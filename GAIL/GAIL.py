@@ -35,7 +35,7 @@ class Discriminator(tf.keras.Model):
 
         z = self.input_layer(input)
         for layer in self.hidden_layers:
-            z = tf.nn.relu(layer(z))
+            z = tf.nn.tanh(layer(z))
         output = tf.nn.sigmoid(self.output_layer(z))
 
         return output
