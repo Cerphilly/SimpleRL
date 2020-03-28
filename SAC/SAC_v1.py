@@ -340,7 +340,7 @@ if __name__ == '__main__':
 
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
-    env = gym.make("InvertedPendulumSwing-v2")
+    env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps.
     #env = gym.make("InvertedPendulum-v2")
 
     state_dim = env.observation_space.shape[0]

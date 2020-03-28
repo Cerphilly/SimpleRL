@@ -50,7 +50,7 @@ class GAIL:
         self.max_action = max_action
         self.min_action = min_action
 
-        self.discriminator = Discriminator(self.state_dim, [32, 32], self.action_dim)
+        self.discriminator = Discriminator(self.state_dim, [100, 100], self.action_dim)
         self.policy = policy#SAC, DDPG, TD3 etc
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.001, beta_1=0.5, beta_2=0.999)
         self.expert_buffer = Buffer(self.policy.batch_size)
@@ -139,12 +139,12 @@ class GAIL:
 
 if __name__ == '__main__':
 
-    #env = gym.make("Pendulum-v0")  # around 500 steps
+    #env = gym.make("Pendulum-v0")  # around 3000 steps
     # env = gym.make("MountainCarContinuous-v0")
 
     # env = gym.make("InvertedDoublePendulumSwing-v2")
     # env = gym.make("InvertedDoublePendulum-v2")
-    env = gym.make("InvertedPendulumSwing-v2")
+    env = gym.make("InvertedPendulumSwing-v2")#why don't work?
     # env = gym.make("InvertedPendulum-v2")
 
     state_dim = env.observation_space.shape[0]
