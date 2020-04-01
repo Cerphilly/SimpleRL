@@ -1,5 +1,3 @@
-
-
 import numpy as np
 import gym
 import cv2
@@ -25,6 +23,10 @@ def expert_data(env, policy, expert_buffer, expert_saver):
     episode = 0
     total_step = 0
     buffer_start = 0
+
+    if policy.load == True:
+        policy.saver.load()
+        print("network data loaded")
 
     while True:
         episode += 1
@@ -59,7 +61,7 @@ def expert_data(env, policy, expert_buffer, expert_saver):
                 policy.train(s, a, r, ns, d)
 
         if episode_reward >= 800:
-            for i in range(buffer_start, buffer_start + local_step):
+            for i in range(buffer_start, buffer_start + local_step-1):
                 expert_buffer.add(policy.buffer.s[i], policy.buffer.a[i], policy.buffer.r[i], policy.buffer.ns[i],
                                        policy.buffer.d[i])
 
@@ -70,6 +72,10 @@ def expert_data(env, policy, expert_buffer, expert_saver):
         if len(expert_buffer.s) % 10000 == 0 and len(expert_buffer.s) > 1000:
             expert_saver.buffer_save()
             print("expert buffer saved")
+
+        if episode % 1000 == 0:
+            policy.saver.save()
+            print("temporary save")
 
         buffer_start = buffer_start + local_step
 
@@ -122,7 +128,7 @@ def expert_data_dm(env, policy, expert_buffer, expert_saver):
                 policy.train(s, a, r, ns, d)
 
         if episode_reward >= 700:
-            for i in range(buffer_start, buffer_start + local_step):
+            for i in range(buffer_start, buffer_start + local_step-1):
                 expert_buffer.add(policy.buffer.s[i], policy.buffer.a[i], policy.buffer.r[i], policy.buffer.ns[i],
                                        policy.buffer.d[i])
 
@@ -133,6 +139,10 @@ def expert_data_dm(env, policy, expert_buffer, expert_saver):
         if len(expert_buffer.s) % 10000 == 0 and len(expert_buffer.s) > 1000:
             expert_saver.buffer_save()
             print("expert buffer saved")
+
+        if episode % 2 == 0:
+            policy.saver.save()
+            print("temporary save")
 
         buffer_start = buffer_start + local_step
 
@@ -163,7 +173,7 @@ if __name__ == '__main__':
     max_action = action_spec.maximum[0]  # 1.0
     min_action = action_spec.minimum[0]
     '''
-    policy = SAC_v1.SAC(state_dim, action_dim, max_action, min_action, False, False)
+    policy = SAC_v1.SAC(state_dim, action_dim, max_action, min_action, True, True)
     buffer = Buffer(policy.batch_size)
     saver = Saver([], [], buffer, '/home/cocel/PycharmProjects/SimpleRL/GAIL/expert_InvertedDoublePendulumSwing-v2')
 

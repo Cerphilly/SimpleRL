@@ -56,9 +56,9 @@ class GAIL:
         self.min_action = min_action
         self.expert_reward = parameters['expert_reward']
 
-        self.discriminator = Discriminator(self.state_dim, [32, 32], self.action_dim)
+        self.discriminator = Discriminator(self.state_dim, [100, 100], self.action_dim)
         self.policy = policy#SAC, DDPG, TD3 etc
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.0003)
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
         self.expert_buffer = Buffer(self.policy.batch_size)
 
         self.saver = Saver([self.discriminator], ['discriminator'], self.expert_buffer, expert_path)
@@ -96,7 +96,6 @@ class GAIL:
     def inference(self, states, actions):
         return self.discriminator.log_reward(tf.concat([states, actions], axis=1))
 
-
     def run(self):
         self.saver.buffer_load()
 
@@ -130,8 +129,8 @@ class GAIL:
                 self.policy.buffer.add(observation, action, reward, next_observation, done)
                 observation = next_observation
 
-            for i in range(local_step):
-                if total_step >= 5*self.policy.batch_size:
+            if episode % 5 == 0:
+                for i in range(200):
                     s, a, _, ns, d = self.policy.buffer.sample()
                     r = self.inference(s, a)
                     expert_s, expert_a, expert_r, expert_ns, expert_d = self.expert_buffer.sample()
@@ -139,77 +138,23 @@ class GAIL:
                     self.policy.train(s, a, r, ns, d)
                     episode_js_divergence += js_divergence
                     episode_accuracy += accuracy
+                self.policy.buffer.delete()
+
 
 
             print("episode: {}, total_step: {}, step: {}, episode_reward: {}, episode_js_divergence: {}, episode_accuracy: {}".format(episode, total_step, local_step,
                                                                                      episode_reward, episode_js_divergence/local_step, episode_accuracy/local_step))
 
-    def run_dm(self):
-        self.saver.buffer_load()
 
-        episode = 0
-        total_step = 0
-
-        height = 480
-        width = 640
-
-        video = np.zeros((1001, height, width, 3), dtype=np.uint8)
-
-        while True:
-            episode += 1
-            episode_reward = 0
-            episode_js_divergence = 0
-            episode_accuracy = 0
-            local_step = 0
-
-            done = False
-            observation = dmstate(env.reset())
-
-            while not done:
-                local_step += 1
-                total_step += 1
-                x = env.physics.render(height=480, width=640, camera_id=0)
-                video[local_step] = x
-
-                action = np.max(self.policy.actor.predict(np.expand_dims(observation, axis=0).astype('float32')),
-                                axis=1)
-
-                if total_step <= 5 * self.policy.batch_size:
-                    action = np.random.uniform(self.min_action, self.max_action)
-
-                next_observation, reward, done = dmstep(env.step(self.max_action * action))
-                episode_reward += reward
-
-                self.policy.buffer.add(observation, action, reward, next_observation, done)
-                observation = next_observation
-
-                cv2.imshow('result', video[local_step - 1])
-                cv2.waitKey(1)
-                if local_step == 1000: done = True
-
-            for i in range(local_step):
-                if total_step >= 5 * self.policy.batch_size:
-                    s, a, _, ns, d = self.policy.buffer.sample()
-                    r = self.inference(s, a)
-                    expert_s, expert_a, expert_r, expert_ns, expert_d = self.expert_buffer.sample()
-                    js_divergence, accuracy = self.train(s, a, expert_s, expert_a)
-                    self.policy.train(s, a, r, ns, d)
-                    episode_js_divergence += js_divergence
-                    episode_accuracy += accuracy
-
-            print(
-                "episode: {}, total_step: {}, step: {}, episode_reward: {}, episode_js_divergence: {}, episode_accuracy: {}".format(
-                    episode, total_step, local_step,
-                    episode_reward, episode_js_divergence / local_step, episode_accuracy / local_step))
 
 
 if __name__ == '__main__':
-    '''
-    #env = gym.make("Pendulum-v0")  # around 3000 steps
+
+    env = gym.make("Pendulum-v0")  # around 3000 steps
     # env = gym.make("MountainCarContinuous-v0")
 
     #env = gym.make("InvertedDoublePendulumSwing-v2")
-    env = gym.make("InvertedDoublePendulum-v2")
+    #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#why don't work?
     #env = gym.make("InvertedPendulum-v2")
 
@@ -233,7 +178,7 @@ if __name__ == '__main__':
     action_dim = action_spec.shape[0]  # 1
     max_action = action_spec.maximum[0]  # 1.0
     min_action = action_spec.minimum[0]
-
+    '''
 
     parameters = {'tau': 0.995, "learning_rate": 0.0003, 'gamma': 0.99, 'alpha': 0.2, 'batch_size': 100,
                   'reward_scale': 1, 'save': False, 'load': False, 'expert_reward': 1000}
@@ -243,7 +188,7 @@ if __name__ == '__main__':
     print("Action dim:", action_dim)
     print("Max action:", max_action)
 
-    expert_path = '/home/cocel/PycharmProjects/SimpleRL/GAIL/expert_dm_cartpole'
+    expert_path = '/home/cocel/PycharmProjects/SimpleRL/GAIL/expert_pendulum-v0'
 
 
     sac = SAC_v1.SAC(state_dim, action_dim, max_action, min_action, False, False)
@@ -252,7 +197,7 @@ if __name__ == '__main__':
 
 
     gail = GAIL(sac, state_dim, action_dim, max_action, min_action, expert_path)
-    gail.run_dm()
+    gail.run()
     '''
     environment:
     1. Pendulum-v0: 5000 step -> 3000~4000 step. Works fine in all algorithm

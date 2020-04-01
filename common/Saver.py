@@ -15,7 +15,7 @@ class Saver:
         network.save_weights('{}/{}'.format(self.path, name), overwrite=True, save_format='tf')
 
     def save(self):
-        self.buffer_save()
+        #self.buffer_save()
         for network, name in zip(self.networks, self.networks_names):
             self.network_save(network, name)
 
@@ -35,7 +35,7 @@ class Saver:
         print("{} loaded".format(name))
 
     def load(self):
-        self.buffer_load()
+        #self.buffer_load()
         for network, name in zip(self.networks, self.networks_names):
             self.network_load(network, name)
 

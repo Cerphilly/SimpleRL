@@ -39,6 +39,26 @@ class Buffer:
             del self.ns[0]
             del self.d[0]
 
+    def delete(self):
+        del self.s, self.a, self.r, self.ns, self.d
+
+        self.s = []
+        self.a = []
+        self.r = []
+        self.ns = []
+        self.d = []
+
+        print("Buffer deleted")
+
+    def all_sample(self):
+        states = np.asarray(self.s)
+        actions = np.asarray(self.a)
+        rewards = np.asarray(self.r)
+        states_next = np.asarray(self.ns)
+        dones = np.asarray(self.d)
+
+        return states, actions, rewards, states_next, dones
+
 
     def sample(self):
         ids = np.random.randint(low=0, high=len(self.s), size=self.batch_size)
@@ -66,3 +86,5 @@ class Buffer:
         dones = np.asarray([self.d[i] for i in ids]).astype('float32')  # (batch_size, 1)
 
         return states, actions, rewards, states_next, dones
+
+
