@@ -40,7 +40,6 @@ class Buffer:
             del self.d[0]
 
     def delete(self):
-        del self.s, self.a, self.r, self.ns, self.d
 
         self.s = []
         self.a = []
@@ -48,14 +47,14 @@ class Buffer:
         self.ns = []
         self.d = []
 
-        print("Buffer deleted")
+        #print("Buffer deleted")
 
     def all_sample(self):
-        states = np.asarray(self.s)
-        actions = np.asarray(self.a)
-        rewards = np.asarray(self.r)
-        states_next = np.asarray(self.ns)
-        dones = np.asarray(self.d)
+        states = np.array(self.s).astype('float32')
+        actions = np.array(self.a).astype('float32')
+        rewards = np.array(self.r).astype('float32')
+        states_next = np.array(self.ns).astype('float32')
+        dones = np.array(self.d).astype('float32')
 
         return states, actions, rewards, states_next, dones
 

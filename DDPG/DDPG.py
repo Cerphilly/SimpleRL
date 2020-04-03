@@ -2,6 +2,7 @@
 import tensorflow as tf
 
 from dm_control import suite
+
 import gym
 import cv2
 import numpy as np
@@ -227,7 +228,7 @@ class DDPG:
 
 
 if __name__ == '__main__':
-
+    '''
     env = gym.make("Pendulum-v0")
     #env = gym.make("MountainCarContinuous-v0")
 
@@ -244,14 +245,14 @@ if __name__ == '__main__':
     print("DDPG training of", env.unwrapped.spec.id)
 
     '''
-    env = suite.load(domain_name="cartpole", task_name="swingup")
+    env = suite.load(domain_name="cartpole", task_name="swingup", visualize_reward=True)
     state_spec = env.reset()
     action_spec = env.action_spec()
     state_dim = len(dmstate(state_spec))
     action_dim = action_spec.shape[0]  # 1
     max_action = action_spec.maximum[0]  # 1.0
     min_action = action_spec.minimum[0]
-    '''
+
     print("State dim:", state_dim)
     print("Action dim:", action_dim)
     print("Max action:", max_action)
@@ -259,7 +260,7 @@ if __name__ == '__main__':
     parameters = {"gamma": 0.99, "tau": 0.995, "learning_rate": 0.001, "training_start": 1000, "batch_size": 100, 'save': False, 'load': False}
 
     ddpg = DDPG(state_dim, action_dim, max_action, min_action, parameters['save'], parameters['load'])
-    ddpg.run()
+    ddpg.run_dm()
 
 
 

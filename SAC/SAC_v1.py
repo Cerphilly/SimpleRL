@@ -179,56 +179,6 @@ class SAC:
             update = self.tau * v2 + (1 - self.tau) * v1
             v2.assign(update)
 
-    def train_onpolicy(self, s, a, r, ns, d):
-
-        with tf.GradientTape(persistent=True) as tape:
-            # v_loss calculation
-            min_aq = tf.minimum(self.critic1(tf.concat([s, self.actor(s)], axis=1)),
-                                self.critic2(tf.concat([s, self.actor(s)], axis=1)))  ###
-
-            target_v = tf.stop_gradient(min_aq - self.alpha * self.actor.log_pi(s))
-            v_loss = tf.reduce_mean(0.5 * tf.square(self.v_network(s) - target_v))
-
-            # q_loss calculation
-            target_q = tf.stop_gradient(r + self.gamma * (1 - d) * self.target_v_network(ns))
-
-            critic1_loss = 0.5 * tf.reduce_mean(tf.square(self.critic1(tf.concat([s, a], axis=1)) - (target_q)))
-            critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(tf.concat([s, a], axis=1)) - (target_q)))
-
-            # actor_loss calculation
-
-            mu, sigma = self.actor.mu_sigma(s)
-
-            output = mu + tf.random.normal(shape=mu.shape) * sigma
-
-            min_aq_rep = tf.minimum(self.critic1(tf.concat([s, output], axis=1)),
-                                    self.critic2(tf.concat([s, output], axis=1)))
-
-            # does reparametrization improves the performance of SAC? not sure. change min_aq_rep to min_aq to disable reparametrization
-            actor_loss = tf.reduce_mean((self.alpha * self.actor.log_pi(s) - min_aq))
-
-        # updating v, q, actor network
-        # calculate losses first then update.
-        v_network_variables = self.v_network.trainable_variables
-        v_gradients = tape.gradient(v_loss, v_network_variables)
-        self.v_network_optimizer.apply_gradients(zip(v_gradients, v_network_variables))
-
-        self.soft_update(self.v_network, self.target_v_network)
-
-        critic1_variables = self.critic1.trainable_variables
-        critic1_gradients = tape.gradient(critic1_loss, critic1_variables)
-        self.critic1_optimizer.apply_gradients(zip(critic1_gradients, critic1_variables))
-
-        critic2_variables = self.critic2.trainable_variables
-        critic2_gradients = tape.gradient(critic2_loss, critic2_variables)
-        self.critic2_optimizer.apply_gradients(zip(critic2_gradients, critic2_variables))
-
-        actor_variables = self.actor.trainable_variables
-        actor_grad = tape.gradient(actor_loss, actor_variables)
-        self.actor_optimizer.apply_gradients(zip(actor_grad, actor_variables))
-
-        del tape
-
     def train(self, s, a, r, ns, d):
 
         with tf.GradientTape(persistent=True) as tape:
@@ -334,7 +284,7 @@ class SAC:
         height = 480
         width = 640
 
-        #video = np.zeros((1001, height, width, 3), dtype=np.uint8)
+        video = np.zeros((1001, height, width, 3), dtype=np.uint8)
 
         while True:
             episode += 1
@@ -349,8 +299,8 @@ class SAC:
                 local_step += 1
                 total_step += 1
 
-                #x = env.physics.render(height=480, width=640, camera_id=0)
-                #video[local_step] = x
+                x = env.physics.render(height=480, width=640, camera_id=0)
+                video[local_step] = x
 
                 action = np.max(self.actor.predict(np.expand_dims(observation, axis=0).astype('float32')), axis=1)
 
@@ -366,8 +316,8 @@ class SAC:
 
                 observation = next_observation
 
-                #cv2.imshow('result', video[local_step - 1])
-                #cv2.waitKey(1)
+                cv2.imshow('result', video[local_step - 1])
+                cv2.waitKey(1)
                 if local_step == 1000: done = True
 
             print("episode: {}, total_step: {}, step: {}, episode_reward: {}".format(episode, total_step, local_step,
