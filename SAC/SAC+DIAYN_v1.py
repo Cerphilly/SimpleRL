@@ -14,12 +14,13 @@ from common.Saver import Saver
 from common.dm2gym import dmstep, dmstate, dmextendstate, dmextendstep
 
 class Q_network(tf.keras.Model):
-    def __init__(self, state_dim, hidden_units, action_dim):
+    def __init__(self, state_dim, hidden_units, action_dim, skill_num):
         super(Q_network, self).__init__()
         self.state_dim = state_dim
         self.action_dim = action_dim
+        self.skill_num = skill_num
 
-        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim + self.action_dim,), name='input')
+        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim + self.skill_num + self.action_dim,), name='input')
 
         self.hidden_layers = []
         for i in hidden_units:
@@ -39,11 +40,12 @@ class Q_network(tf.keras.Model):
 
 
 class V_network(tf.keras.Model):
-    def __init__(self, state_dim, hidden_units):
+    def __init__(self, state_dim, hidden_units, skill_num):
         super(V_network, self).__init__()
         self.state_dim = state_dim
+        self.skill_num = skill_num
 
-        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim,), name='input')
+        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim + self.skill_num ,), name='input')
 
         self.hidden_layers = []
         for i in hidden_units:
@@ -63,12 +65,13 @@ class V_network(tf.keras.Model):
 
 
 class Policy_network(tf.keras.Model):
-    def __init__(self, state_dim, hidden_units, action_dim):
+    def __init__(self, state_dim, hidden_units, action_dim, skill_num):
         super(Policy_network, self).__init__()
         self.state_dim = state_dim
         self.action_dim = action_dim
+        self.skill_num = skill_num
 
-        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim,), name='input')
+        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim + self.skill_num,), name='input')
 
         self.hidden_layers = []
         for i in hidden_units:
@@ -129,9 +132,33 @@ class Policy_network(tf.keras.Model):
 
         return mu, sigma
 
-class SAC:
-    def __init__(self, state_dim, action_dim, max_action, min_action, save, load, batch_size=100, tau=0.995, learning_rate=0.0003, gamma=0.99, alpha=0.2, reward_scale=1):
 
+class Discriminator(tf.keras.Model):
+    def __init__(self, state_dim, hidden_units, skill_num):
+        super(Discriminator, self).__init__()
+        self.state_dim = state_dim
+        self.skill_num = skill_num
+
+        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim,), name='input')
+
+        self.hidden_layers = []
+        for i in hidden_units:
+            self.hidden_layers.append(tf.keras.layers.Dense(i, kernel_initializer='RandomNormal'))
+
+        self.output_layer = tf.keras.layers.Dense(self.skill_num, kernel_initializer='RandomNormal', name='output')
+
+    @tf.function
+    def call(self, input):
+
+        z = self.input_layer(input)
+        for layer in self.hidden_layers:
+            z = tf.nn.relu(layer(z))
+        output = self.output_layer(z)
+
+        return output
+
+class SAC_DIAYN:
+    def __init__(self, state_dim, action_dim, max_action, min_action, save, load, skill_num, batch_size=100, tau=0.995, learning_rate=0.0003, gamma=0.99, alpha=0.1, reward_scale=1):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.max_action = max_action
@@ -139,7 +166,7 @@ class SAC:
 
         self.save = save
         self.load = load
-
+        self.skill_num = skill_num
         self.batch_size = batch_size
         self.tau = tau
         self.learning_rate = learning_rate
@@ -147,22 +174,24 @@ class SAC:
         self.alpha = alpha
         self.reward_scale = reward_scale
 
-        self.actor = Policy_network(self.state_dim, [256, 256], self.action_dim)
-        self.critic1 = Q_network(self.state_dim, [256, 256], self.action_dim)
-        self.critic2 = Q_network(self.state_dim, [256, 256], self.action_dim)
-        self.v_network = V_network(self.state_dim, [256, 256])
-        self.target_v_network = V_network(self.state_dim, [256, 256])
-
-        self.buffer = Buffer(self.batch_size)
-        self.saver = Saver([self.actor, self.critic1, self.critic2, self.v_network, self.target_v_network], ['actor', 'critic1', 'critic2', 'v_network', 'target_v_network'], self.buffer,
-                           '/home/cocel/PycharmProjects/SimpleRL/SAC_fixed_init')
+        self.actor = Policy_network(self.state_dim, [300, 300], self.action_dim, self.skill_num)
+        self.critic1 = Q_network(self.state_dim, [300, 300], self.action_dim, self.skill_num)
+        self.critic2 = Q_network(self.state_dim, [300, 300], self.action_dim, self.skill_num)
+        self.v_network = V_network(self.state_dim, [300, 300], self.skill_num)
+        self.target_v_network = V_network(self.state_dim, [300, 300], self.skill_num)
+        self.discriminator = Discriminator(self.state_dim, [100, 100], self.skill_num)
+        self.buffer = Buffer(100)
 
         self.actor_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.critic1_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.critic2_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.v_network_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
+        self.discriminator_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
 
+
+        self.p_z = np.full(self.skill_num, 1.0/self.skill_num)
         self.copy_weight(self.v_network, self.target_v_network)
+
 
     def copy_weight(self, network, target_network):
         variable1 = network.weights
@@ -179,37 +208,63 @@ class SAC:
             update = self.tau * v2 + (1 - self.tau) * v1
             v2.assign(update)
 
-    def train(self, s, a, r, ns, d):
+    def sample_z(self):
+        z = np.random.choice(self.skill_num, p=self.p_z)
+        z_one_hot = np.zeros(self.skill_num)
+        z_one_hot[z] = 1
+        return z, z_one_hot
 
+
+    def split_obs(self, obs):
+        return tf.split(obs, [self.state_dim, self.skill_num], 1)
+
+    def train(self, s, a, r, ns, d):
         with tf.GradientTape(persistent=True) as tape:
-            # v_loss calculation
+
+            obs, z_one_hot = self.split_obs(ns)
+
             min_aq = tf.minimum(self.critic1(tf.concat([s, self.actor(s)], axis=1)),
                                 self.critic2(tf.concat([s, self.actor(s)], axis=1)))  ###
 
             target_v = tf.stop_gradient(min_aq - self.alpha * self.actor.log_pi(s))
             v_loss = tf.reduce_mean(0.5 * tf.square(self.v_network(s) - target_v))
 
-            # q_loss calculation
-            target_q = tf.stop_gradient(r + self.gamma * (1 - d) * self.target_v_network(ns))
+            logits = self.discriminator(obs)
+
+            #ns, _ = self.split_obs(ns)
+
+
+            reward = -tf.expand_dims(tf.nn.softmax_cross_entropy_with_logits(labels=z_one_hot, logits=logits), axis=1)
+            #reward = tf.math.log(self.discriminator(ns) + 1e-6)
+            p_z = tf.reduce_sum(self.p_z*z_one_hot, axis=1)
+            log_p_z = tf.expand_dims(tf.math.log(p_z + 1e-6), axis=1)
+            reward = reward - log_p_z
+            print(reward)
+            #reward = tf.expand_dims(reward, axis=1)
+
+            target_q = tf.stop_gradient(reward + self.gamma * (1 - d) * self.target_v_network(ns))
 
             critic1_loss = 0.5 * tf.reduce_mean(tf.square(self.critic1(tf.concat([s, a], axis=1)) - (target_q)))
             critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(tf.concat([s, a], axis=1)) - (target_q)))
-
-            # actor_loss calculation
 
             mu, sigma = self.actor.mu_sigma(s)
 
             output = mu + tf.random.normal(shape=mu.shape) * sigma
 
-            min_aq_rep = tf.minimum(self.critic1(tf.concat([s, output], axis=1)),
-                                    self.critic2(tf.concat([s, output], axis=1)))
+            #min_aq_rep = tf.minimum(self.critic1(tf.concat([s, output], axis=1)),
+            #                       self.critic2(tf.concat([s, output], axis=1)))
+            min_aq_rep = self.critic1(tf.concat([s, output], axis=1))
 
             # does reparametrization improves the performance of SAC? not sure. change min_aq_rep to min_aq to disable reparametrization
-            actor_loss = tf.reduce_mean((self.alpha * self.actor.log_pi(s) - min_aq))
+            actor_loss = tf.reduce_mean((self.alpha * self.actor.log_pi(s) - min_aq_rep))
 
-        # updating v, q, actor network
-        # calculate losses first then update.
-        v_network_variables = self.v_network.trainable_variables
+            obs, z_one_hot = self.split_obs(s)
+
+
+            discriminator_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=z_one_hot, logits=logits))
+
+
+        v_network_variables= self.v_network.trainable_variables
         v_gradients = tape.gradient(v_loss, v_network_variables)
         self.v_network_optimizer.apply_gradients(zip(v_gradients, v_network_variables))
 
@@ -227,13 +282,13 @@ class SAC:
         actor_grad = tape.gradient(actor_loss, actor_variables)
         self.actor_optimizer.apply_gradients(zip(actor_grad, actor_variables))
 
-        del tape
+        discriminator_variables = self.discriminator.trainable_variables
+        discriminator_gradients = tape.gradient(discriminator_loss, discriminator_variables)
+        self.discriminator_optimizer.apply_gradients(zip(discriminator_gradients, discriminator_variables))
+
+
 
     def run(self):
-
-        if self.load == True:
-            self.saver.load()
-
         episode = 0
         total_step = 0
 
@@ -242,15 +297,18 @@ class SAC:
             episode_reward = 0
             local_step = 0
 
+            z, z_one_hot = self.sample_z()#example: 1, [0, 1]
+
             done = False
             observation = env.reset()
+            observation = np.hstack((observation, z_one_hot))
 
             while not done:
                 local_step += 1
                 total_step += 1
                 env.render()
 
-                action = np.max(self.actor.predict(np.expand_dims(observation, axis=0).astype('float32')), axis=1)
+                action = np.max(self.actor.predict(np.expand_dims(observation, axis=0).astype('float32')), axis=1)#[[  ]]줌형태로 나오므로 np.max로 []로 바꿔
 
                 if total_step <= 5 * self.batch_size:
                     action = env.action_space.sample()
@@ -258,8 +316,11 @@ class SAC:
                 next_observation, reward, done, _ = env.step(self.max_action * action)
                 episode_reward += reward
 
+                next_observation = np.hstack((next_observation, z_one_hot))
+
                 self.buffer.add(observation, action, self.reward_scale * reward, next_observation, done)
                 observation = next_observation
+
 
             print("episode: {}, total_step: {}, step: {}, episode_reward: {}".format(episode, total_step, local_step,
                                                                                      episode_reward))
@@ -267,70 +328,7 @@ class SAC:
             if total_step >= 5 * self.batch_size:
                 for i in range(local_step):
                     s, a, r, ns, d = self.buffer.sample()
-                    # s, a, r, ns, d = self.buffer.ERE_sample(i, update_len)
                     self.train(s, a, r, ns, d)
-
-            if self.save == True:
-                if total_step % 1000 == 0:
-                    self.saver.save()
-
-    def run_dm(self):
-        if self.load == True:
-            self.saver.load()
-
-        episode = 0
-        total_step = 0
-
-        height = 480
-        width = 640
-
-        #video = np.zeros((1001, height, width, 3), dtype=np.uint8)
-
-        while True:
-            episode += 1
-            episode_reward = 0
-            local_step = 0
-
-            done = False
-
-            observation = dmstate(env.reset())
-
-            while not done:
-                local_step += 1
-                total_step += 1
-
-                x = env.physics.render(height=480, width=640, camera_id=0)
-                #video[local_step] = x
-
-                action = np.max(self.actor.predict(np.expand_dims(observation, axis=0).astype('float32')), axis=1)
-
-                if self.load == False:
-                    if total_step <= 5 * self.batch_size:
-                        action = np.random.uniform(self.min_action, self.max_action)
-
-                next_observation, reward, done = dmstep(env.step(self.max_action*action))
-
-                episode_reward += reward
-
-                self.buffer.add(observation, action, self.reward_scale * reward, next_observation, done)
-
-                observation = next_observation
-
-                #cv2.imshow('result', video[local_step - 1])
-                #cv2.waitKey(1)
-                if local_step == 1000: done = True
-
-            print("episode: {}, total_step: {}, step: {}, episode_reward: {}".format(episode, total_step, local_step,
-                                                                                     episode_reward))
-
-            if total_step >= 50 * self.batch_size:
-                for i in range(local_step):
-                    s, a, r, ns, d = self.buffer.sample()
-                    self.train(s, a, r, ns, d)
-
-            if self.save == True:
-                if total_step % 10000 == 0:
-                    self.saver.save()
 
 
 if __name__ == '__main__':
@@ -349,26 +347,10 @@ if __name__ == '__main__':
     min_action = env.action_space.low[0]
 
     print("SAC training of", env.unwrapped.spec.id)
-    '''
-    env = suite.load(domain_name="cartpole", task_name="three_poles")#300만 스텝 학습: SAC_Test
-    #env = suite.load(domain_name="cartpole", task_name="two_poles")
-    #env = suite.load(domain_name="acrobot", task_name="swingup")
 
-    #env = suite.load(domain_name="cartpole", task_name="swingup")
-    state_spec = env.reset()
-    action_spec = env.action_spec()
-    state_dim = len(dmstate(state_spec))
-    print(dmstate(state_spec))
-    action_dim = action_spec.shape[0]  # 1
-    max_action = action_spec.maximum[0]  # 1.0
-    min_action = action_spec.minimum[0]
-    '''
-
-
-
-    print("State dim:", state_dim)
-    print("Action dim:", action_dim)
-    print("Max action:", max_action)
-
-    sac = SAC(state_dim, action_dim, max_action, min_action, False, False)
+    sac = SAC_DIAYN(state_dim, action_dim, max_action, min_action, False, False, 2)
     sac.run()
+
+
+
+

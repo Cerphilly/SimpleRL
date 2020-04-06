@@ -257,11 +257,11 @@ class TD3:
 if __name__ == '__main__':
 
     #env = gym.make("Pendulum-v0")
-    # env = gym.make("MountainCarContinuous-v0")
+    env = gym.make("MountainCarContinuous-v0")
 
     # env = gym.make("InvertedDoublePendulumSwing-v2")
     # env = gym.make("InvertedDoublePendulum-v2")
-    env = gym.make("InvertedPendulumSwing-v2")
+    #env = gym.make("InvertedPendulumSwing-v2")
     #env = gym.make("InvertedPendulum-v2")
 
     state_dim = env.observation_space.shape[0]
@@ -282,7 +282,7 @@ if __name__ == '__main__':
     '''
 
     parameters = {"gamma": 0.99, "tau": 0.995, "learning_rate": 0.001, "policy_delay": 2, "actor_noise": 0.1, "target_noise": 0.2,
-                  "noise_clip": 0.5, "training_start": 1000, "batch_size": 100, 'save': True, 'load': False}
+                  "noise_clip": 0.5, "training_start": 1000, "batch_size": 100, 'save': False, 'load': False}
 
     print("State dim:", state_dim)
     print("Action dim:", action_dim)

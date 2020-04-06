@@ -104,7 +104,7 @@ class Policy_network(tf.keras.Model):
         return mu, sigma
 
 class SAC:
-    def __init__(self, state_dim, action_dim, max_action, min_action, save, load, batch_size=100, alpha=0.2, tau=0.995, learning_rate=0.0003, gamma=0.99, auto_alpha=False, reward_scale=1):
+    def __init__(self, state_dim, action_dim, max_action, min_action, save, load, batch_size=100, alpha=0.2, tau=0.995, learning_rate=0.0003, gamma=0.99, auto_alpha=True, reward_scale=1):
 
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -184,8 +184,10 @@ class SAC:
             mu, sigma = self.actor.mu_sigma(s)
             output = mu + tf.random.normal(shape=mu.shape) * sigma
 
-            min_aq_rep = tf.minimum(self.critic1(tf.concat([s, output], axis=1)),
-                                    self.critic2(tf.concat([s, output], axis=1)))
+            #min_aq_rep = tf.minimum(self.critic1(tf.concat([s, output], axis=1)),
+            #                        self.critic2(tf.concat([s, output], axis=1)))
+            min_aq_rep = self.critic1(tf.concat([s, output], axis=1))
+
 
             actor_loss = tf.reduce_mean(self.alpha * self.actor.log_pi(s) - min_aq_rep)
 
