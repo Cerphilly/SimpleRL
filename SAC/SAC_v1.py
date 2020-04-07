@@ -266,6 +266,8 @@ class SAC:
 
             if total_step >= 5 * self.batch_size:
                 for i in range(local_step):
+                    print(np.shape(self.buffer.s), np.shape(self.buffer.a), np.shape(self.buffer.r), np.shape(self.buffer.d))
+                    print(self.buffer.a)
                     s, a, r, ns, d = self.buffer.sample()
                     # s, a, r, ns, d = self.buffer.ERE_sample(i, update_len)
                     self.train(s, a, r, ns, d)

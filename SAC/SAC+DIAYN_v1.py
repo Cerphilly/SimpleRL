@@ -134,10 +134,14 @@ class Policy_network(tf.keras.Model):
 
 
 class Discriminator(tf.keras.Model):
-    def __init__(self, state_dim, hidden_units, skill_num):
+    def __init__(self, state_dim, hidden_units, action_dim, skill_num, use_action=True):
         super(Discriminator, self).__init__()
         self.state_dim = state_dim
+        self.action_dim = action_dim
         self.skill_num = skill_num
+
+        if use_action:
+            self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim + self.action_dim,), name='input')
 
         self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim,), name='input')
 
@@ -156,6 +160,8 @@ class Discriminator(tf.keras.Model):
         output = self.output_layer(z)
 
         return output
+
+
 
 class SAC_DIAYN:
     def __init__(self, state_dim, action_dim, max_action, min_action, save, load, skill_num, batch_size=100, tau=0.995, learning_rate=0.0003, gamma=0.99, alpha=0.1, reward_scale=1):
@@ -179,7 +185,7 @@ class SAC_DIAYN:
         self.critic2 = Q_network(self.state_dim, [300, 300], self.action_dim, self.skill_num)
         self.v_network = V_network(self.state_dim, [300, 300], self.skill_num)
         self.target_v_network = V_network(self.state_dim, [300, 300], self.skill_num)
-        self.discriminator = Discriminator(self.state_dim, [100, 100], self.skill_num)
+        self.discriminator = Discriminator(self.state_dim, [100, 100], self.action_dim, self.skill_num, use_action=True)
         self.buffer = Buffer(100)
 
         self.actor_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
@@ -221,7 +227,7 @@ class SAC_DIAYN:
     def train(self, s, a, r, ns, d):
         with tf.GradientTape(persistent=True) as tape:
 
-            obs, z_one_hot = self.split_obs(ns)
+            obs, z_one_hot = self.split_obs(s)
 
             min_aq = tf.minimum(self.critic1(tf.concat([s, self.actor(s)], axis=1)),
                                 self.critic2(tf.concat([s, self.actor(s)], axis=1)))  ###
@@ -230,17 +236,16 @@ class SAC_DIAYN:
             v_loss = tf.reduce_mean(0.5 * tf.square(self.v_network(s) - target_v))
 
             logits = self.discriminator(obs)
+            #logits = self.discriminator(tf.concat([obs, a], axis=1))
 
             #ns, _ = self.split_obs(ns)
 
 
             reward = -tf.expand_dims(tf.nn.softmax_cross_entropy_with_logits(labels=z_one_hot, logits=logits), axis=1)
-            #reward = tf.math.log(self.discriminator(ns) + 1e-6)
-            p_z = tf.reduce_sum(self.p_z*z_one_hot, axis=1)
-            log_p_z = tf.expand_dims(tf.math.log(p_z + 1e-6), axis=1)
-            reward = reward - log_p_z
-            print(reward)
-            #reward = tf.expand_dims(reward, axis=1)
+
+            #reward = tf.reduce_sum(logits*z_one_hot, axis=1, keepdims=True)
+            p_z = tf.reduce_sum(self.p_z*z_one_hot, axis=1, keepdims=True)
+            reward = reward - tf.math.log(p_z)
 
             target_q = tf.stop_gradient(reward + self.gamma * (1 - d) * self.target_v_network(ns))
 
@@ -257,8 +262,6 @@ class SAC_DIAYN:
 
             # does reparametrization improves the performance of SAC? not sure. change min_aq_rep to min_aq to disable reparametrization
             actor_loss = tf.reduce_mean((self.alpha * self.actor.log_pi(s) - min_aq_rep))
-
-            obs, z_one_hot = self.split_obs(s)
 
 
             discriminator_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=z_one_hot, logits=logits))
@@ -286,7 +289,7 @@ class SAC_DIAYN:
         discriminator_gradients = tape.gradient(discriminator_loss, discriminator_variables)
         self.discriminator_optimizer.apply_gradients(zip(discriminator_gradients, discriminator_variables))
 
-
+        del tape
 
     def run(self):
         episode = 0
@@ -322,7 +325,7 @@ class SAC_DIAYN:
                 observation = next_observation
 
 
-            print("episode: {}, total_step: {}, step: {}, episode_reward: {}".format(episode, total_step, local_step,
+            print("episode: {}, skill: {}, total_step: {}, step: {}, episode_reward: {}".format(episode, z, total_step, local_step,
                                                                                      episode_reward))
 
             if total_step >= 5 * self.batch_size:
@@ -333,10 +336,9 @@ class SAC_DIAYN:
 
 if __name__ == '__main__':
 
-    env = gym.make("Pendulum-v0")#around 5000 steps
     #env = gym.make("MountainCarContinuous-v0")
 
-    #env = gym.make("InvertedDoublePendulumSwing-v2")
+    env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps.
     #env = gym.make("InvertedPendulum-v2")
@@ -347,8 +349,7 @@ if __name__ == '__main__':
     min_action = env.action_space.low[0]
 
     print("SAC training of", env.unwrapped.spec.id)
-
-    sac = SAC_DIAYN(state_dim, action_dim, max_action, min_action, False, False, 2)
+    sac = SAC_DIAYN(state_dim, action_dim, max_action, min_action, False, False, 3)
     sac.run()
 
 
