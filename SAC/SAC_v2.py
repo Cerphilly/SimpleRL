@@ -104,7 +104,7 @@ class Policy_network(tf.keras.Model):
         return mu, sigma
 
 class SAC:
-    def __init__(self, state_dim, action_dim, max_action, min_action, save, load, batch_size=100, alpha=0.2, tau=0.995, learning_rate=0.0003, gamma=0.99, auto_alpha=True, reward_scale=1):
+    def __init__(self, state_dim, action_dim, max_action, min_action, save, load, batch_size=100, alpha=0.2, tau=0.995, learning_rate=0.0003, gamma=0.99, auto_alpha=False, reward_scale=1):
 
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -327,8 +327,8 @@ class SAC:
 
 if __name__ == '__main__':
 
-    env = gym.make("Pendulum-v0")#around 5000 steps
-    # env = gym.make("MountainCarContinuous-v0")
+    #env = gym.make("Pendulum-v0")#around 5000 steps
+    env = gym.make("MountainCarContinuous-v0")
 
     # env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
@@ -343,8 +343,8 @@ if __name__ == '__main__':
     print("SAC training of", env.unwrapped.spec.id)
     '''
     #env = suite.load(domain_name="pendulum", task_name="swingup")
-    #env = suite.load(domain_name="cartpole", task_name="three_poles")
-    env = suite.load(domain_name="cartpole", task_name="swingup")
+    env = suite.load(domain_name="cartpole", task_name="three_poles")
+    #env = suite.load(domain_name="cartpole", task_name="swingup")
     state_spec = env.reset()
     action_spec = env.action_spec()
     state_dim = len(dmstate(state_spec))

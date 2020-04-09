@@ -155,7 +155,7 @@ class SAC:
 
         self.buffer = Buffer(self.batch_size)
         self.saver = Saver([self.actor, self.critic1, self.critic2, self.v_network, self.target_v_network], ['actor', 'critic1', 'critic2', 'v_network', 'target_v_network'], self.buffer,
-                           '/home/cocel/PycharmProjects/SimpleRL/SAC_fixed_init')
+                           '/SAC_v2')
 
         self.actor_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.critic1_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
