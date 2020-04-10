@@ -3,7 +3,7 @@ import gym
 import cv2
 
 from SAC import SAC_v1
-from SAC import SAC_v2
+from SAC import SAC_v1
 
 from common.ReplayBuffer import Buffer
 from common.Saver import Saver

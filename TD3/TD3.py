@@ -92,7 +92,7 @@ class TD3:
         self.buffer = Buffer(self.batch_size)
         self.saver = Saver([self.actor, self.target_actor, self.critic1, self.target_critic1, self.critic2, self.target_critic2],
                            ['actor', 'target_actor', 'critic1', 'target_critic1', 'critic2', 'target_critic2'], self.buffer,
-                           'td3_save')
+                           'TD3_threepole')
 
         self.actor_optimizer = tf.keras.optimizers.Adam(self.lr)
         self.critic1_optimizer = tf.keras.optimizers.Adam(self.lr)
@@ -201,6 +201,9 @@ class TD3:
             print("episode: {}, total_step: {}, step: {}, episode_reward: {}".format(episode, self.total_step, step, episode_reward))
 
     def run_dm(self):
+        if self.load == True:
+            self.saver.load()
+
         episode = 0
         total_step = 0
 
@@ -210,8 +213,6 @@ class TD3:
         video = np.zeros((1001, height, width, 3), dtype=np.uint8)
 
         while True:
-            if self.load == True:
-                self.saver.load()
 
             episode += 1
             episode_reward = 0
@@ -242,11 +243,14 @@ class TD3:
                 cv2.imshow('result', video[local_step - 1])
                 cv2.waitKey(1)
 
-                if total_step >= self.training_start:
+                if local_step == 1000: done = True
+
+            if total_step >= self.training_start:
+                for _ in range(100):
                     s, a, r, ns, d = self.buffer.sample()
                     self.train(s, a, r, ns, d)
 
-                if local_step == 1000: done = True
+
 
             print("episode: {}, total_step: {}, step: {}, episode_reward: {}".format(episode, total_step, local_step, episode_reward))
 
@@ -255,7 +259,7 @@ class TD3:
                     self.saver.save()
 
 if __name__ == '__main__':
-
+    '''
     #env = gym.make("Pendulum-v0")
     env = gym.make("MountainCarContinuous-v0")
 
@@ -279,10 +283,10 @@ if __name__ == '__main__':
     action_dim = action_spec.shape[0]  # 1
     max_action = action_spec.maximum[0]  # 1.0
     min_action = action_spec.minimum[0]
-    '''
+
 
     parameters = {"gamma": 0.99, "tau": 0.995, "learning_rate": 0.001, "policy_delay": 2, "actor_noise": 0.1, "target_noise": 0.2,
-                  "noise_clip": 0.5, "training_start": 1000, "batch_size": 100, 'save': False, 'load': False}
+                  "noise_clip": 0.5, "training_start": 1000, "batch_size": 100, 'save': True, 'load': True}
 
     print("State dim:", state_dim)
     print("Action dim:", action_dim)
@@ -290,8 +294,8 @@ if __name__ == '__main__':
 
 
     td3 = TD3(state_dim, action_dim, max_action, min_action, parameters['save'], parameters['load'])
-    td3.run()
-
+    td3.run_dm()
+    #50만 학습
 
 
 

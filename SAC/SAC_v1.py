@@ -155,7 +155,7 @@ class SAC:
 
         self.buffer = Buffer(self.batch_size)
         self.saver = Saver([self.actor, self.critic1, self.critic2, self.v_network, self.target_v_network], ['actor', 'critic1', 'critic2', 'v_network', 'target_v_network'], self.buffer,
-                           '/SAC_v2')
+                           '/SAC_v1')
 
         self.actor_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.critic1_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
@@ -265,7 +265,7 @@ class SAC:
                                                                                      episode_reward))
 
             if total_step >= 5 * self.batch_size:
-                for i in range(local_step):
+                for i in range(100):
                     print(np.shape(self.buffer.s), np.shape(self.buffer.a), np.shape(self.buffer.r), np.shape(self.buffer.d))
                     print(self.buffer.a)
                     s, a, r, ns, d = self.buffer.sample()
@@ -286,7 +286,7 @@ class SAC:
         height = 480
         width = 640
 
-        #video = np.zeros((1001, height, width, 3), dtype=np.uint8)
+        video = np.zeros((1001, height, width, 3), dtype=np.uint8)
 
         while True:
             episode += 1
@@ -302,12 +302,12 @@ class SAC:
                 total_step += 1
 
                 x = env.physics.render(height=480, width=640, camera_id=0)
-                #video[local_step] = x
+                video[local_step] = x
 
                 action = np.max(self.actor.predict(np.expand_dims(observation, axis=0).astype('float32')), axis=1)
 
                 if self.load == False:
-                    if total_step <= 5 * self.batch_size:
+                    if total_step <= 10 * self.batch_size:
                         action = np.random.uniform(self.min_action, self.max_action)
 
                 next_observation, reward, done = dmstep(env.step(self.max_action*action))
@@ -318,25 +318,25 @@ class SAC:
 
                 observation = next_observation
 
-                #cv2.imshow('result', video[local_step - 1])
-                #cv2.waitKey(1)
+                cv2.imshow('result', video[local_step - 1])
+                cv2.waitKey(1)
                 if local_step == 1000: done = True
 
             print("episode: {}, total_step: {}, step: {}, episode_reward: {}".format(episode, total_step, local_step,
                                                                                      episode_reward))
 
-            if total_step >= 50 * self.batch_size:
-                for i in range(local_step):
+            if total_step >= 10 * self.batch_size:
+                for i in range(100):
                     s, a, r, ns, d = self.buffer.sample()
                     self.train(s, a, r, ns, d)
 
             if self.save == True:
-                if total_step % 10000 == 0:
+                if total_step % 100000 == 0:
                     self.saver.save()
 
 
 if __name__ == '__main__':
-
+    '''
     env = gym.make("Pendulum-v0")#around 5000 steps
     #env = gym.make("MountainCarContinuous-v0")
 
@@ -364,7 +364,7 @@ if __name__ == '__main__':
     action_dim = action_spec.shape[0]  # 1
     max_action = action_spec.maximum[0]  # 1.0
     min_action = action_spec.minimum[0]
-    '''
+
 
 
 
@@ -372,5 +372,5 @@ if __name__ == '__main__':
     print("Action dim:", action_dim)
     print("Max action:", max_action)
 
-    sac = SAC(state_dim, action_dim, max_action, min_action, False, False)
-    sac.run()
+    sac = SAC(state_dim, action_dim, max_action, min_action, True, False)
+    sac.run_dm()

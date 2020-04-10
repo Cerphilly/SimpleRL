@@ -1,244 +1,206 @@
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
+from tensorflow.keras.layers import Input, Dense, Lambda
 
-
+import gym
+import argparse
 import numpy as np
-import random
-import os
 
-from matplotlib import pyplot as plt
-from tqdm import tqdm
+tf.keras.backend.set_floatx('float64')
 
-# Bit flipping environment
-class Env():
-    def __init__(self, size = 8, shaped_reward = False):
-        self.size = size
-        self.shaped_reward = shaped_reward
-        self.state = np.random.randint(2, size = size)
-        self.target = np.random.randint(2, size = size)
-        while np.sum(self.state == self.target) == size:
-            self.target = np.random.randint(2, size = size)
 
-    def step(self, action):
-        self.state[action] = 1 - self.state[action]
-        if self.shaped_reward:
-            return np.copy(self.state), -np.sum(np.square(self.state - self.target))
-        else:
-            if not np.sum(self.state == self.target) == self.size:
-                return np.copy(self.state), -1
-            else:
-                return np.copy(self.state), 0
+parser = argparse.ArgumentParser()
+parser.add_argument('--gamma', type=float, default=0.99)
+parser.add_argument('--update_interval', type=int, default=32)
+parser.add_argument('--actor_lr', type=float, default=0.0003)
+parser.add_argument('--critic_lr', type=float, default=0.0003)
+parser.add_argument('--clip_ratio', type=float, default=0.1)
+parser.add_argument('--lmbda', type=float, default=0.95)
+parser.add_argument('--epochs', type=int, default=10)
 
-    def reset(self, size = None):
-        if size is None:
-            size = self.size
-        self.state = np.random.randint(2, size = size)
-        self.target = np.random.randint(2, size = size)
+args = parser.parse_args()
 
-# Experience replay buffer
-class Buffer():
-    def __init__(self, buffer_size = 50000):
-        self.buffer = []
-        self.buffer_size = buffer_size
 
-    def add(self, experience):
-        self.buffer.append(experience)
-        if len(self.buffer) > self.buffer_size:
-            self.buffer = self.buffer[int(0.0001 * self.buffer_size):]
+class Actor:
+    def __init__(self, state_dim, action_dim, action_bound, std_bound):
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.action_bound = action_bound
+        self.std_bound = std_bound
+        self.model = self.create_model()
+        self.opt = tf.keras.optimizers.Adam(args.actor_lr)
 
-    def sample(self,size):
-        if len(self.buffer) >= size:
-            experience_buffer = self.buffer
-        else:
-            experience_buffer = self.buffer * size
-        return np.copy(np.reshape(np.array(random.sample(experience_buffer,size)),[size,4]))
+    def get_action(self, state):
+        state = np.reshape(state, [1, self.state_dim])
+        mu, std = self.model.predict(state)
+        action = np.random.normal(mu[0], std[0], size=self.action_dim)
+        action = np.clip(action, -self.action_bound, self.action_bound)
+        log_policy = self.log_pdf(mu, std, action)
 
-# Simple 1 layer feed forward neural network
-class Model():
-    def __init__(self, size, name):
-        with tf.variable_scope(name):
-            self.size = size
-            self.inputs = tf.placeholder(shape = [None, self.size * 2], dtype = tf.float32)
-            #init = tf.contrib.layers.variance_scaling_initializer(factor = 1.0, mode = "FAN_AVG", uniform = False)
-            self.hidden = fully_connected_layer(self.inputs, 256, activation = tf.nn.relu, scope = "fc")
-            self.Q_ = fully_connected_layer(self.hidden, self.size, activation = None, scope = "Q", bias = False)
-            self.predict = tf.argmax(self.Q_, axis = -1)
-            self.action = tf.placeholder(shape = None, dtype = tf.int32)
-            self.action_onehot = tf.one_hot(self.action, self.size, dtype = tf.float32)
-            self.Q = tf.reduce_sum(tf.multiply(self.Q_, self.action_onehot), axis = 1)
-            self.Q_next = tf.placeholder(shape=None, dtype=tf.float32)
-            self.loss = tf.reduce_sum(tf.square(self.Q_next - self.Q))
-            self.optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
-            self.train_op = self.optimizer.minimize(self.loss)
-            self.init_op = tf.global_variables_initializer()
+        return log_policy, action
 
-def fully_connected_layer(inputs, dim, activation = None, scope = "fc", reuse = None, init = 'RandomNormal', bias = True):
-    with tf.variable_scope(scope, reuse = reuse):
-        w_ = tf.get_variable("W_", [inputs.shape[-1], dim])
-        outputs = tf.matmul(inputs, w_)
-        if bias:
-            b = tf.get_variable("b_", dim, initializer = tf.zeros_initializer())
-            outputs += b
-        if activation is not None:
-            outputs = activation(outputs)
-        return outputs
+    def log_pdf(self, mu, std, action):
+        std = tf.clip_by_value(std, self.std_bound[0], self.std_bound[1])
+        var = std ** 2
+        log_policy_pdf = -0.5 * (action - mu) ** 2 / \
+            var - 0.5 * tf.math.log(var * 2 * np.pi)
+        return tf.reduce_sum(log_policy_pdf, 1, keepdims=True)
 
-def updateTargetGraph(tfVars,tau):
-    total_vars = len(tfVars)
-    op_holder = []
-    for idx,var in enumerate(tfVars[0:total_vars//2]):
-        op_holder.append(tfVars[idx+total_vars//2].assign((var.value()*(1. - tau)) + (tau * tfVars[idx+total_vars//2].value())))
-    return op_holder
+    def create_model(self):
+        state_input = Input((self.state_dim,))
+        dense_1 = Dense(32, activation='relu')(state_input)
+        dense_2 = Dense(32, activation='relu')(dense_1)
+        out_mu = Dense(self.action_dim, activation='tanh')(dense_2)
+        mu_output = Lambda(lambda x: x * self.action_bound)(out_mu)
+        std_output = Dense(self.action_dim, activation='softplus')(dense_2)
+        return tf.keras.models.Model(state_input, [mu_output, std_output])
 
-def updateTarget(op_holder,sess):
-    for op in op_holder:
-        sess.run(op)
+    def compute_loss(self, log_old_policy, log_new_policy, actions, gaes):
+        ratio = tf.exp(log_new_policy - tf.stop_gradient(log_old_policy))
+        gaes = tf.stop_gradient(gaes)
+        clipped_ratio = tf.clip_by_value(
+            ratio, 1.0-args.clip_ratio, 1.0+args.clip_ratio)
+        surrogate = -tf.minimum(ratio * gaes, clipped_ratio * gaes)
+        return tf.reduce_mean(surrogate)
+
+    def train(self, log_old_policy, states, actions, gaes):
+        with tf.GradientTape() as tape:
+            mu, std = self.model(states, training=True)
+            log_new_policy = self.log_pdf(mu, std, actions)
+            loss = self.compute_loss(
+                log_old_policy, log_new_policy, actions, gaes)
+        grads = tape.gradient(loss, self.model.trainable_variables)
+        self.opt.apply_gradients(zip(grads, self.model.trainable_variables))
+        return loss
+
+
+class Critic:
+    def __init__(self, state_dim):
+        self.state_dim = state_dim
+        self.model = self.create_model()
+        self.opt = tf.keras.optimizers.Adam(args.critic_lr)
+
+    def create_model(self):
+        return tf.keras.Sequential([
+            Input((self.state_dim,)),
+            Dense(32, activation='relu'),
+            Dense(32, activation='relu'),
+            Dense(16, activation='relu'),
+            Dense(1, activation='linear')
+        ])
+
+    def compute_loss(self, v_pred, td_targets):
+        mse = tf.keras.losses.MeanSquaredError()
+        return mse(td_targets, v_pred)
+
+    def train(self, states, td_targets):
+        with tf.GradientTape() as tape:
+            v_pred = self.model(states, training=True)
+            assert v_pred.shape == td_targets.shape
+            loss = self.compute_loss(v_pred, tf.stop_gradient(td_targets))
+        grads = tape.gradient(loss, self.model.trainable_variables)
+        self.opt.apply_gradients(zip(grads, self.model.trainable_variables))
+        return loss
+
+
+class Agent:
+    def __init__(self, env):
+        self.env = env
+        self.state_dim = self.env.observation_space.shape[0]
+        self.action_dim = self.env.action_space.shape[0]
+        self.action_bound = self.env.action_space.high[0]
+        self.std_bound = [1e-2, 1.0]
+
+        self.actor_opt = tf.keras.optimizers.Adam(args.actor_lr)
+        self.critic_opt = tf.keras.optimizers.Adam(args.critic_lr)
+        self.actor = Actor(self.state_dim, self.action_dim,
+                           self.action_bound, self.std_bound)
+        self.critic = Critic(self.state_dim)
+
+    def gae_target(self, rewards, v_values, next_v_value, done):
+        n_step_targets = np.zeros_like(rewards)
+        gae = np.zeros_like(rewards)
+        gae_cumulative = 0
+        forward_val = 0
+
+        if not done:
+            forward_val = next_v_value
+
+        for k in reversed(range(0, len(rewards))):
+            delta = rewards[k] + args.gamma * forward_val - v_values[k]
+            gae_cumulative = args.gamma * args.lmbda * gae_cumulative + delta
+            gae[k] = gae_cumulative
+            forward_val = v_values[k]
+            n_step_targets[k] = gae[k] + v_values[k]
+        return gae, n_step_targets
+
+    def list_to_batch(self, list):
+        batch = list[0]
+        for elem in list[1:]:
+            batch = np.append(batch, elem, axis=0)
+        return batch
+
+    def train(self, max_episodes=1000):
+        for ep in range(max_episodes):
+            state_batch = []
+            action_batch = []
+            reward_batch = []
+            old_policy_batch = []
+
+            episode_reward, done = 0, False
+
+            state = self.env.reset()
+
+            while not done:
+                self.env.render()
+                log_old_policy, action = self.actor.get_action(state)
+
+                next_state, reward, done, _ = self.env.step(action)
+
+                state = np.reshape(state, [1, self.state_dim])
+                action = np.reshape(action, [1, 1])
+                next_state = np.reshape(next_state, [1, self.state_dim])
+                reward = np.reshape(reward, [1, 1])
+                log_old_policy = np.reshape(log_old_policy, [1, 1])
+
+                state_batch.append(state)
+                action_batch.append(action)
+                reward_batch.append((reward+8)/8)
+                old_policy_batch.append(log_old_policy)
+
+                if len(state_batch) >= args.update_interval or done:
+                    states = self.list_to_batch(state_batch)
+                    actions = self.list_to_batch(action_batch)
+                    rewards = self.list_to_batch(reward_batch)
+                    old_policys = self.list_to_batch(old_policy_batch)
+
+                    v_values = self.critic.model.predict(states)
+                    next_v_value = self.critic.model.predict(next_state)
+
+                    gaes, td_targets = self.gae_target(
+                        rewards, v_values, next_v_value, done)
+
+                    for epoch in range(args.epochs):
+                        actor_loss = self.actor.train(
+                            old_policys, states, actions, gaes)
+                        critic_loss = self.critic.train(states, td_targets)
+
+                    state_batch = []
+                    action_batch = []
+                    reward_batch = []
+                    old_policy_batch = []
+
+                episode_reward += reward[0][0]
+                state = next_state[0]
+
+            print('EP{} EpisodeReward={}'.format(ep, episode_reward))
+
 
 def main():
-    HER = True
-    shaped_reward = False
-    size = 15
-    num_epochs = 5
-    num_cycles = 50
-    num_episodes = 16
-    optimisation_steps = 40
-    K = 4
-    buffer_size = 1e6
-    tau = 0.95
-    gamma = 0.98
-    epsilon = 0.0
-    batch_size = 128
-    add_final = False
+    env_name = 'Pendulum-v0'
+    env = gym.make(env_name)
+    agent = Agent(env)
+    agent.train()
 
-    total_rewards = []
-    total_loss = []
-    success_rate = []
-    succeed = 0
-
-    save_model = True
-    model_dir = "./train"
-    train = True
-
-    if not os.path.isdir(model_dir):
-        os.mkdir(model_dir)
-
-    modelNetwork = Model(size = size, name = "model")
-    targetNetwork = Model(size = size, name = "target")
-    trainables = tf.trainable_variables()
-    updateOps = updateTargetGraph(trainables, tau)
-    env = Env(size = size, shaped_reward = shaped_reward)
-    buff = Buffer(int(buffer_size))
-
-    if train:
-        plt.ion()
-        fig = plt.figure()
-        ax = fig.add_subplot(211)
-        plt.title("Success Rate")
-        ax.set_ylim([0,1.])
-        ax2 = fig.add_subplot(212)
-        plt.title("Q Loss")
-        line = ax.plot(np.zeros(1), np.zeros(1), 'b-')[0]
-        line2 = ax2.plot(np.zeros(1), np.zeros(1), 'b-')[0]
-        fig.canvas.draw()
-        with tf.Session() as sess:
-            sess.run(modelNetwork.init_op)
-            sess.run(targetNetwork.init_op)
-            for i in tqdm(range(num_epochs), total = num_epochs):
-                for j in range(num_cycles):
-                    total_reward = 0.0
-                    successes = []
-                    for n in range(num_episodes):
-                        env.reset()
-                        episode_experience = []
-                        episode_succeeded = False
-                        for t in range(size):
-                            s = np.copy(env.state)
-                            g = np.copy(env.target)
-                            inputs = np.concatenate([s,g],axis = -1)
-                            action = sess.run(modelNetwork.predict,feed_dict = {modelNetwork.inputs:[inputs]})
-                            action = action[0]
-                            if np.random.rand(1) < epsilon:
-                                action = np.random.randint(size)
-                            s_next, reward = env.step(action)
-                            episode_experience.append((s,action,reward,s_next,g))
-                            total_reward += reward
-                            if reward == 0:
-                                if episode_succeeded:
-                                    continue
-                                else:
-                                    episode_succeeded = True
-                                    succeed += 1
-                        successes.append(episode_succeeded)
-                        for t in range(size):
-                            s, a, r, s_n, g = episode_experience[t]
-                            inputs = np.concatenate([s,g],axis = -1)
-                            new_inputs = np.concatenate([s_n,g],axis = -1)
-                            buff.add(np.reshape(np.array([inputs,a,r,new_inputs]),[1,4]))
-                            if HER:
-                                for k in range(K):
-                                    future = np.random.randint(t, size)
-                                    _, _, _, g_n, _ = episode_experience[future]
-                                    inputs = np.concatenate([s,g_n],axis = -1)
-                                    new_inputs = np.concatenate([s_n, g_n],axis = -1)
-                                    final = np.sum(np.array(s_n) == np.array(g_n)) == size
-                                    if shaped_reward:
-                                        r_n = 0 if final else -np.sum(np.square(np.array(s_n) == np.array(g_n)))
-                                    else:
-                                        r_n = 0 if final else -1
-                                    buff.add(np.reshape(np.array([inputs,a,r_n,new_inputs]),[1,4]))
-
-                    mean_loss = []
-                    for k in range(optimisation_steps):
-                        experience = buff.sample(batch_size)
-                        s, a, r, s_next = [np.squeeze(elem, axis = 1) for elem in np.split(experience, 4, 1)]
-                        s = np.array([ss for ss in s])
-                        s = np.reshape(s, (batch_size, size * 2))
-                        s_next = np.array([ss for ss in s_next])
-                        s_next = np.reshape(s_next, (batch_size, size * 2))
-                        Q1 = sess.run(modelNetwork.Q_, feed_dict = {modelNetwork.inputs: s_next})
-                        Q2 = sess.run(targetNetwork.Q_, feed_dict = {targetNetwork.inputs: s_next})
-                        doubleQ = Q2[:, np.argmax(Q1, axis = -1)]
-                        Q_target = np.clip(r + gamma * doubleQ,  -1. / (1 - gamma), 0)
-                        _, loss = sess.run([modelNetwork.train_op, modelNetwork.loss], feed_dict = {modelNetwork.inputs: s, modelNetwork.Q_next: Q_target, modelNetwork.action: a})
-                        mean_loss.append(loss)
-
-                    success_rate.append(np.mean(successes))
-                    total_loss.append(np.mean(mean_loss))
-                    updateTarget(updateOps,sess)
-                    total_rewards.append(total_reward)
-                    ax.relim()
-                    ax.autoscale_view()
-                    ax2.relim()
-                    ax2.autoscale_view()
-                    line.set_data(np.arange(len(success_rate)), np.array(success_rate))
-                    # line.set_data(np.arange(len(total_rewards)), np.array(total_rewards))
-                    line2.set_data(np.arange(len(total_loss)), np.array(total_loss))
-                    fig.canvas.draw()
-                    fig.canvas.flush_events()
-                    plt.pause(1e-7)
-            if save_model:
-                saver = tf.train.Saver()
-                saver.save(sess, os.path.join(model_dir, "model.ckpt"))
-        print("Number of episodes succeeded: {}".format(succeed))
-    with tf.Session() as sess:
-        saver = tf.train.Saver()
-        saver.restore(sess, os.path.join(model_dir, "model.ckpt"))
-        while True:
-            env.reset()
-            print("Initial State:\t{}".format(env.state))
-            print("Goal:\t{}".format(env.target))
-            for t in range(size):
-                s = np.copy(env.state)
-                g = np.copy(env.target)
-                inputs = np.concatenate([s,g],axis = -1)
-                action = sess.run(targetNetwork.predict,feed_dict = {targetNetwork.inputs:[inputs]})
-                action = action[0]
-                s_next, reward = env.step(action)
-                print("State at step {}: {}".format(t, env.state))
-                if reward == 0:
-                    print("Success!")
-                    break
 
 if __name__ == "__main__":
-    tf.disable_v2_behavior()
-
     main()

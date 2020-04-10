@@ -137,7 +137,7 @@ class SAC:
         self.target_critic2 = Q_network(self.state_dim, [256, 256], self.action_dim)
 
         self.buffer = Buffer(self.batch_size)
-        self.saver = Saver([self.actor, self.critic1, self.target_critic1, self.critic2, self.target_critic2], ['actor', 'critic1', 'target_critic1', 'critic2', 'target_critic2'], self.buffer, 'SAC_v2')
+        self.saver = Saver([self.actor, self.critic1, self.target_critic1, self.critic2, self.target_critic2], ['actor', 'critic1', 'target_critic1', 'critic2', 'target_critic2'], self.buffer, 'SAC')
 
         self.actor_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.critic1_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
