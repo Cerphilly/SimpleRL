@@ -104,7 +104,7 @@ class Policy_network(tf.keras.Model):
         return mu, sigma
 
 class SAC:
-    def __init__(self, state_dim, action_dim, max_action, min_action, save, load, batch_size=100, alpha=0.2, tau=0.995, learning_rate=0.0003, gamma=0.99, auto_alpha=False, reward_scale=1):
+    def __init__(self, state_dim, action_dim, max_action, min_action, save, load, batch_size=100, alpha=0.1, tau=0.995, learning_rate=0.0003, gamma=0.99, auto_alpha=False, reward_scale=1):
 
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -137,7 +137,7 @@ class SAC:
         self.target_critic2 = Q_network(self.state_dim, [256, 256], self.action_dim)
 
         self.buffer = Buffer(self.batch_size)
-        self.saver = Saver([self.actor, self.critic1, self.target_critic1, self.critic2, self.target_critic2], ['actor', 'critic1', 'target_critic1', 'critic2', 'target_critic2'], self.buffer, 'SAC')
+        self.saver = Saver([self.actor, self.critic1, self.target_critic1, self.critic2, self.target_critic2], ['actor', 'critic1', 'target_critic1', 'critic2', 'target_critic2'], self.buffer, '/home/cocel/PycharmProjects/SimpleRL/TD3/TD3_threepole')
 
         self.actor_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.critic1_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
@@ -328,7 +328,9 @@ class SAC:
 if __name__ == '__main__':
 
     #env = gym.make("Pendulum-v0")#around 5000 steps
-    env = gym.make("MountainCarContinuous-v0")
+    #env = gym.make("MountainCarContinuous-v0")
+
+    env = gym.make("InvertedTriplePendulumSwing-v2")
 
     # env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
@@ -353,7 +355,7 @@ if __name__ == '__main__':
     min_action = action_spec.minimum[0]
     '''
 
-    parameters = {'tau': 0.995, "learning_rate": 0.01, 'gamma': 0.99, 'alpha':0.2, 'batch_size': 100, 'auto_alpha': False, 'reward_scale': 1, 'save': False, 'load': False}
+    parameters = {'tau': 0.995, "learning_rate": 0.01, 'gamma': 0.99, 'alpha':0.1, 'batch_size': 100, 'auto_alpha': False, 'reward_scale': 1, 'save': False, 'load': False}
 
 
     print("State dim:", state_dim)
@@ -362,3 +364,4 @@ if __name__ == '__main__':
 
     sac = SAC(state_dim, action_dim, max_action, min_action, False, False)
     sac.run()
+    #TD3 1200000 step to SAC_v2

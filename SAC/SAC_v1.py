@@ -6,6 +6,7 @@ import numpy as np
 import cv2
 
 import gym
+import gym.spaces
 import dm_control2gym
 from dm_control import suite
 
@@ -266,8 +267,6 @@ class SAC:
 
             if total_step >= 5 * self.batch_size:
                 for i in range(100):
-                    print(np.shape(self.buffer.s), np.shape(self.buffer.a), np.shape(self.buffer.r), np.shape(self.buffer.d))
-                    print(self.buffer.a)
                     s, a, r, ns, d = self.buffer.sample()
                     # s, a, r, ns, d = self.buffer.ERE_sample(i, update_len)
                     self.train(s, a, r, ns, d)
@@ -336,13 +335,14 @@ class SAC:
 
 
 if __name__ == '__main__':
-    '''
-    env = gym.make("Pendulum-v0")#around 5000 steps
+
+    #env = gym.make("Pendulum-v0")#around 5000 steps
     #env = gym.make("MountainCarContinuous-v0")
 
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps.
+    env = gym.make("InvertedTriplePendulumSwing-v2")
     #env = gym.make("InvertedPendulum-v2")
 
     state_dim = env.observation_space.shape[0]
@@ -366,11 +366,11 @@ if __name__ == '__main__':
     min_action = action_spec.minimum[0]
 
 
-
+    '''
 
     print("State dim:", state_dim)
     print("Action dim:", action_dim)
     print("Max action:", max_action)
 
-    sac = SAC(state_dim, action_dim, max_action, min_action, True, False)
-    sac.run_dm()
+    sac = SAC(state_dim, action_dim, max_action, min_action, False, False)
+    sac.run()
