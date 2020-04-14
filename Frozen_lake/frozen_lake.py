@@ -7,6 +7,10 @@ class SARSA:
         self.state_dim = env.observation_space.n
         self.action_dim = env.action_space.n
 
+class MC:
+    def __init__(self, env):
+        self.state_dim = env.observation_space.n
+        self.action_dim = env.action_space.n
 
 class Dyna_Q:
     def __init__(self, env):

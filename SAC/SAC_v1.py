@@ -156,7 +156,7 @@ class SAC:
 
         self.buffer = Buffer(self.batch_size)
         self.saver = Saver([self.actor, self.critic1, self.critic2, self.v_network, self.target_v_network], ['actor', 'critic1', 'critic2', 'v_network', 'target_v_network'], self.buffer,
-                           '/SAC_v1')
+                           '/home/cocel/PycharmProjects/SimpleRL/SAC/SAC_v1')
 
         self.actor_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.critic1_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
@@ -266,13 +266,13 @@ class SAC:
                                                                                      episode_reward))
 
             if total_step >= 5 * self.batch_size:
-                for i in range(100):
+                for i in range(local_step):
                     s, a, r, ns, d = self.buffer.sample()
                     # s, a, r, ns, d = self.buffer.ERE_sample(i, update_len)
                     self.train(s, a, r, ns, d)
 
             if self.save == True:
-                if total_step % 1000 == 0:
+                if episode % 10 == 0:
                     self.saver.save()
 
     def run_dm(self):
@@ -372,5 +372,7 @@ if __name__ == '__main__':
     print("Action dim:", action_dim)
     print("Max action:", max_action)
 
-    sac = SAC(state_dim, action_dim, max_action, min_action, False, False)
+    sac = SAC(state_dim, action_dim, max_action, min_action, True, True)
     sac.run()
+
+    #146151 step in SAC_V1

@@ -1,4 +1,4 @@
-#Playing Atari with Deep Reinforcement Learning, Mnih et al, 2013. Algorithm: DQN.
+#Deep Reinforcement Learning with Double Q-learning, Hasselt et al 2015. Algorithm: Double DQN
 
 import tensorflow as tf
 import gym
@@ -35,7 +35,7 @@ class Network(tf.keras.Model):
         return np.argmax(q_value, axis=1)
 
 
-class DQN:
+class DDQN:
     def __init__(self, state_dim, action_dim, save, load, batch_size=100, gamma=0.99, learning_rate=0.001, epsilon=0.2, training_start=200, copy_iter=5):
 
         self.state_dim = state_dim
@@ -61,7 +61,6 @@ class DQN:
 
         self.copy_weight()
 
-
     def copy_weight(self):
         variable1 = self.network.trainable_variables
         variable2 = self.target_network.trainable_variables
@@ -74,17 +73,18 @@ class DQN:
         else:
             return self.network.best_action(state)[0]
 
-    def train(self, s, a, r, ns, d):
-        #print(s.shape, a.shape, r.shape, ns.shape, d.shape)
 
-        target_q = (tf.reduce_max(self.target_network(ns), axis=1, keepdims=True))
-        target_value = (r + self.gamma * (1 - d)*target_q)
+    def train(self, s, a, r, ns, d):
+        q_value = tf.expand_dims(tf.argmax(self.network(ns), axis=1, output_type=tf.dtypes.int32), axis=1)
+        q_value_one = tf.squeeze(tf.one_hot(q_value, depth=self.action_dim), axis=1)
+
+        target_value = r + self.gamma*(1-d)*tf.reduce_sum(self.target_network(ns)*q_value_one, axis=1, keepdims=True)
         target_value = tf.stop_gradient(target_value)
 
         with tf.GradientTape() as tape:
-            #(100, 1, 2) to (100, 2) using tf.squeeze
-            selected_values = tf.math.reduce_sum(self.network(s)*tf.squeeze(tf.one_hot(tf.dtypes.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
-            loss = 0.5*tf.math.reduce_mean(tf.square(target_value - selected_values))
+            # (100, 1, 2) to (100, 2) using tf.squeeze
+            selected_values = tf.math.reduce_sum(self.network(s) * tf.squeeze(tf.one_hot(tf.dtypes.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
+            loss = 0.5 * tf.math.reduce_mean(tf.square(target_value - selected_values))
 
         variables = self.network.trainable_variables
         gradients = tape.gradient(loss, variables)
@@ -93,7 +93,6 @@ class DQN:
         return loss
 
     def run(self):
-
         if self.load == True:
             self.saver.load()
 
@@ -136,46 +135,18 @@ class DQN:
 
 
 if __name__ == '__main__':
-
     env = gym.make("CartPole-v0")
-    #env = gym.make("MountainCar-v0")
-    #env = gym.make("Acrobot-v1")
-    #env = gym.make("LunarLander-v2")
+    # env = gym.make("MountainCar-v0")
+    # env = gym.make("Acrobot-v1")
+    # env = gym.make("LunarLander-v2")
 
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
 
-    print("DQN training of", env.unwrapped.spec.id)
+    print("Double DQN training of", env.unwrapped.spec.id)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)
 
-    parameters = {"gamma": 0.99, "epsilon": 0.2, "learning_rate": 0.001, 'training_start': 200, 'batch_size': 100, 'copy_iter':1, 'save': False, 'load': False}
-
-    dqn = DQN(state_dim, action_dim, parameters['save'], parameters['load'])
-
-    dqn.run()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    ddqn = DDQN(state_dim, action_dim, False, False)
+    ddqn.run()
 

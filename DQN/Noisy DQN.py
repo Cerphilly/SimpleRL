@@ -1,5 +1,3 @@
-#Playing Atari with Deep Reinforcement Learning, Mnih et al, 2013. Algorithm: DQN.
-
 import tensorflow as tf
 import gym
 import numpy as np
@@ -35,7 +33,7 @@ class Network(tf.keras.Model):
         return np.argmax(q_value, axis=1)
 
 
-class DQN:
+class Noisy_DQN:
     def __init__(self, state_dim, action_dim, save, load, batch_size=100, gamma=0.99, learning_rate=0.001, epsilon=0.2, training_start=200, copy_iter=5):
 
         self.state_dim = state_dim
@@ -75,25 +73,9 @@ class DQN:
             return self.network.best_action(state)[0]
 
     def train(self, s, a, r, ns, d):
-        #print(s.shape, a.shape, r.shape, ns.shape, d.shape)
-
-        target_q = (tf.reduce_max(self.target_network(ns), axis=1, keepdims=True))
-        target_value = (r + self.gamma * (1 - d)*target_q)
-        target_value = tf.stop_gradient(target_value)
-
-        with tf.GradientTape() as tape:
-            #(100, 1, 2) to (100, 2) using tf.squeeze
-            selected_values = tf.math.reduce_sum(self.network(s)*tf.squeeze(tf.one_hot(tf.dtypes.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
-            loss = 0.5*tf.math.reduce_mean(tf.square(target_value - selected_values))
-
-        variables = self.network.trainable_variables
-        gradients = tape.gradient(loss, variables)
-        self.optimizer.apply_gradients(zip(gradients, variables))
-
-        return loss
+        pass
 
     def run(self):
-
         if self.load == True:
             self.saver.load()
 
@@ -145,37 +127,12 @@ if __name__ == '__main__':
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
 
-    print("DQN training of", env.unwrapped.spec.id)
+    print("Noisy DQN training of", env.unwrapped.spec.id)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)
 
     parameters = {"gamma": 0.99, "epsilon": 0.2, "learning_rate": 0.001, 'training_start': 200, 'batch_size': 100, 'copy_iter':1, 'save': False, 'load': False}
 
-    dqn = DQN(state_dim, action_dim, parameters['save'], parameters['load'])
+    noisy_dqn = Noisy_DQN(state_dim, action_dim, parameters['save'], parameters['load'])
 
-    dqn.run()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    noisy_dqn.run()
