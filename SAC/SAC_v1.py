@@ -1,4 +1,5 @@
 #Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor, Haarnoja et al, 2018.
+#https://gist.github.com/cc8bb4ed3045bd53a4cfa385ffcd575e
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -6,7 +7,6 @@ import numpy as np
 import cv2
 
 import gym
-import gym.spaces
 import dm_control2gym
 from dm_control import suite
 
@@ -82,6 +82,7 @@ class Policy_network(tf.keras.Model):
         z = self.input_layer(input)
         for layer in self.hidden_layers:
             z = tf.nn.relu(layer(z))
+
         z = self.output_layer(z)
 
         mu = z[:, :self.action_dim]
@@ -156,12 +157,14 @@ class SAC:
 
         self.buffer = Buffer(self.batch_size)
         self.saver = Saver([self.actor, self.critic1, self.critic2, self.v_network, self.target_v_network], ['actor', 'critic1', 'critic2', 'v_network', 'target_v_network'], self.buffer,
-                           '/home/cocel/PycharmProjects/SimpleRL/SAC/SAC_v1')
+                           '/home/cocel/PycharmProjects/SimpleRL/SAC/SAC_v1_3pole')
+
 
         self.actor_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.critic1_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.critic2_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.v_network_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
+
 
         self.copy_weight(self.v_network, self.target_v_network)
 
@@ -251,10 +254,11 @@ class SAC:
                 total_step += 1
                 env.render()
 
-                action = np.max(self.actor.predict(np.expand_dims(observation, axis=0).astype('float32')), axis=1)
+                action = np.max(self.actor(np.expand_dims(observation, axis=0)).numpy(), axis=1)
 
-                if total_step <= 5 * self.batch_size:
-                    action = env.action_space.sample()
+                if self.load == False:
+                    if total_step <= 5 * self.batch_size:
+                        action = env.action_space.sample()
 
                 next_observation, reward, done, _ = env.step(self.max_action * action)
                 episode_reward += reward
@@ -264,16 +268,24 @@ class SAC:
 
             print("episode: {}, total_step: {}, step: {}, episode_reward: {}".format(episode, total_step, local_step,
                                                                                      episode_reward))
+            if self.load == False:
+                if total_step >= 5 * self.batch_size:
+                    for i in range(local_step):
+                        s, a, r, ns, d = self.buffer.sample()
+                        # s, a, r, ns, d = self.buffer.ERE_sample(i, update_len)
+                        self.train(s, a, r, ns, d)
 
-            if total_step >= 5 * self.batch_size:
-                for i in range(local_step):
-                    s, a, r, ns, d = self.buffer.sample()
-                    # s, a, r, ns, d = self.buffer.ERE_sample(i, update_len)
-                    self.train(s, a, r, ns, d)
+            elif self.load == True:
+                if total_step >= self.buffer.max_size:
+                    print("Training...")
+                    for i in range(local_step):
+                        s, a, r, ns, d = self.buffer.sample()
+                        self.train(s, a, r, ns, d)
 
-            if self.save == True:
-                if episode % 10 == 0:
-                    self.saver.save()
+                    if self.save == True:
+                        if episode % 10 == 0:
+                            self.saver.save()
+
 
     def run_dm(self):
         if self.load == True:
@@ -335,14 +347,15 @@ class SAC:
 
 
 if __name__ == '__main__':
-
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    tf.config.experimental.set_memory_growth(gpus[0], True)
     #env = gym.make("Pendulum-v0")#around 5000 steps
     #env = gym.make("MountainCarContinuous-v0")
 
+    env = gym.make("InvertedTriplePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps.
-    env = gym.make("InvertedTriplePendulumSwing-v2")
     #env = gym.make("InvertedPendulum-v2")
 
     state_dim = env.observation_space.shape[0]

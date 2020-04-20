@@ -259,7 +259,7 @@ class TD3:
                     self.saver.save()
 
 if __name__ == '__main__':
-
+    '''
     #env = gym.make("Pendulum-v0")
     #env = gym.make("MountainCarContinuous-v0")
     env = gym.make("InvertedTriplePendulumSwing-v2")

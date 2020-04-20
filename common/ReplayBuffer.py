@@ -1,7 +1,7 @@
 import numpy as np
 
 class Buffer:
-    def __init__(self, batch_size = 100, max_size=1e6):
+    def __init__(self, batch_size = 100, max_size=1e6):#1000000: save the last 1000 episode at most
         self.max_size = max_size
         self.batch_size = batch_size
         self.s = []
