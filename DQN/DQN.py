@@ -136,7 +136,8 @@ class DQN:
 
 
 if __name__ == '__main__':
-
+    my_devices = tf.config.experimental.list_physical_devices(device_type='CPU')
+    tf.config.experimental.set_visible_devices(devices=my_devices, device_type='CPU')
     env = gym.make("CartPole-v0")
     #env = gym.make("MountainCar-v0")
     #env = gym.make("Acrobot-v1")

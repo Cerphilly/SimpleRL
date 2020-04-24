@@ -10,4 +10,12 @@ DDQN, Dueling DQN, etc
 
 fuck
 fuuuuck
+
+
+modular RL
+->let it make new algorithm by combining network, train and run
+->put save, load inside the network model
+->allow gpu and cpu setting
+->tensorboard.
+
 '''

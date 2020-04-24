@@ -283,7 +283,7 @@ class SAC:
                         self.train(s, a, r, ns, d)
 
                     if self.save == True:
-                        if episode % 10 == 0:
+                        if episode % 100 == 0:
                             self.saver.save()
 
 

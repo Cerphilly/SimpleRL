@@ -161,7 +161,7 @@ class SAC:
             update = self.tau * v2 + (1 - self.tau) * v1
             v2.assign(update)
 
-
+    @tf.function
     def train(self, s, a, r, ns, d):
         #s, a, r, ns, d = self.buffer.ERE_sample(i, update_len)
 
@@ -191,6 +191,8 @@ class SAC:
 
             actor_loss = tf.reduce_mean(self.alpha * self.actor.log_pi(s) - min_aq_rep)
 
+
+
             if self.auto_alpha == True:
                 alpha_loss = -tf.reduce_mean(self.log_alpha*tf.stop_gradient(self.actor.log_pi(s) + self.target_alpha))
 
@@ -217,7 +219,6 @@ class SAC:
     def run(self):
         if self.load == True:
             self.saver.load()
-
         episode = 0
         total_step = 0
 
@@ -254,12 +255,23 @@ class SAC:
                 print("episode: {}, total_step: {}, step: {}, episode_reward: {}".format(episode, total_step, local_step,
                                                                                      episode_reward))
 
+                '''
+                with summary_writer.as_default():
+                    tf.summary.scalar("Episode_reward", episode_reward, step=episode)
+                    print("save done")
+                '''
 
             if total_step >= 5*self.batch_size:
                 for i in range(local_step):
+                    #tf.summary.trace_on(graph=True, profiler=True)
+
                     s, a, r, ns, d = self.buffer.sample()
                     self.train(s, a, r, ns, d)
-
+                    '''
+                    with summary_writer.as_default():
+                        tf.summary.trace_export(name="train_trace", step=0, profiler_outdir='summaries')
+                    '''
+            self.actor.save_weights("actor", overwrite=True, save_format='h5')
             if self.save == True:
                 self.saver.save()
 
@@ -326,11 +338,13 @@ class SAC:
 
 
 if __name__ == '__main__':
-
-    #env = gym.make("Pendulum-v0")#around 5000 steps
+    my_devices = tf.config.experimental.list_physical_devices(device_type='CPU')
+    tf.config.experimental.set_visible_devices(devices=my_devices, device_type='CPU')
+    summary_writer = tf.summary.create_file_writer('summaries')
+    env = gym.make("Pendulum-v0")#around 5000 steps
     #env = gym.make("MountainCarContinuous-v0")
 
-    env = gym.make("InvertedTriplePendulumSwing-v2")
+    #env = gym.make("InvertedTriplePendulumSwing-v2")
 
     # env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
