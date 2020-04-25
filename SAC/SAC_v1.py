@@ -1,5 +1,6 @@
 #Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor, Haarnoja et al, 2018.
-#https://gist.github.com/cc8bb4ed3045bd53a4cfa385ffcd575e
+#https://gist.github.com/cc8bb4ed3045bd53a4cfa385ffcd575e backup Eh goTdma
+
 import tensorflow as tf
 import tensorflow_probability as tfp
 
