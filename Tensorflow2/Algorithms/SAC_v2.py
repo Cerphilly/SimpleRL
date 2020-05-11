@@ -21,6 +21,7 @@ class SAC_v2:
         self.target_critic2 = target_critic2
 
         self.buffer = TFBuffer(buffer_size)
+        self.saver = TFSaver('SAC_v2', 'test')
 
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.critic1_optimizer = tf.keras.optimizers.Adam(learning_rate)
@@ -44,8 +45,8 @@ class SAC_v2:
         if auto_alpha == False:
             self.alpha = alpha
         else:
-            self.log_alpha = tf.Variable(0., dtype=tf.float32)
-            self.alpha = tf.Variable(1., dtype=tf.float32)
+            #self.log_alpha = tf.Variable(0., dtype=tf.float32)
+            self.alpha = tf.Variable(0.2, dtype=tf.float32)
             self.target_alpha = -action_dim
             self.alpha_optimizer = tf.keras.optimizers.Adam(learning_rate)
 
@@ -99,7 +100,7 @@ class SAC_v2:
                 actor_loss = tf.reduce_mean(self.alpha * self.actor.log_pi(s) - min_aq_rep)
 
                 if self.auto_alpha == True:
-                    alpha_loss = -tf.reduce_mean(self.log_alpha*(tf.stop_gradient(self.actor.log_pi(s) + self.target_alpha)))
+                    alpha_loss = -tf.reduce_mean(self.alpha*(tf.stop_gradient(self.actor.log_pi(s) + self.target_alpha)))
 
 
             critic1_gradients = tape.gradient(critic1_loss, self.critic1.trainable_variables)
@@ -111,9 +112,9 @@ class SAC_v2:
             self.actor_optimizer.apply_gradients(zip(actor_gradients, self.actor.trainable_variables))
 
             if self.auto_alpha == True:
-                alpha_grad = tape.gradient(alpha_loss, [self.log_alpha])
-                self.alpha_optimizer.apply_gradients(zip(alpha_grad, [self.log_alpha]))
-                self.alpha.assign(tf.exp(self.log_alpha))
+                alpha_grad = tape.gradient(alpha_loss, [self.alpha])
+                self.alpha_optimizer.apply_gradients(zip(alpha_grad, [self.alpha]))
+                #self.alpha.assign(tf.exp(self.log_alpha))
 
             soft_update(self.critic1, self.target_critic1, self.tau)
             soft_update(self.critic2, self.target_critic2, self.tau)
@@ -122,5 +123,5 @@ class SAC_v2:
             self.critic1_loss += critic1_loss.numpy()
             self.critic2_loss += critic2_loss.numpy()
 
-        return [self.actor_loss, self.critic1_loss, self.critic2_loss]
+        return [self.actor_loss, self.critic1_loss, self.critic2_loss, self.alpha]
 

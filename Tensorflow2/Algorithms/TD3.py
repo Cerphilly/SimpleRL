@@ -20,6 +20,7 @@ class TD3:
         self.target_critic2 = target_critic2
 
         self.buffer = TFBuffer(buffer_size)
+        self.saver = TFSaver('TD3', 'test')
 
         self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
         self.critic1_optimizer = tf.keras.optimizers.Adam(critic_lr)

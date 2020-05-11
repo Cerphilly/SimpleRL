@@ -20,6 +20,7 @@ class SAC_v1:
         self.target_v_network = target_v_network
 
         self.buffer = TFBuffer(buffer_size)
+        self.saver = TFSaver('SAC_v1', 'triple')
 
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.critic1_optimizer = tf.keras.optimizers.Adam(learning_rate)
@@ -53,6 +54,8 @@ class SAC_v1:
             self.target_v_network = V_network(self.state_dim)
 
         copy_weight(self.v_network, self.target_v_network)
+
+        self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'V_network': self.v_network, 'Target_V_network': self.target_v_network}
 
     def get_action(self, state):
         state = np.array(state)
