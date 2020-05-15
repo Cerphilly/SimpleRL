@@ -4,14 +4,16 @@ import os
 import datetime
 
 class TFSaver:
-    def __init__(self, algorithm_name, save_name='test'):
+    def __init__(self, algorithm_name, save_name='test', log=False):
         #example: Algorithm_name_TF2_save_name
         self.path = '/home/cocel/PycharmProjects/SimpleRL/saved_models'
+
         self.save_name = save_name
         self.algorithm_name = algorithm_name
 
         self.make_path()
-        self.summary_writer = tf.summary.create_file_writer(os.path.join(self.path, '{}_{}'.format(self.algorithm_name, self.save_name)))
+        if log == True:
+            self.summary_writer = tf.summary.create_file_writer(os.path.join(self.path, '{}_{}'.format(self.algorithm_name, self.save_name)))
 
 
     def make_path(self):

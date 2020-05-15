@@ -20,16 +20,15 @@ def main(cpu_only = False, force_gpu = True):
         gpu = tf.config.experimental.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(gpu[0], True)
 
-    #env = gym.make("Pendulum-v0")
+    env = gym.make("Pendulum-v0")
     #env = gym.make("MountainCarContinuous-v0")
 
-    env = gym.make("InvertedTriplePendulumSwing-v2")
+    #env = gym.make("InvertedTriplePendulumSwing-v2")
     #env = gym.make("InvertedTriplePendulum-v2")
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps.
     #env = gym.make("InvertedPendulum-v2")
-
 
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
@@ -53,10 +52,10 @@ def main(cpu_only = False, force_gpu = True):
 
     #ddpg = DDPG(state_dim, action_dim, max_action, min_action, False, False)
     #td3 = TD3(state_dim, action_dim, max_action, min_action, False, False)
-    sac_v1 = SAC_v1(state_dim, action_dim, max_action, min_action, False, False)
+    sac_v1 = SAC_v1(state_dim, action_dim, max_action, min_action)
     #sac_v2 = SAC_v2(state_dim, action_dim, max_action, min_action, False, False, auto_alpha=True)
 
-    trainer = Offline_Gym_trainer(env=env, algorithm=sac_v1, render=False, save=True, load=False, log=True, save_period=100)
+    trainer = Offline_Gym_trainer(env=env, algorithm=sac_v1, render=True, save=True, load=False, log=False, save_period=100)
     trainer.run()
 
 

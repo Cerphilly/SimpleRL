@@ -58,10 +58,12 @@ class Online_Gym_trainer:
 
 
 class Offline_Gym_trainer:
-    def __init__(self, env, algorithm, render=True, save=False, load=False, log=False, save_period=10, max_episode=1e6):
+    def __init__(self, env, algorithm, render, save, load, log, save_period, max_episode=1e6):
 
         self.env = env
         self.algorithm = algorithm
+        self.saver = TFSaver('SAC_v1', 'example', log)
+
         self.render = render
         self.save = save
         self.load = load
@@ -76,10 +78,12 @@ class Offline_Gym_trainer:
         self.local_step = 0
         self.random = False
 
+
+
     def run(self):
 
         if self.load == True:
-            self.algorithm.saver.load_weights(**self.algorithm.network_list)
+            self.saver.load_weights(**self.algorithm.network_list)
 
 
         while True:
@@ -117,17 +121,17 @@ class Offline_Gym_trainer:
                 observation = next_observation
 
             if self.total_step >= self.algorithm.training_start:
-                self.losses = self.algorithm.train(training_num=self.local_step)
+                self.algorithm.train(training_num=self.local_step)
 
 
-            print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}, Losses: {}".format(self.episode, self.episode_reward,
-                                                                                     self.local_step, self.total_step, self.losses))
+            print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward,
+                                                                                     self.local_step, self.total_step))
 
-            if self.log == True and self.random == False:
-                self.algorithm.saver.log(self.episode, **{"reward": self.episode_reward[0], "actor_loss": self.losses[0], "critic1_loss": self.losses[1], "critic2_loss": self.losses[2], "v_loss": self.losses[3]})
+            if self.log == True:
+                self.algorithm.saver.log(self.episode, **{"reward": self.episode_reward, "step": self.local_step})
 
             if self.save == True and self.episode % self.save_period == 0:
-                self.algorithm.saver.save_weights(**self.algorithm.network_list)
+                self.saver.save_weights(**self.algorithm.network_list)
 
 
 

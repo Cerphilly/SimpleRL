@@ -10,7 +10,7 @@ from Tensorflow2.Networks.Basic_Networks import Q_network, V_network
 from Tensorflow2.Networks.Gaussian_Actor import Gaussian_Actor
 
 class SAC_v1:
-    def __init__(self, state_dim, action_dim, max_action, min_action, save, load, actor=None, critic1=None, critic2=None, v_network=None, target_v_network=None,
+    def __init__(self, state_dim, action_dim, max_action, min_action, actor=None, critic1=None, critic2=None, v_network=None, target_v_network=None,
                  batch_size=100, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, alpha=0.2, reward_scale=1, training_start = 500):
 
         self.actor = actor
@@ -20,7 +20,6 @@ class SAC_v1:
         self.target_v_network = target_v_network
 
         self.buffer = TFBuffer(buffer_size)
-        self.saver = TFSaver('SAC_v1', 'triple')
 
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.critic1_optimizer = tf.keras.optimizers.Adam(learning_rate)
@@ -32,8 +31,7 @@ class SAC_v1:
         self.max_action = max_action
         self.min_action = min_action
 
-        self.save = save
-        self.load = load
+
 
         self.batch_size = batch_size
         self.tau = tau
@@ -66,11 +64,8 @@ class SAC_v1:
 
         return action
 
+
     def train(self, training_num):
-        self.actor_loss = 0
-        self.critic1_loss = 0
-        self.critic2_loss = 0
-        self.v_loss = 0
 
         for i in range(training_num):
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
@@ -108,11 +103,6 @@ class SAC_v1:
             actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
             self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
-            self.actor_loss += actor_loss.numpy()
-            self.critic1_loss += critic1_loss.numpy()
-            self.critic2_loss += critic2_loss.numpy()
-            self.v_loss += v_loss.numpy()
 
 
 
-        return [self.actor_loss, self.critic1_loss, self.critic2_loss, self.v_loss]
