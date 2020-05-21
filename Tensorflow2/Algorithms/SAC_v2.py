@@ -11,7 +11,7 @@ from Tensorflow2.Networks.Gaussian_Actor import Gaussian_Actor
 
 
 class SAC_v2:
-    def __init__(self, state_dim, action_dim, max_action, min_action, save, load, actor=None, critic1=None, target_critic1=None, critic2=None, target_critic2=None,
+    def __init__(self, state_dim, action_dim, max_action, min_action, actor=None, critic1=None, target_critic1=None, critic2=None, target_critic2=None,
                  batch_size=100, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, alpha=0.2, auto_alpha = False, reward_scale=1, training_start = 500):
 
         self.actor = actor
@@ -21,7 +21,6 @@ class SAC_v2:
         self.target_critic2 = target_critic2
 
         self.buffer = TFBuffer(buffer_size)
-        self.saver = TFSaver('SAC_v2', 'test')
 
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.critic1_optimizer = tf.keras.optimizers.Adam(learning_rate)
@@ -31,9 +30,6 @@ class SAC_v2:
         self.action_dim = action_dim
         self.max_action = max_action
         self.min_action = min_action
-
-        self.save = save
-        self.load = load
 
         self.batch_size = batch_size
         self.tau = tau
@@ -63,6 +59,9 @@ class SAC_v2:
 
         copy_weight(self.critic1, self.target_critic1)
         copy_weight(self.critic2, self.target_critic2)
+
+        self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
+
 
 
     def get_action(self, state):
@@ -123,5 +122,4 @@ class SAC_v2:
             self.critic1_loss += critic1_loss.numpy()
             self.critic2_loss += critic2_loss.numpy()
 
-        return [self.actor_loss, self.critic1_loss, self.critic2_loss, self.alpha]
 

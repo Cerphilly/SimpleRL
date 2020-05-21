@@ -64,6 +64,9 @@ class TD3:
         copy_weight(self.critic1, self.target_critic1)
         copy_weight(self.critic2, self.target_critic2)
 
+        self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
+
+
     def get_action(self, state):
         state = np.array(state)
         if state.ndim == 1:
@@ -121,5 +124,4 @@ class TD3:
 
             del tape
 
-        return [self.actor_loss, self.critic1_loss, self.critic2_loss]
 

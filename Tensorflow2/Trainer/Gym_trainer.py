@@ -62,7 +62,7 @@ class Offline_Gym_trainer:
 
         self.env = env
         self.algorithm = algorithm
-        self.saver = TFSaver('SAC_v1', 'example', log)
+        self.saver = TFSaver('SAC_v1', 'low_damping', log)
 
         self.render = render
         self.save = save
@@ -128,7 +128,7 @@ class Offline_Gym_trainer:
                                                                                      self.local_step, self.total_step))
 
             if self.log == True:
-                self.algorithm.saver.log(self.episode, **{"reward": self.episode_reward, "step": self.local_step})
+                self.saver.log(self.episode, **{"reward": self.episode_reward, "local_step": self.local_step})
 
             if self.save == True and self.episode % self.save_period == 0:
                 self.saver.save_weights(**self.algorithm.network_list)
