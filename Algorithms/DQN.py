@@ -44,7 +44,7 @@ class DQN:
         if state.ndim == 1:
             state = np.expand_dims(state, axis=0)
 
-        q_value = self.network(state, use_tanh=False).numpy()
+        q_value = self.network(state, activation='linear').numpy()
         best_action = np.argmax(q_value, axis=1)[0]
 
         if np.random.random() < self.epsilon:
@@ -61,12 +61,12 @@ class DQN:
 
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
-            target_q = tf.reduce_max(self.target_network(ns, use_tanh=False), axis=1, keepdims=True)
+            target_q = tf.reduce_max(self.target_network(ns, activation='linear'), axis=1, keepdims=True)
             target_value = r + self.gamma*(1-d)*target_q
             target_value = tf.stop_gradient(target_value)
 
             with tf.GradientTape() as tape:
-                selected_values = tf.reduce_sum(self.network(s, use_tanh=False)*tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
+                selected_values = tf.reduce_sum(self.network(s, activation='linear')*tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
                 loss = 0.5*tf.reduce_mean(tf.square(target_value - selected_values))
 
             variables = self.network.trainable_variables

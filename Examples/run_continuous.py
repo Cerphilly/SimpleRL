@@ -50,8 +50,8 @@ def main(cpu_only = False, force_gpu = True):
     print("Max action:", max_action)
     print("Min action:", min_action)
 
-    ddpg = DDPG(state_dim, action_dim, max_action, min_action, False, False)
-    #td3 = TD3(state_dim, action_dim, max_action, min_action, False, False)
+    ddpg = DDPG(state_dim, action_dim, max_action, min_action)
+    #td3 = TD3(state_dim, action_dim, max_action, min_action)
     #sac_v1 = SAC_v1(state_dim, action_dim, max_action, min_action)
     #sac_v2 = SAC_v2(state_dim, action_dim, max_action, min_action, auto_alpha=True)
 
