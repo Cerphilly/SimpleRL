@@ -2,9 +2,11 @@
 import tensorflow as tf
 import gym
 
-from Trainer.Gym_trainer import Online_Gym_trainer
+from Trainer.Gym_trainer import Online_Gym_trainer, Offline_Gym_trainer
 from Algorithms.DQN import DQN
 from Algorithms.DDQN import DDQN
+from Algorithms.REINFORCE import REINFORCE
+from Algorithms.VPG import VPG
 
 
 def main(cpu_only = False, force_gpu = False):
@@ -18,7 +20,7 @@ def main(cpu_only = False, force_gpu = False):
 
     env = gym.make("CartPole-v0")
     #env = gym.make("MountainCar-v0")
-    # env = gym.make("Acrobot-v1")
+    #env = gym.make("Acrobot-v1")
 
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
@@ -30,7 +32,12 @@ def main(cpu_only = False, force_gpu = False):
     dqn = DQN(state_dim, action_dim)
     ddqn = DDQN(state_dim, action_dim)
 
-    trainer = Online_Gym_trainer(env=env, algorithm=dqn, render=True)
+    reinforce = REINFORCE(state_dim, action_dim)
+    vpg = VPG(state_dim, action_dim)
+
+    #trainer = Online_Gym_trainer(env=env, algorithm=dqn, render=True)
+
+    trainer = Offline_Gym_trainer(env=env, algorithm=vpg, render=True, save=False, load=False, log=False, save_period=100)
     trainer.run()
 
 

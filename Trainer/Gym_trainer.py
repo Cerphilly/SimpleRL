@@ -41,8 +41,9 @@ class Online_Gym_trainer:
 
                 action = self.algorithm.get_action(observation)
 
-                if self.total_step <= self.algorithm.training_start:
-                    action = self.env.action_space.sample()
+                if self.local_step <= self.algorithm.training_start:
+                   action = self.env.action_space.sample()
+
 
                 next_observation, reward, done, _ = self.env.step(action)
 
@@ -52,9 +53,10 @@ class Online_Gym_trainer:
                 observation = next_observation
 
                 if self.total_step >= self.algorithm.training_start:
-                    self.losses = self.algorithm.train(training_num=1)
+                    self.algorithm.train(training_num=1)
 
-            print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}, Losses: {}".format(self.episode, self.episode_reward, self.local_step, self.total_step, self.losses))
+
+            print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward, self.local_step, self.total_step))
 
 
 class Offline_Gym_trainer:
@@ -62,7 +64,7 @@ class Offline_Gym_trainer:
 
         self.env = env
         self.algorithm = algorithm
-        self.saver = TFSaver('SAC_v1', 'low_damping', log)
+        self.saver = Saver('SAC_v1', 'low_damping', log)
 
         self.render = render
         self.save = save

@@ -2,7 +2,7 @@
 
 import tensorflow as tf
 import numpy as np
-
+import gym
 from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network
 
@@ -11,14 +11,56 @@ class REINFORCE:
     def __init__(self, state_dim, action_dim, network=None, gamma=0.99, learning_rate=0.001):
         self.network = network
 
+        self.buffer = Buffer()
+
         self.state_dim = state_dim
         self.action_dim = action_dim
 
         self.gamma = gamma
+        self.training_start = 0
         self.optimizer = tf.keras.optimizers.Adam(learning_rate)
 
-    def get_action(self, state):
-        pass
+        if network == None:
+            self.network = Policy_network(self.state_dim, self.action_dim)
 
-    def train(self):
-        pass
+        self.network_list = {'Network': self.network}
+
+
+    def get_action(self, state):
+        state = np.array(state)
+        if state.ndim == 1:
+            state = np.expand_dims(state, axis=0)
+
+        policy = self.network(state, activation='softmax').numpy()[0]
+
+        action = np.random.choice(self.action_dim, 1, p=policy)[0]
+
+        return action
+
+
+    def train(self, training_num):
+        s, a, r, ns, d = self.buffer.all_sample()
+        returns = np.zeros_like(r.numpy())
+
+        running_return = 0
+        for t in reversed(range(len(r))):
+            running_return = r[t] + self.gamma * running_return * (1-d[t])
+            returns[t] = running_return
+
+
+
+        with tf.GradientTape() as tape:
+            policy = self.network(s, activation='softmax')
+
+            a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
+            log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
+            loss = tf.reduce_sum(-log_policy * returns)
+
+
+        variables = self.network.trainable_variables
+        gradients = tape.gradient(loss, variables)
+
+        self.optimizer.apply_gradients(zip(gradients, variables))
+
+        self.buffer.delete()
+
