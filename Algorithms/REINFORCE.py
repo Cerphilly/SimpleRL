@@ -8,13 +8,14 @@ from Networks.Basic_Networks import Policy_network
 
 
 class REINFORCE:
-    def __init__(self, state_dim, action_dim, network=None, gamma=0.99, learning_rate=0.001):
+    def __init__(self, state_dim, action_dim, mode, network=None, gamma=0.99, learning_rate=0.001):
         self.network = network
 
         self.buffer = Buffer()
 
         self.state_dim = state_dim
         self.action_dim = action_dim
+        self.mode = mode
 
         self.gamma = gamma
         self.training_start = 0

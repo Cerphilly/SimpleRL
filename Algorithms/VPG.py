@@ -1,6 +1,6 @@
 #Policy Gradient Methods for Reinforcement Learning with Function Approximation, Sutton et al, 2000
 #High Dimensional Continuous Control Using Generalized Advantage Estimation, Schulman et al. 2016(b)
-
+#Spinning Up VPG
 
 import tensorflow as tf
 import numpy as np
@@ -11,10 +11,12 @@ from Networks.Basic_Networks import Policy_network, V_network
 
 
 class VPG:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, actor=None, critic=None, gamma = 0.99, lambda_gae = 0.96, learning_rate = 0.0003):
+    def __init__(self, state_dim, action_dim, mode, actor=None, critic=None, gamma = 0.99, lambda_gae = 0.96, learning_rate = 0.0003):
 
         self.actor = actor
         self.critic = critic
+
+        self.mode = mode
 
         self.buffer = Buffer()
 

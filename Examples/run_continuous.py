@@ -2,13 +2,13 @@ import tensorflow as tf
 import gym
 
 import sys
-sys.path.append('../..')
+sys.path.append('../')
 
-from Tensorflow2.Trainer.Gym_trainer import Offline_Gym_trainer
-from Tensorflow2.Algorithms.DDPG import DDPG
-from Tensorflow2.Algorithms.TD3 import TD3
-from Tensorflow2.Algorithms.SAC_v1 import SAC_v1
-from Tensorflow2.Algorithms.SAC_v2 import SAC_v2
+from Trainer.Gym_trainer import Offline_Gym_trainer
+from Algorithms.DDPG import DDPG
+from Algorithms.TD3 import TD3
+from Algorithms.SAC_v1 import SAC_v1
+from Algorithms.SAC_v2 import SAC_v2
 
 
 def main(cpu_only = False, force_gpu = True):
@@ -21,14 +21,14 @@ def main(cpu_only = False, force_gpu = True):
         tf.config.experimental.set_memory_growth(gpu[0], True)
 
     #env = gym.make("Pendulum-v0")
-    env = gym.make("MountainCarContinuous-v0")
+    #env = gym.make("MountainCarContinuous-v0")
 
     #env = gym.make("InvertedTriplePendulumSwing-v2")
     #env = gym.make("InvertedTriplePendulum-v2")
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps.
-    #env = gym.make("InvertedPendulum-v2")
+    env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
