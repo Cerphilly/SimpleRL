@@ -5,16 +5,20 @@ import numpy as np
 import gym
 from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network
+from Networks.Gaussian_Actor import Gaussian_Actor
 
 
 class REINFORCE:
-    def __init__(self, state_dim, action_dim, discrete=True, network=None, gamma=0.99, learning_rate=0.001):
+    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, network=None, gamma=0.99, learning_rate=0.001):
         self.network = network
 
         self.buffer = Buffer()
 
         self.state_dim = state_dim
         self.action_dim = action_dim
+        self.max_action = max_action
+        self.min_action = min_action
+        
         self.discrete = discrete
 
         self.gamma = gamma
