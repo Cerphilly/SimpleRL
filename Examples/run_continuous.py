@@ -5,6 +5,7 @@ import sys
 sys.path.append('../')
 
 from Trainer.Gym_trainer import Offline_Gym_trainer
+from Algorithms.REINFORCE import REINFORCE
 from Algorithms.DDPG import DDPG
 from Algorithms.TD3 import TD3
 from Algorithms.SAC_v1 import SAC_v1
@@ -20,7 +21,7 @@ def main(cpu_only = False, force_gpu = True):
         gpu = tf.config.experimental.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(gpu[0], True)
 
-    #env = gym.make("Pendulum-v0")
+    env = gym.make("Pendulum-v0")
     #env = gym.make("MountainCarContinuous-v0")
 
     #env = gym.make("InvertedTriplePendulumSwing-v2")
@@ -28,7 +29,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps.
-    env = gym.make("InvertedPendulum-v2")
+    #env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
@@ -50,12 +51,13 @@ def main(cpu_only = False, force_gpu = True):
     print("Max action:", max_action)
     print("Min action:", min_action)
 
+    reinforce = REINFORCE(state_dim, action_dim, max_action, min_action, discrete=False)
     ddpg = DDPG(state_dim, action_dim, max_action, min_action)
     #td3 = TD3(state_dim, action_dim, max_action, min_action)
     #sac_v1 = SAC_v1(state_dim, action_dim, max_action, min_action)
     #sac_v2 = SAC_v2(state_dim, action_dim, max_action, min_action, auto_alpha=True)
 
-    trainer = Offline_Gym_trainer(env=env, algorithm=ddpg, render=True, save=False, load=False, log=False, save_period=100)
+    trainer = Offline_Gym_trainer(env=env, algorithm=reinforce, render=True, save=False, load=False, log=False, save_period=100)
     trainer.run()
 
 

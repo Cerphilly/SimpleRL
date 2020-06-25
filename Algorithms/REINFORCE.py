@@ -1,6 +1,7 @@
 #Simple statistical gradient-following algorithms for connectionist reinforcement learning, Ronald J. Williams, 1992
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 import numpy as np
 import gym
 from Common.Buffer import Buffer
@@ -36,7 +37,7 @@ class REINFORCE:
         if state.ndim == 1:
             state = np.expand_dims(state, axis=0)
             
-        if self.discrete == True
+        if self.discrete == True:
             policy = self.network(state, activation='softmax').numpy()[0]
             action = np.random.choice(self.action_dim, 1, p=policy)[0]
             

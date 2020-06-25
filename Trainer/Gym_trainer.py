@@ -64,7 +64,7 @@ class Offline_Gym_trainer:
 
         self.env = env
         self.algorithm = algorithm
-        self.saver = Saver('SAC_v1', 'low_damping', log)
+        #self.saver = Saver('SAC_v1', 'low_damping', log)
 
         self.render = render
         self.save = save
@@ -84,8 +84,8 @@ class Offline_Gym_trainer:
 
     def run(self):
 
-        if self.load == True:
-            self.saver.load_weights(**self.algorithm.network_list)
+        #if self.load == True:
+            #self.saver.load_weights(**self.algorithm.network_list)
 
 
         while True:
@@ -119,7 +119,7 @@ class Offline_Gym_trainer:
                 next_observation, reward, done, _ = self.env.step(action)
                 self.episode_reward += reward
 
-                self.algorithm.buffer.add(observation, action, reward, next_observation, done)
+                self.algorithm.buffer.add(observation, action, reward + 10, next_observation, done)
                 observation = next_observation
 
             if self.total_step >= self.algorithm.training_start:

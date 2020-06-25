@@ -11,12 +11,14 @@ from Networks.Basic_Networks import Policy_network, V_network
 
 
 class VPG:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, mode, actor=None, critic=None, gamma = 0.99, lambda_gae = 0.96, learning_rate = 0.0003):
+    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, gamma = 0.99, lambda_gae = 0.96, learning_rate = 0.0003):
 
         self.actor = actor
         self.critic = critic
+        self.max_action = max_action
+        self.min_action = min_action
 
-        self.mode = mode
+        self.discrete = discrete
 
         self.buffer = Buffer()
 

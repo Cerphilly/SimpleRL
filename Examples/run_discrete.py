@@ -32,8 +32,8 @@ def main(cpu_only = False, force_gpu = False):
     dqn = DQN(state_dim, action_dim)
     ddqn = DDQN(state_dim, action_dim)
 
-    reinforce = REINFORCE(state_dim, action_dim, mode='discrete')
-    vpg = VPG(state_dim, action_dim, mode='discrete')
+    reinforce = REINFORCE(state_dim, action_dim, discrete=True)
+    vpg = VPG(state_dim, action_dim, discrete=True)
 
     #trainer = Online_Gym_trainer(env=env, algorithm=dqn, render=True)
 
