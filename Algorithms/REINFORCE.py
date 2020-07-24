@@ -45,13 +45,9 @@ class REINFORCE:
             action = np.random.choice(self.action_dim, 1, p=policy)[0]
             
         else:
-            # mean = self.network(state, activation='linear').numpy()[0]
-            # logstd = tf.zeros_like(mean)
-            # std = tf.exp(logstd)
-            # action = tf.clip_by_value(tf.random.normal(tf.shape(mean), mean, std), self.min_action, self.max_action)
 
-            output = self.network(state, activation='linear')
-            mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
+            output = self.network(state)
+            mean, log_std = self.max_action*(output[:, :self.action_dim]), output[:, self.action_dim:]
             std = tf.exp(log_std)
 
             eps = tf.random.normal(tf.shape(mean))
@@ -77,8 +73,8 @@ class REINFORCE:
                 a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
                 log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
             else:
-                output = self.network(s, activation='linear')
-                mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
+                output = self.network(s)
+                mean, log_std = self.max_action*(output[:, :self.action_dim]), output[:, self.action_dim:]
                 std = tf.exp(log_std)
                 dist = tfp.distributions.Normal(loc=mean, scale=std)
                 log_policy = dist.log_prob(a)

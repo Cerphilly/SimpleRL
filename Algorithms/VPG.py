@@ -7,7 +7,6 @@ import tensorflow_probability as tfp
 import numpy as np
 
 from Common.Buffer import Buffer
-from Common.Utils import copy_weight, soft_update
 from Networks.Basic_Networks import Policy_network, V_network
 
 
@@ -57,14 +56,14 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
             policy = self.actor(state, activation='softmax').numpy()[0]
             action = np.random.choice(self.action_dim, 1, p=policy)[0]
         else:
-            mean = self.actor(state, activation='linear')
-            std = tf.ones_like(mean)
-            if self.fixed_std == False:
-                output = self.actor(state, activation='linear')
-                mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
+            output = self.actor(state)
+            mean, log_std = self.max_action*(output[:, :self.action_dim]), output[:, self.action_dim:]
+            std = tf.exp(log_std)
+
             eps = tf.random.normal(tf.shape(mean))
             action = (mean + std * eps)[0]
             action = tf.clip_by_value(action, self.min_action, self.max_action)
+
 
         return action
 
@@ -94,12 +93,9 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
                 a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
                 log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
             else:
-                mean = self.actor(s, activation='linear')
-                std = tf.ones_like(mean)
-                if self.fixed_std == False:
-                    output = self.actor(s, activation='linear')
-                    mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
-                    std = tf.exp(log_std)
+                output = self.actor(s)
+                mean, log_std = self.max_action*(output[:, :self.action_dim]), output[:, self.action_dim:]
+                std = tf.exp(log_std)
                 dist = tfp.distributions.Normal(loc=mean, scale=std)
                 log_policy = dist.log_prob(a)
 

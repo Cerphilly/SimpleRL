@@ -147,7 +147,7 @@ def main(cpu_only = False, force_gpu = True):
         gpu = tf.config.experimental.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(gpu[0], True)
 
-    env = gym.make("Pendulum-v0")
+    #env = gym.make("Pendulum-v0")
     #env = gym.make("MountainCarContinuous-v0")
 
     #env = gym.make("InvertedTriplePendulumSwing-v2")
@@ -155,7 +155,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps.
-    #env = gym.make("InvertedPendulum-v2")
+    env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
