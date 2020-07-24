@@ -15,7 +15,6 @@ class Policy_network(tf.keras.Model):
         self.output_layer = tf.keras.layers.Dense(self.action_dim, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Output')
 
-    @tf.function
     def call(self, input, activation = 'tanh'):
         z = self.input_layer(input)
         for layer in self.hidden_layers:
@@ -27,7 +26,6 @@ class Policy_network(tf.keras.Model):
             output = tf.nn.tanh(output)
         elif activation == 'softmax':
             output = tf.nn.softmax(output)
-
 
         return output
 
@@ -75,7 +73,6 @@ class V_network(tf.keras.Model):
 
         self.output_layer = tf.keras.layers.Dense(1, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, name='Output')
 
-    @tf.function
     def call(self, input):
         z = self.input_layer(input)
         for layer in self.hidden_layers:

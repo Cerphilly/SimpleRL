@@ -3,6 +3,7 @@
 #Spinning Up VPG
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 import numpy as np
 
 from Common.Buffer import Buffer
@@ -11,7 +12,7 @@ from Networks.Basic_Networks import Policy_network, V_network
 
 
 class VPG:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, gamma = 0.99, lambda_gae = 0.96, learning_rate = 0.0003):
+    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, gamma = 0.99, lambda_gae = 0.96, learning_rate = 0.0003, fixed_std=False):
 
         self.actor = actor
         self.critic = critic
@@ -19,6 +20,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         self.min_action = min_action
 
         self.discrete = discrete
+        self.fixed_std = fixed_std
 
         self.buffer = Buffer()
 
@@ -34,7 +36,12 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
 
 
         if self.actor == None:
-            self.actor = Policy_network(self.state_dim, self.action_dim)
+            if self.discrete == True:
+                self.actor = Policy_network(self.state_dim, self.action_dim)
+            else:
+                self.actor = Policy_network(self.state_dim, self.action_dim)
+                if fixed_std == False:
+                    self.actor = Policy_network(self.state_dim, self.action_dim*2)
 
         if self.critic == None:
             self.critic = V_network(self.state_dim)
@@ -45,15 +52,24 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         state = np.array(state)
         if state.ndim == 1:
             state = np.expand_dims(state, axis=0)
-        policy = self.actor(state, activation='softmax').numpy()[0]
 
-        action = np.random.choice(self.action_dim, 1, p=policy)[0]
+        if self.discrete == True:
+            policy = self.actor(state, activation='softmax').numpy()[0]
+            action = np.random.choice(self.action_dim, 1, p=policy)[0]
+        else:
+            mean = self.actor(state, activation='linear')
+            std = tf.ones_like(mean)
+            if self.fixed_std == False:
+                output = self.actor(state, activation='linear')
+                mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
+            eps = tf.random.normal(tf.shape(mean))
+            action = (mean + std * eps)[0]
+            action = tf.clip_by_value(action, self.min_action, self.max_action)
 
         return action
 
     def train(self, training_num):
         s, a, r, ns, d = self.buffer.all_sample()
-
         values = self.critic(s)
 
         returns = np.zeros_like(r.numpy())
@@ -72,16 +88,23 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
             previous_value = values[t]
             advantages[t] = running_advantage
 
-
-
         with tf.GradientTape(persistent=True) as tape:
+            if self.discrete == True:
+                policy = self.actor(s, activation='softmax')
+                a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
+                log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
+            else:
+                mean = self.actor(s, activation='linear')
+                std = tf.ones_like(mean)
+                if self.fixed_std == False:
+                    output = self.actor(s, activation='linear')
+                    mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
+                    std = tf.exp(log_std)
+                dist = tfp.distributions.Normal(loc=mean, scale=std)
+                log_policy = dist.log_prob(a)
 
-            policy = self.actor(s, activation='softmax')
-            a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
-            log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
-
-            actor_loss = -tf.reduce_sum(log_policy * advantages)
-            critic_loss = 0.5 * tf.reduce_mean(tf.square(returns - self.critic(s)))
+            actor_loss = -tf.reduce_sum(log_policy * tf.stop_gradient(advantages))
+            critic_loss = 0.5 * tf.reduce_mean(tf.square(tf.stop_gradient(returns) - self.critic(s)))
 
         actor_variables = self.actor.trainable_variables
         critic_variables = self.critic.trainable_variables
