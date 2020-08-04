@@ -1,6 +1,6 @@
 #Policy Gradient Methods for Reinforcement Learning with Function Approximation, Sutton et al, 2000
 #High Dimensional Continuous Control Using Generalized Advantage Estimation, Schulman et al. 2016(b)
-#Spinning Up VPG
+#http://spinningup.openai.com -> Vanilla Policy Gradient
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -11,7 +11,7 @@ from Networks.Basic_Networks import Policy_network, V_network
 
 
 class VPG:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, gamma = 0.99, lambda_gae = 0.96, learning_rate = 0.0003, fixed_std=False):
+    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, gamma = 0.99, lambda_gae = 0.96, learning_rate = 0.001):
 
         self.actor = actor
         self.critic = critic
@@ -19,7 +19,6 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         self.min_action = min_action
 
         self.discrete = discrete
-        self.fixed_std = fixed_std
 
         self.buffer = Buffer()
 
@@ -38,9 +37,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
             if self.discrete == True:
                 self.actor = Policy_network(self.state_dim, self.action_dim)
             else:
-                self.actor = Policy_network(self.state_dim, self.action_dim)
-                if fixed_std == False:
-                    self.actor = Policy_network(self.state_dim, self.action_dim*2)
+                self.actor = Policy_network(self.state_dim, self.action_dim*2)
 
         if self.critic == None:
             self.critic = V_network(self.state_dim)

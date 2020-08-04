@@ -57,8 +57,9 @@ class Online_Gym_trainer:
 
                 self.episode_reward += reward
 
-                self.algorithm.buffer.add(observation, action, reward, next_observation, done)
+                self.algorithm.buffer.add(observation, action, (reward + 8)/8, next_observation, done)
                 observation = next_observation
+
 
                 if self.total_step >= self.algorithm.training_start:
                     self.algorithm.train(training_num=1)
@@ -131,11 +132,11 @@ class Offline_Gym_trainer:
             print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward,
                                                                                      self.local_step, self.total_step))
 
-            if self.log == True:
-                self.saver.log(self.episode, **{"reward": self.episode_reward, "local_step": self.local_step})
-
-            if self.save == True and self.episode % self.save_period == 0:
-                self.saver.save_weights(**self.algorithm.network_list)
+            # if self.log == True:
+            #     self.saver.log(self.episode, **{"reward": self.episode_reward, "local_step": self.local_step})
+            #
+            # if self.save == True and self.episode % self.save_period == 0:
+            #     self.saver.save_weights(**self.algorithm.network_list)
 
 
 def main(cpu_only = False, force_gpu = True):
@@ -154,7 +155,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedTriplePendulum-v2")
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
-    #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps.
+    #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
     env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
@@ -184,7 +185,7 @@ def main(cpu_only = False, force_gpu = True):
     #sac_v1 = SAC_v1(state_dim, action_dim, max_action, min_action)
     #sac_v2 = SAC_v2(state_dim, action_dim, max_action, min_action, auto_alpha=True)
 
-    trainer = Offline_Gym_trainer(env=env, algorithm=vpg, render=True, save=False, load=False, log=False, save_period=100)
+    trainer = Online_Gym_trainer(env=env, algorithm=vpg, render=True)
     trainer.run()
 
 

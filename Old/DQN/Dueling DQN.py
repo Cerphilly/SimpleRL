@@ -19,7 +19,7 @@ class Network(tf.keras.Model):
         self.value = tf.keras.layers.Dense(1, kernel_initializer='RandomNormal', name='value')
         self.advantage = tf.keras.layers.Dense(self.action_dim, kernel_initializer='RandomNormal', name='advantage')
 
-    @tf.function
+    #@tf.function
     def call(self, inputs, estimator='mean'):
         inputs = self.input_layer(inputs)
         z = tf.nn.relu(self.layer1(inputs))
@@ -27,6 +27,7 @@ class Network(tf.keras.Model):
         advantage = self.advantage(advantage)
         value = tf.nn.relu(self.layer3(z))
         value = self.value(value)
+
 
         if estimator == 'mean':
             output = value + (advantage - tf.reduce_mean(advantage, axis=1, keepdims=True))
@@ -80,7 +81,6 @@ class Dueling_DQN:
         target_q = tf.stop_gradient(target_q)
 
         with tf.GradientTape() as tape:
-
             q_value = tf.reduce_sum(
                 self.network(s) * tf.squeeze(tf.one_hot(tf.dtypes.cast(a, tf.int32), self.action_dim), axis=1), axis=1,
                 keepdims=True)

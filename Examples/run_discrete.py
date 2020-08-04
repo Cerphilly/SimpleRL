@@ -3,6 +3,7 @@ import gym
 
 from Algorithms.DQN import DQN
 from Algorithms.DDQN import DDQN
+from Algorithms.Dueling_DQN import Dueling_DQN
 from Algorithms.REINFORCE import REINFORCE
 from Algorithms.VPG import VPG
 
@@ -44,9 +45,8 @@ class Online_Gym_trainer:
 
                 action = self.algorithm.get_action(observation)
 
-                if self.local_step <= self.algorithm.training_start:
+                if self.total_step <= self.algorithm.training_start:
                    action = self.env.action_space.sample()
-
 
                 next_observation, reward, done, _ = self.env.step(action)
 
@@ -57,7 +57,6 @@ class Online_Gym_trainer:
 
                 if self.total_step >= self.algorithm.training_start:
                     self.algorithm.train(training_num=1)
-
 
             print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward, self.local_step, self.total_step))
 
@@ -131,11 +130,11 @@ class Offline_Gym_trainer:
             print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward,
                                                                                      self.local_step, self.total_step))
 
-            if self.log == True:
-                self.saver.log(self.episode, **{"reward": self.episode_reward, "local_step": self.local_step})
-
-            if self.save == True and self.episode % self.save_period == 0:
-                self.saver.save_weights(**self.algorithm.network_list)
+            # if self.log == True:
+            #     self.saver.log(self.episode, **{"reward": self.episode_reward, "local_step": self.local_step})
+            #
+            # if self.save == True and self.episode % self.save_period == 0:
+            #     self.saver.save_weights(**self.algorithm.network_list)
 
 def main(cpu_only = False, force_gpu = False):
     if cpu_only == True:
@@ -146,9 +145,9 @@ def main(cpu_only = False, force_gpu = False):
         gpu = tf.config.experimental.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(gpu[0], True)
 
-    #env = gym.make("CartPole-v0")
+    env = gym.make("CartPole-v0")
     #env = gym.make("MountainCar-v0")
-    env = gym.make("Acrobot-v1")
+    #env = gym.make("Acrobot-v1")
 
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
@@ -157,15 +156,17 @@ def main(cpu_only = False, force_gpu = False):
     print("State dim:", state_dim)
     print("Action dim:", action_dim)
 
-    dqn = DQN(state_dim, action_dim)
-    ddqn = DDQN(state_dim, action_dim)
+    #dqn = DQN(state_dim, action_dim)
+    #ddqn = DDQN(state_dim, action_dim)
+    dueling_dqn = Dueling_DQN(state_dim, action_dim)
 
-    reinforce = REINFORCE(state_dim, action_dim, discrete=True)
-    vpg = VPG(state_dim, action_dim, discrete=True)
 
-    #trainer = Online_Gym_trainer(env=env, algorithm=dqn, render=True)
+    #reinforce = REINFORCE(state_dim, action_dim, discrete=True)
+    #vpg = VPG(state_dim, action_dim, discrete=True)
 
-    trainer = Offline_Gym_trainer(env=env, algorithm=vpg, render=True, save=False, load=False, log=False, save_period=100)
+    trainer = Online_Gym_trainer(env=env, algorithm=dueling_dqn, render=True)
+
+    #trainer = Offline_Gym_trainer(env=env, algorithm=vpg, render=True, save=False, load=False, log=False, save_period=100)
     trainer.run()
 
 
