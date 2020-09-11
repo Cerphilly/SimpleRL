@@ -49,7 +49,7 @@ class Online_Gym_trainer:
 
                 action = self.algorithm.get_action(observation)
 
-                if self.local_step <= self.algorithm.training_start:
+                if self.total_step <= self.algorithm.training_start:
                    action = self.env.action_space.sample()
 
 
@@ -68,18 +68,18 @@ class Online_Gym_trainer:
 
 
 class Offline_Gym_trainer:
-    def __init__(self, env, algorithm, render, save, load, log, save_period, max_episode=1e6):
+    def __init__(self, env, algorithm, render, max_episode=1e6):
 
         self.env = env
         self.algorithm = algorithm
         #self.saver = Saver('SAC_v1', 'low_damping', log)
 
         self.render = render
-        self.save = save
-        self.load = load
-        self.log = log
-
-        self.save_period = save_period
+        # self.save = save
+        # self.load = load
+        # self.log = log
+        #
+        # self.save_period = save_period
         self.max_episode = max_episode
 
         self.episode = 0
@@ -116,7 +116,7 @@ class Offline_Gym_trainer:
 
                 action = self.algorithm.get_action(observation)
 
-                if self.load == False and self.total_step <= self.algorithm.training_start:
+                if self.total_step <= self.algorithm.training_start:
                     action = self.env.action_space.sample()
                     self.random = True
 
@@ -127,7 +127,6 @@ class Offline_Gym_trainer:
 
             if self.total_step >= self.algorithm.training_start:
                 self.algorithm.train(training_num=self.local_step)
-
 
             print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward,
                                                                                      self.local_step, self.total_step))
@@ -155,8 +154,8 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedTriplePendulum-v2")
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
-    #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
-    env = gym.make("InvertedPendulum-v2")
+    env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
+    #env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
@@ -179,13 +178,13 @@ def main(cpu_only = False, force_gpu = True):
     print("Min action:", min_action)
 
     reinforce = REINFORCE(state_dim, action_dim, max_action, min_action, discrete=False)
-    vpg = VPG(state_dim, action_dim, max_action, min_action, discrete=False)
+    #vpg = VPG(state_dim, action_dim, max_action, min_action, discrete=False)
     ddpg = DDPG(state_dim, action_dim, max_action, min_action)
     #td3 = TD3(state_dim, action_dim, max_action, min_action)
-    #sac_v1 = SAC_v1(state_dim, action_dim, max_action, min_action)
+    sac_v1 = SAC_v1(state_dim, action_dim, max_action, min_action)
     #sac_v2 = SAC_v2(state_dim, action_dim, max_action, min_action, auto_alpha=True)
 
-    trainer = Online_Gym_trainer(env=env, algorithm=vpg, render=True)
+    trainer = Offline_Gym_trainer(env=env, algorithm=sac_v1, render=True)
     trainer.run()
 
 

@@ -1,6 +1,5 @@
-#Policy Gradient Methods for Reinforcement Learning with Function Approximation, Sutton et al, 2000
-#High Dimensional Continuous Control Using Generalized Advantage Estimation, Schulman et al. 2016(b)
-#http://spinningup.openai.com -> Vanilla Policy Gradient
+#Proximal Policy Optimization Algorithms, Schulman et al, 2017
+#Emergence of Locomotion Behaviours in Rich Environments, Heess et al
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -10,9 +9,8 @@ from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network, V_network
 
 
-class VPG:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, gamma = 0.99, lambda_gae = 0.96, learning_rate = 0.001):
-
+class PPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
+    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, gamma = 0.99, lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, num_epoch=10):
         self.actor = actor
         self.critic = critic
         self.max_action = max_action
@@ -24,6 +22,8 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
 
         self.gamma = gamma
         self.lambda_gae = lambda_gae
+        self.batch_size = batch_size
+        self.num_epoch = num_epoch
 
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate)
@@ -31,7 +31,6 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.training_start = 0
-
 
         if self.actor == None:
             if self.discrete == True:
@@ -66,6 +65,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
 
     def train(self, training_num):
         s, a, r, ns, d = self.buffer.all_sample()
+
         values = self.critic(s)
 
         returns = np.zeros_like(r.numpy())
@@ -84,36 +84,18 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
             previous_value = values[t]
             advantages[t] = running_advantage
 
-        with tf.GradientTape(persistent=True) as tape:
-            if self.discrete == True:
-                policy = self.actor(s, activation='softmax')
-                a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
-                log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
-            else:
-                output = self.actor(s)
-                mean, log_std = self.max_action*(output[:, :self.action_dim]), output[:, self.action_dim:]
-                std = tf.exp(log_std)
-                dist = tfp.distributions.Normal(loc=mean, scale=std)
-                log_policy = dist.log_prob(a)
+        old_policy = self.actor(s, activation = 'softmax').numpy()
+        n = len(s)
+        arr = np.arange(n)
 
-            actor_loss = -tf.reduce_sum(log_policy * tf.stop_gradient(advantages))
-            critic_loss = 0.5 * tf.reduce_mean(tf.square(tf.stop_gradient(returns) - self.critic(s)))
-            #critic_loss = 0.5 * tf.reduce_mean(tf.square(tf.stop_gradient(r + self.gamma*(1-d)*self.critic(ns)) - self.critic(s)))
-
-        actor_variables = self.actor.trainable_variables
-        critic_variables = self.critic.trainable_variables
-
-        actor_gradients = tape.gradient(actor_loss, actor_variables)
-        critic_gradients = tape.gradient(critic_loss, critic_variables)
-
-        self.actor_optimizer.apply_gradients(zip(actor_gradients, actor_variables))
-        self.critic_optimizer.apply_gradients(zip(critic_gradients, critic_variables))
-
-        self.buffer.delete()
+        for epoch in range(self.num_epoch):
+            np.random.shuffle(arr)
+            for i in range(n // self.batch_size):
+                batch_index = arr[self.batch_size*i: self.batch_size*(i+1)]
+                if self.discrete == True:
+                    policy = self.actor(s, activation='softmax')
 
 
-
-
-
-
-
+                    pass
+                else:
+                    pass

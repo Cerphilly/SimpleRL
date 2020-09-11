@@ -145,8 +145,8 @@ def main(cpu_only = False, force_gpu = False):
         gpu = tf.config.experimental.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(gpu[0], True)
 
-    env = gym.make("CartPole-v0")
-    #env = gym.make("MountainCar-v0")
+    #env = gym.make("CartPole-v0")
+    env = gym.make("MountainCar-v0")
     #env = gym.make("Acrobot-v1")
 
     state_dim = env.observation_space.shape[0]
