@@ -64,7 +64,7 @@ class DDPG:
 
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
-            value_next = tf.stop_gradient(self.target_critic(ns, self.actor(ns)))
+            value_next = tf.stop_gradient(self.target_critic(ns, self.target_actor(ns)))
             target_value = r + (1 - d) * self.gamma * value_next
 
             with tf.GradientTape(persistent=True) as tape:
