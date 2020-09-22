@@ -3,15 +3,115 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 import numpy as np
-import cv2
 
 import gym
-import dm_control2gym
-from dm_control import suite
 
-from common.ReplayBuffer import Buffer
-from common.Saver import Saver
-from common.dm2gym import dmstep, dmstate, dmextendstate, dmextendstep
+#from common.ReplayBuffer import Buffer
+#from common.Saver import Saver
+#from common.dm2gym import dmstep, dmstate, dmextendstate, dmextendstep
+class Buffer:
+    def __init__(self, max_size=1e6):#1000000: save the last 1000 episode at most
+        self.max_size = max_size
+        self.s = []
+        self.a = []
+        self.r = []
+        self.ns = []
+        self.d = []
+
+    def check(self, element):
+
+        element = np.asarray(element)
+
+        if element.ndim == 0:
+            return np.expand_dims(element, axis=0)
+        if element.ndim == 1:
+            return element
+        if element.ndim > 1:
+            raise ValueError
+
+
+    def add(self, s, a, r, ns, d):
+
+        self.s.append(self.check(s))
+        self.a.append(self.check(a))
+        self.r.append(self.check(r))
+        self.ns.append(self.check(ns))
+        self.d.append(self.check(d))
+
+        if len(self.s)>=self.max_size:
+            del self.s[0]
+            del self.a[0]
+            del self.r[0]
+            del self.ns[0]
+            del self.d[0]
+
+    def delete(self):
+
+        self.s = []
+        self.a = []
+        self.r = []
+        self.ns = []
+        self.d = []
+
+
+    def all_sample(self):
+        states = np.array(self.s)
+        actions = np.array(self.a)
+        rewards = np.array(self.r)
+        states_next = np.array(self.ns)
+        dones = np.array(self.d)
+
+        states = tf.convert_to_tensor(states, tf.float32)
+        actions = tf.convert_to_tensor(actions, tf.float32)
+        rewards = tf.convert_to_tensor(rewards, tf.float32)
+        states_next = tf.convert_to_tensor(states_next, tf.float32)
+        dones = tf.convert_to_tensor(dones, tf.float32)
+
+        return states, actions, rewards, states_next, dones
+
+
+    def sample(self, batch_size):
+        ids = np.random.randint(low=0, high=len(self.s), size=batch_size)
+        #ids = np.random.choice(len(self.s), self.batch_size, replace=False)
+
+        states = np.asarray([self.s[i] for i in ids]) # (batch_size, states_dim)
+        actions = np.asarray([self.a[i] for i in ids]) # (batch_size, 1)
+        rewards = np.asarray([self.r[i] for i in ids]) # (batch_Size, 1)
+        states_next = np.asarray([self.ns[i] for i in ids]) #(batch_size, states_dim)
+        dones = np.asarray([self.d[i] for i in ids]) #(batch_size, 1)
+
+        states = tf.convert_to_tensor(states, tf.float32)
+        actions = tf.convert_to_tensor(actions, tf.float32)
+        rewards = tf.convert_to_tensor(rewards, tf.float32)
+        states_next = tf.convert_to_tensor(states_next, tf.float32)
+        dones = tf.convert_to_tensor(dones, tf.float32)
+
+
+        return states, actions, rewards, states_next, dones
+
+    def ERE_sample(self, i, update_len, batch_size, cmin = 100, eta = 0.996):
+        #Boosting Soft Actor-Critic: Emphasizing Recent Experience without Forgetting the Past, Che Wang, Keith Ross. arXiv:1906.04009T
+        N = len(self.s)
+        cmin = cmin*batch_size
+        ck = max(N*eta**(i*1000/update_len), cmin)
+        ck = max(len(self.s) - int(ck), 0)
+
+        ids = np.random.randint(low=ck, high=len(self.s), size=batch_size)
+        states = np.asarray([self.s[i] for i in ids])  # (batch_size, states_dim)
+        actions = np.asarray([self.a[i] for i in ids])  # (batch_size, 1)
+        rewards = np.asarray([self.r[i] for i in ids])  # (batch_Size, 1)
+        states_next = np.asarray([self.ns[i] for i in ids])  # (batch_size, states_dim)
+        dones = np.asarray([self.d[i] for i in ids])  # (batch_size, 1)
+
+        states = tf.convert_to_tensor(states, tf.float32)
+        actions = tf.convert_to_tensor(actions, tf.float32)
+        rewards = tf.convert_to_tensor(rewards, tf.float32)
+        states_next = tf.convert_to_tensor(states_next, tf.float32)
+        dones = tf.convert_to_tensor(dones, tf.float32)
+
+        return states, actions, rewards, states_next, dones
+
+
 
 class Q_network(tf.keras.Model):
     def __init__(self, state_dim, hidden_units, action_dim, skill_num):
@@ -186,7 +286,7 @@ class SAC_DIAYN:
         self.v_network = V_network(self.state_dim, [300, 300], self.skill_num)
         self.target_v_network = V_network(self.state_dim, [300, 300], self.skill_num)
         self.discriminator = Discriminator(self.state_dim, [100, 100], self.action_dim, self.skill_num, use_action=True)
-        self.buffer = Buffer(100)
+        self.buffer = Buffer()
 
         self.actor_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
         self.critic1_optimizer = tf.keras.optimizers.Adam(self.learning_rate)
@@ -311,9 +411,9 @@ class SAC_DIAYN:
                 total_step += 1
                 env.render()
 
-                action = np.max(self.actor.predict(np.expand_dims(observation, axis=0).astype('float32')), axis=1)#[[  ]]줌형태로 나오므로 np.max로 []로 바꿔
+                action = self.actor.predict(np.expand_dims(observation, axis=0).astype('float32'))[0]#[[  ]]줌형태로 나오므로 np.max로 []로 바꿔
 
-                if total_step <= 5 * self.batch_size:
+                if total_step <= 0 * self.batch_size:
                     action = env.action_space.sample()
 
                 next_observation, reward, done, _ = env.step(self.max_action * action)
@@ -324,14 +424,14 @@ class SAC_DIAYN:
                 self.buffer.add(observation, action, self.reward_scale * reward, next_observation, done)
                 observation = next_observation
 
+                if total_step >= 5 * self.batch_size:
+                    s, a, r, ns, d = self.buffer.sample(batch_size=100)
+                    self.train(s, a, r, ns, d)
 
             print("episode: {}, skill: {}, total_step: {}, step: {}, episode_reward: {}".format(episode, z, total_step, local_step,
                                                                                      episode_reward))
 
-            if total_step >= 5 * self.batch_size:
-                for i in range(local_step):
-                    s, a, r, ns, d = self.buffer.sample()
-                    self.train(s, a, r, ns, d)
+
 
 
 if __name__ == '__main__':
@@ -339,17 +439,18 @@ if __name__ == '__main__':
     #env = gym.make("MountainCarContinuous-v0")
 
     #env = gym.make("InvertedDoublePendulumSwing-v2")
-    #env = gym.make("InvertedDoublePendulum-hv2")
+    #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps.
     env = gym.make("InvertedPendulum-v2")
-
+    #env = gym.make("Ant-v2")
+    #env = gym.make("HalfCheetah-v2")
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
     max_action = env.action_space.high[0]
     min_action = env.action_space.low[0]
 
     print("SAC training of", env.unwrapped.spec.id)
-    sac = SAC_DIAYN(state_dim, action_dim, max_action, min_action, False, False, 3)
+    sac = SAC_DIAYN(state_dim, action_dim, max_action, min_action, False, False, 20)
     sac.run()
 
 
