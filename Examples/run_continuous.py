@@ -1,7 +1,9 @@
 import tensorflow as tf
 import gym
+import pybullet_envs
 
 import sys
+import time
 sys.path.append('../')
 
 from Algorithms.REINFORCE import REINFORCE
@@ -46,6 +48,7 @@ class Online_Gym_trainer:
 
                 if self.render == True:
                     self.env.render()
+                time.sleep(1. / 30.)
 
                 action = self.algorithm.get_action(observation)
 
@@ -92,6 +95,8 @@ class Offline_Gym_trainer:
 
         #if self.load == True:
             #self.saver.load_weights(**self.algorithm.network_list)
+        if self.render == True:
+            self.env.render()
         while True:
             if self.episode > self.max_episode:
                 print("Training finished")
@@ -113,6 +118,7 @@ class Offline_Gym_trainer:
 
                 if self.render == True:
                     self.env.render()
+                time.sleep(1. / 60.)
 
                 action = self.algorithm.get_action(observation)
 
@@ -154,7 +160,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedTriplePendulum-v2")
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
-    env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
+    #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
     #env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
@@ -166,6 +172,13 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("Swimmer-v2")
     #env = gym.make("Walker2d-v2")
 
+    #env = gym.make("InvertedPendulumSwingupBulletEnv-v0")
+
+
+
+    env = gym.make("InvertedDoublePendulumBulletEnv-v0")
+    #env = gym.make("InvertedDoublePendulumSwingupBulletEnv-v0")
+    #env = gym.make("MinitaurBulletEnv-v0", render=True)
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
     max_action = env.action_space.high[0]
@@ -177,9 +190,9 @@ def main(cpu_only = False, force_gpu = True):
     print("Max action:", max_action)
     print("Min action:", min_action)
 
-    reinforce = REINFORCE(state_dim, action_dim, max_action, min_action, discrete=False)
+    #reinforce = REINFORCE(state_dim, action_dim, max_action, min_action, discrete=False)
     #vpg = VPG(state_dim, action_dim, max_action, min_action, discrete=False)
-    ddpg = DDPG(state_dim, action_dim, max_action, min_action)
+    #ddpg = DDPG(state_dim, action_dim, max_action, min_action)
     #td3 = TD3(state_dim, action_dim, max_action, min_action)
     sac_v1 = SAC_v1(state_dim, action_dim, max_action, min_action)
     #sac_v2 = SAC_v2(state_dim, action_dim, max_action, min_action, auto_alpha=True)
