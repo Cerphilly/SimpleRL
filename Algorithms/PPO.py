@@ -10,7 +10,7 @@ from Networks.Basic_Networks import Policy_network, V_network
 
 
 class PPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, gamma = 0.99, lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, num_epoch=10):
+    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, training_step=1, gamma = 0.99, lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, num_epoch=10, clip=0.2):
         self.actor = actor
         self.critic = critic
         self.max_action = max_action
@@ -24,6 +24,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         self.lambda_gae = lambda_gae
         self.batch_size = batch_size
         self.num_epoch = num_epoch
+        self.clip = clip
 
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate)
@@ -31,6 +32,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.training_start = 0
+        self.training_step = training_step
 
         if self.actor == None:
             if self.discrete == True:
@@ -60,13 +62,12 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             action = (mean + std * eps)[0]
             action = tf.clip_by_value(action, self.min_action, self.max_action)
 
-
         return action
 
     def train(self, training_num):
         s, a, r, ns, d = self.buffer.all_sample()
 
-        values = self.critic(s)
+        old_values = self.critic(s)
 
         returns = np.zeros_like(r.numpy())
         advantages = np.zeros_like(returns)
@@ -77,25 +78,70 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
         for t in reversed(range(len(r))):
             running_return = (r[t] + self.gamma * running_return * (1 - d[t])).numpy()
-            running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - values[t]).numpy()
+            running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - old_values[t]).numpy()
             running_advantage = (running_tderror + (self.gamma * self.lambda_gae) * running_advantage * (1 - d[t])).numpy()
 
             returns[t] = running_return
-            previous_value = values[t]
+            previous_value = old_values[t]
             advantages[t] = running_advantage
 
-        old_policy = self.actor(s, activation = 'softmax').numpy()
+        if self.discrete == True:
+            old_policy = self.actor(s, activation = 'softmax')
+            old_a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
+            old_log_policy = tf.reduce_sum(tf.math.log(old_policy) * tf.stop_gradient(old_a_one_hot), axis=1, keepdims=True)
+        else:
+            old_policy = self.actor(s)
+            old_mean, old_log_std = self.max_action * (old_policy[:, :self.action_dim]), old_policy[:, self.action_dim:]
+            old_std = tf.exp(old_log_std)
+            old_dist = tfp.distributions.Normal(loc=old_mean, scale=old_std)
+            old_log_policy = old_dist.log_prob(a)
+
         n = len(s)
         arr = np.arange(n)
 
         for epoch in range(self.num_epoch):
             np.random.shuffle(arr)
-            for i in range(n // self.batch_size):
-                batch_index = arr[self.batch_size*i: self.batch_size*(i+1)]
-                if self.discrete == True:
-                    policy = self.actor(s, activation='softmax')
+            for i in range(n // self.batch_size + 1):
 
-
-                    pass
+                if n//self.batch_size > 0:
+                    batch_index = arr[self.batch_size*i : self.batch_size*(i+1)]
+                    batch_index.sort()
                 else:
-                    pass
+                    batch_index = arr
+
+                batch_s = s.numpy()[batch_index]
+                batch_a = a.numpy()[batch_index]
+                batch_returns = returns[batch_index]
+                batch_advantages = advantages[batch_index]
+                batch_old_log_policy = old_log_policy.numpy()[batch_index]
+
+                with tf.GradientTape(persistent=True) as tape:
+                    if self.discrete == True:
+                        policy = self.actor(batch_s, activation='softmax')
+                        a_one_hot = tf.squeeze(tf.one_hot(tf.cast(batch_a, tf.int32), depth=self.action_dim), axis=1)
+                        log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
+
+                        ratio = tf.exp(log_policy - batch_old_log_policy)
+                        surrogate = ratio * batch_advantages
+
+                        clipped_surrogate = tf.clip_by_value(surrogate, 1-self.clip, 1+self.clip)*batch_advantages
+
+                        actor_loss = -tf.reduce_mean(tf.minimum(surrogate, clipped_surrogate))
+
+                    else:
+                        policy = self.actor(batch_s)
+
+                    critic_loss = 0.5 * tf.reduce_mean(tf.square(tf.stop_gradient(batch_returns) - self.critic(batch_s)))
+
+                actor_variables = self.actor.trainable_variables
+                critic_variables = self.critic.trainable_variables
+
+                actor_gradients = tape.gradient(actor_loss, actor_variables)
+                critic_gradients = tape.gradient(critic_loss, critic_variables)
+
+                self.actor_optimizer.apply_gradients(zip(actor_gradients, actor_variables))
+                self.critic_optimizer.apply_gradients(zip(critic_gradients, critic_variables))
+
+        self.buffer.delete()
+
+

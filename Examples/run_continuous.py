@@ -65,7 +65,7 @@ class Online_Gym_trainer:
 
 
                 if self.total_step >= self.algorithm.training_start:
-                    self.algorithm.train(training_num=1)
+                    self.algorithm.train(training_num=self.algorithm.training_step)
 
             print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward, self.local_step, self.total_step))
 
@@ -75,14 +75,10 @@ class Offline_Gym_trainer:
 
         self.env = env
         self.algorithm = algorithm
-        #self.saver = Saver('SAC_v1', 'low_damping', log)
+
 
         self.render = render
-        # self.save = save
-        # self.load = load
-        # self.log = log
-        #
-        # self.save_period = save_period
+
         self.max_episode = max_episode
 
         self.episode = 0
@@ -92,9 +88,6 @@ class Offline_Gym_trainer:
         self.random = False
 
     def run(self):
-
-        #if self.load == True:
-            #self.saver.load_weights(**self.algorithm.network_list)
         if self.render == True:
             self.env.render()
         while True:
@@ -118,7 +111,6 @@ class Offline_Gym_trainer:
 
                 if self.render == True:
                     self.env.render()
-                time.sleep(1. / 60.)
 
                 action = self.algorithm.get_action(observation)
 
@@ -132,17 +124,10 @@ class Offline_Gym_trainer:
                 observation = next_observation
 
             if self.total_step >= self.algorithm.training_start:
-                self.algorithm.train(training_num=self.local_step)
+                self.algorithm.train(training_num=self.algorithm.training_step)
 
             print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward,
                                                                                      self.local_step, self.total_step))
-
-            # if self.log == True:
-            #     self.saver.log(self.episode, **{"reward": self.episode_reward, "local_step": self.local_step})
-            #
-            # if self.save == True and self.episode % self.save_period == 0:
-            #     self.saver.save_weights(**self.algorithm.network_list)
-
 
 def main(cpu_only = False, force_gpu = True):
     if cpu_only == True:
@@ -161,7 +146,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
-    #env = gym.make("InvertedPendulum-v2")
+    env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
@@ -176,7 +161,7 @@ def main(cpu_only = False, force_gpu = True):
 
 
 
-    env = gym.make("InvertedDoublePendulumBulletEnv-v0")
+    #env = gym.make("InvertedDoublePendulumBulletEnv-v0")
     #env = gym.make("InvertedDoublePendulumSwingupBulletEnv-v0")
     #env = gym.make("MinitaurBulletEnv-v0", render=True)
     state_dim = env.observation_space.shape[0]

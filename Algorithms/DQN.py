@@ -8,7 +8,7 @@ from Common.Utils import copy_weight
 from Networks.Basic_Networks import Policy_network
 
 class DQN:
-    def __init__(self, state_dim, action_dim, network=None, target_network=None, batch_size=100, buffer_size=1e6, gamma=0.99, learning_rate=0.001, epsilon=0.1, training_start=200, copy_iter=5):
+    def __init__(self, state_dim, action_dim, network=None, target_network=None, training_step=100, batch_size=100, buffer_size=1e6, gamma=0.99, learning_rate=0.001, epsilon=0.1, training_start=200, copy_iter=5):
 
         self.network = network
         self.target_network = target_network
@@ -24,6 +24,7 @@ class DQN:
         self.learning_rate = learning_rate
         self.epsilon = epsilon
         self.training_start = training_start
+        self.training_step = training_step
         self.copy_iter = copy_iter
 
         self.step = 0

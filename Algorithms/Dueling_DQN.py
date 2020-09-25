@@ -7,7 +7,7 @@ from Common.Buffer import Buffer
 from Networks.Dueling_Network import Dueling_Network
 
 class Dueling_DQN:
-    def __init__(self, state_dim, action_dim, network=None, batch_size=100, buffer_size=1e6, gamma=0.99, learning_rate=0.001, epsilon=0.2, training_start=200):
+    def __init__(self, state_dim, action_dim, network=None, training_step=100, batch_size=100, buffer_size=1e6, gamma=0.99, learning_rate=0.001, epsilon=0.2, training_start=200):
         self.network = network
 
         self.buffer = Buffer(buffer_size)
@@ -20,6 +20,7 @@ class Dueling_DQN:
         self.gamma = gamma
         self.eps = epsilon
         self.training_start = training_start
+        self.training_step = training_step
 
         self.step = 0
 

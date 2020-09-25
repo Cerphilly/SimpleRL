@@ -8,7 +8,7 @@ from Common.Utils import copy_weight, soft_update
 from Networks.Basic_Networks import Policy_network, Q_network
 
 class TD3:
-    def __init__(self, state_dim, action_dim, max_action, min_action, actor = None, target_actor = None, critic1 = None, target_critic1=None, critic2 = None, target_critic2=None, batch_size=100, buffer_size=1e6,
+    def __init__(self, state_dim, action_dim, max_action, min_action, actor = None, target_actor = None, critic1 = None, target_critic1=None, critic2 = None, target_critic2=None, training_step=100, batch_size=100, buffer_size=1e6,
                  gamma=0.99, tau=0.005, actor_lr=0.001, critic_lr=0.001, policy_delay=2, actor_noise=0.1, target_noise=0.2, noise_clip=0.5, training_start=500):
 
         self.actor = actor
@@ -40,6 +40,7 @@ class TD3:
         self.target_noise = target_noise
         self.noise_clip = noise_clip
         self.training_start = training_start
+        self.training_step = training_step
 
         self.step = 0
 

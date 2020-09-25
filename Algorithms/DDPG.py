@@ -9,7 +9,7 @@ from Networks.Basic_Networks import Policy_network, Q_network
 
 
 class DDPG:
-    def __init__(self, state_dim, action_dim, max_action, min_action, actor = None, target_actor = None, critic = None, target_critic=None, batch_size=100, buffer_size=1e6, gamma=0.99, tau = 0.005, actor_lr=0.001, critic_lr=0.001, training_start=500):
+    def __init__(self, state_dim, action_dim, max_action, min_action, actor = None, target_actor = None, critic = None, target_critic=None, training_step=100, batch_size=100, buffer_size=1e6, gamma=0.99, tau = 0.005, actor_lr=0.001, critic_lr=0.001, training_start=500):
         self.actor = actor
         self.target_actor = target_actor
         self.critic = critic
@@ -29,6 +29,7 @@ class DDPG:
         self.gamma = gamma
         self.tau = tau
         self.training_start = training_start
+        self.training_step = training_step
 
 
         if self.actor == None:

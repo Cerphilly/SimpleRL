@@ -9,7 +9,7 @@ from Networks.Basic_Networks import Q_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
 class SAC_v1:
-    def __init__(self, state_dim, action_dim, max_action, min_action, actor=None, critic1=None, critic2=None, v_network=None, target_v_network=None,
+    def __init__(self, state_dim, action_dim, max_action, min_action, actor=None, critic1=None, critic2=None, v_network=None, target_v_network=None, training_step=100,
                  batch_size=100, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, alpha=0.2, reward_scale=1, training_start = 500):
 
         self.actor = actor
@@ -38,6 +38,7 @@ class SAC_v1:
         self.alpha = alpha
         self.reward_scale = reward_scale
         self.training_start = training_start
+        self.training_step = training_step
 
         if self.actor == None:
             self.actor = Gaussian_Actor(self.state_dim, self.action_dim)
