@@ -105,9 +105,10 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
                 if n//self.batch_size > 0:
                     batch_index = arr[self.batch_size*i : self.batch_size*(i+1)]
-                    batch_index.sort()
                 else:
                     batch_index = arr
+
+                batch_index.sort()
 
                 batch_s = s.numpy()[batch_index]
                 batch_a = a.numpy()[batch_index]
@@ -130,6 +131,18 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
                     else:
                         policy = self.actor(batch_s)
+                        mean, log_std = self.max_action * policy[:,:self.action_dim], policy[:,self.action_dim:]
+                        std = tf.exp(log_std)
+                        dist = tfp.distributions.Normal(loc=mean, scale=std)
+                        log_policy = dist.log_prob(batch_a)
+
+                        ratio = tf.exp(log_policy - batch_old_log_policy)
+                        surrogate = ratio * batch_advantages
+
+                        clipped_surrogate = tf.clip_by_value(surrogate, 1-self.clip, 1+self.clip)*batch_advantages
+
+                        actor_loss = -tf.reduce_mean(tf.minimum(surrogate, clipped_surrogate))
+
 
                     critic_loss = 0.5 * tf.reduce_mean(tf.square(tf.stop_gradient(batch_returns) - self.critic(batch_s)))
 
