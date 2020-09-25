@@ -66,7 +66,6 @@ class Offline_Gym_trainer:
 
         self.env = env
         self.algorithm = algorithm
-        #self.saver = Saver('SAC_v1', 'low_damping', log)
 
         self.render = render
 

@@ -1,5 +1,6 @@
 #Proximal Policy Optimization Algorithms, Schulman et al, 2017
-#Emergence of Locomotion Behaviours in Rich Environments, Heess et al
+#High Dimensional Continuous Control Using Generalized Advantage Estimation, Schulman et al. 2016(b)
+#https://spinningup.openai.com/en/latest/algorithms/ppo.html
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -10,7 +11,8 @@ from Networks.Basic_Networks import Policy_network, V_network
 
 
 class PPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, mode='clip', training_step=1, gamma = 0.99, lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, num_epoch=10, clip=0.2, beta=1, dtarg=0.01):
+    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, mode='clip', training_step=1, gamma = 0.99,
+                 lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, num_epoch=10, clip=0.2, beta=1, dtarg=0.01):
         self.actor = actor
         self.critic = critic
         self.max_action = max_action

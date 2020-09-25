@@ -1,6 +1,6 @@
 #Policy Gradient Methods for Reinforcement Learning with Function Approximation, Sutton et al, 2000
 #High Dimensional Continuous Control Using Generalized Advantage Estimation, Schulman et al. 2016(b)
-#http://spinningup.openai.com -> Vanilla Policy Gradient
+#https://spinningup.openai.com/en/latest/algorithms/vpg.html
 
 import tensorflow as tf
 import tensorflow_probability as tfp
