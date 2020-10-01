@@ -8,5 +8,7 @@
     <orderEntry type="jdk" jdkName="Python 3.6 (tf2)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="pg_travel" />
+    <orderEntry type="module" module-name="pg_travel" />
+    <orderEntry type="module" module-name="pg_travel" />
   </component>
 </module>

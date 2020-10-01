@@ -7,6 +7,7 @@ from Algorithms.Dueling_DQN import Dueling_DQN
 from Algorithms.REINFORCE import REINFORCE
 from Algorithms.VPG import VPG
 from Algorithms.PPO import PPO
+from Algorithms.TRPO import TRPO
 
 class Online_Gym_trainer:
     def __init__(self, env, algorithm, render=True, max_episode = 1e6):
@@ -125,8 +126,8 @@ def main(cpu_only = False, force_gpu = False):
         gpu = tf.config.experimental.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(gpu[0], True)
 
-    env = gym.make("CartPole-v0")
-    #env = gym.make("MountainCar-v0")
+    #env = gym.make("CartPole-v0")
+    env = gym.make("MountainCar-v0")
     #env = gym.make("Acrobot-v1")
 
 
@@ -143,13 +144,14 @@ def main(cpu_only = False, force_gpu = False):
 
     #ppo = PPO(state_dim, action_dim, mode='clip', clip=0.2)
     #ppo = PPO(state_dim, action_dim, mode='Adaptive KL', dtarg=0.01)#?????
-    ppo = PPO(state_dim, action_dim, mode='Fixed KL', beta=3)
+    #ppo = PPO(state_dim, action_dim, mode='Fixed KL', beta=3)
+    trpo = TRPO(state_dim, action_dim)
     #reinforce = REINFORCE(state_dim, action_dim, discrete=True)
     #vpg = VPG(state_dim, action_dim, discrete=True)
 
     #trainer = Online_Gym_trainer(env=env, algorithm=dueling_dqn, render=True)
 
-    trainer = Offline_Gym_trainer(env=env, algorithm=ppo, render=True)
+    trainer = Offline_Gym_trainer(env=env, algorithm=trpo, render=True)
     trainer.run()
 
 

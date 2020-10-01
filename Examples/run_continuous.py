@@ -137,14 +137,14 @@ def main(cpu_only = False, force_gpu = True):
         tf.config.experimental.set_memory_growth(gpu[0], True)
 
     #env = gym.make("Pendulum-v0")
-    #env = gym.make("MountainCarContinuous-v0")
+    env = gym.make("MountainCarContinuous-v0")
 
     #env = gym.make("InvertedTriplePendulumSwing-v2")
     #env = gym.make("InvertedTriplePendulum-v2")
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
-    env = gym.make("InvertedPendulum-v2")
+    #env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
@@ -173,16 +173,16 @@ def main(cpu_only = False, force_gpu = True):
 
     #reinforce = REINFORCE(state_dim, action_dim, max_action, min_action, discrete=False)
     #vpg = VPG(state_dim, action_dim, max_action, min_action, discrete=False)
-    #ppo = PPO(state_dim, action_dim, max_action, min_action, discrete=False, mode='clip', clip=0.2)
+    ppo = PPO(state_dim, action_dim, max_action, min_action, discrete=False, mode='clip', clip=0.2)
     #ppo = PPO(state_dim, action_dim, max_action, min_action, discrete=False, mode='Adaptive KL', dtarg=0.01)
-    ppo = PPO(state_dim, action_dim, max_action, min_action, discrete=False, mode='Fixed KL', beta=3)
+    #ppo = PPO(state_dim, action_dim, max_action, min_action, discrete=False, mode='Fixed KL', beta=3)
 
     #ddpg = DDPG(state_dim, action_dim, max_action, min_action)
     #td3 = TD3(state_dim, action_dim, max_action, min_action)
     #sac_v1 = SAC_v1(state_dim, action_dim, max_action, min_action)
     #sac_v2 = SAC_v2(state_dim, action_dim, max_action, min_action, auto_alpha=True)
 
-    trainer = Offline_Gym_trainer(env=env, algorithm=ppo, render=True)
+    trainer = Offline_Gym_trainer(env=env, algorithm=ppo, render=False)
     trainer.run()
 
 
