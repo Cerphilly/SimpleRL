@@ -6,6 +6,7 @@ from Algorithms.DDQN import DDQN
 from Algorithms.Dueling_DQN import Dueling_DQN
 from Algorithms.REINFORCE import REINFORCE
 from Algorithms.VPG import VPG
+from Algorithms.TRPO import TRPO
 from Algorithms.PPO import PPO
 from Algorithms.TRPO import TRPO
 
@@ -142,6 +143,7 @@ def main(cpu_only = False, force_gpu = False):
     #ddqn = DDQN(state_dim, action_dim)
     dueling_dqn = Dueling_DQN(state_dim, action_dim)
 
+    trpo = TRPO(state_dim, action_dim)
     #ppo = PPO(state_dim, action_dim, mode='clip', clip=0.2)
     #ppo = PPO(state_dim, action_dim, mode='Adaptive KL', dtarg=0.01)#?????
     #ppo = PPO(state_dim, action_dim, mode='Fixed KL', beta=3)

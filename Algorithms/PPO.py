@@ -104,6 +104,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
         n = len(s)
         arr = np.arange(n)
+        #arr = np.random.choice(arr, self.batch_size, replace=False)
 
         for epoch in range(self.num_epoch):
             np.random.shuffle(arr)
