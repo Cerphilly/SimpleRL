@@ -11,7 +11,7 @@ from Algorithms.VPG import VPG
 from Algorithms.PPO import PPO
 from Algorithms.DDPG import DDPG
 from Algorithms.TD3 import TD3
-from Algorithms.TRPO2 import TRPO
+from Algorithms.TRPO import TRPO
 from Algorithms.SAC_v1 import SAC_v1
 from Algorithms.SAC_v2 import SAC_v2
 
@@ -149,6 +149,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
     env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
+
     #env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
@@ -178,8 +179,8 @@ def main(cpu_only = False, force_gpu = True):
 
     #reinforce = REINFORCE(state_dim, action_dim, max_action, min_action, discrete=False)
     #vpg = VPG(state_dim, action_dim, max_action, min_action, discrete=False)
-    #trpo = TRPO(state_dim, action_dim, max_action, min_action, discrete=False)
-    ppo = PPO(state_dim, action_dim, max_action, min_action, discrete=False, mode='clip', clip=0.2)
+    trpo = TRPO(state_dim, action_dim, max_action, min_action, discrete=False)
+    #ppo = PPO(state_dim, action_dim, max_action, min_action, discrete=False, mode='clip', clip=0.2)
     #ppo = PPO(state_dim, action_dim, max_action, min_action, discrete=False, mode='Adaptive KL', dtarg=0.01)
     #ppo = PPO(state_dim, action_dim, max_action, min_action, discrete=False, mode='Fixed KL', beta=3)
 
@@ -189,7 +190,7 @@ def main(cpu_only = False, force_gpu = True):
     #sac_v1 = SAC_v1(state_dim, action_dim, max_action, min_action)
     #sac_v2 = SAC_v2(state_dim, action_dim, max_action, min_action, auto_alpha=True)
 
-    trainer = Offline_Gym_trainer(env=env, algorithm=ppo, render=False)
+    trainer = Offline_Gym_trainer(env=env, algorithm=trpo, render=True)
     trainer.run()
 
 

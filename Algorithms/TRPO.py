@@ -5,14 +5,14 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
-import scipy
+import copy
 
 from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network, V_network
 
 class TRPO:
     def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, training_step=1, gamma = 0.99,
-                 lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, backtrack_iter=10, backtrack_coeff=0.6, delta=0.05, num_epoch=5):
+                 lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, backtrack_iter=10, backtrack_coeff=0.8, delta=0.05, num_epoch=10):
 
         self.actor = actor
         self.critic = critic
@@ -42,8 +42,12 @@ class TRPO:
         if self.actor == None:
             if self.discrete == True:
                 self.actor = Policy_network(self.state_dim, self.action_dim)
+                self.backup_actor = Policy_network(self.state_dim, self.action_dim)
             else:
                 self.actor = Policy_network(self.state_dim, self.action_dim*2)
+                self.backup_actor = Policy_network(self.state_dim, self.action_dim * 2)
+
+
 
         if self.critic == None:
             self.critic = V_network(self.state_dim)
@@ -70,32 +74,40 @@ class TRPO:
         return action
 
     def fisher_vector_product(self, states, p):
-        with tf.GradientTape(persistent=True) as tape2:
-            with tf.GradientTape(persistent=True) as tape1:
+        with tf.GradientTape() as tape2:
+            with tf.GradientTape() as tape1:
                 if self.discrete == True:
                     kl_divergence = tfp.distributions.kl_divergence(
                         tfp.distributions.Categorical(probs=self.actor(states, activation='softmax')),
-                        tfp.distributions.Categorical(probs=self.actor(states, activation='softmax')))
+                        tfp.distributions.Categorical(probs=self.backup_actor(states, activation='softmax')))
                 else:
                     policy = self.actor(states)
                     mean, log_std = self.max_action * policy[:, :self.action_dim], policy[:, self.action_dim:]
                     std = tf.exp(log_std)
                     dist = tfp.distributions.Normal(loc=mean, scale=std)
-                    kl_divergence = tfp.distributions.kl_divergence(dist, dist)
+
+                    backup_policy = self.backup_actor(states)
+                    backup_mean, backup_log_std = self.max_action * backup_policy[:,: self.action_dim], backup_policy[:,self.action_dim:]
+                    backup_std = tf.exp(backup_log_std)
+                    backup_dist = tfp.distributions.Normal(loc=backup_mean, scale=backup_std)
+
+                    kl_divergence = tfp.distributions.kl_divergence(dist, backup_dist)
                 kl_divergence = tf.reduce_mean(kl_divergence)
             kl_grad = tape1.gradient(kl_divergence, self.actor.trainable_variables)
+
             flatten_kl_grad = tf.concat([tf.reshape(grad, [-1]) for grad in kl_grad], axis=0)
             kl_grad_p = tf.reduce_sum(flatten_kl_grad * p)
 
         kl_hessian_p = tape2.gradient(kl_grad_p, self.actor.trainable_variables)
-        flatten_kl_hessian_p = tf.concat([tf.reshape(hessian, [-1]) for hessian in kl_hessian_p], axis=0)
+        flatten_kl_hessian_p = tf.concat([tf.reshape(hessian, [-1]) for hessian in kl_hessian_p], axis=0).numpy()
 
         return flatten_kl_hessian_p + 0.1 * p
 
+
     def conjugate_gradient(self, states, b, nsteps, residual_tol=1e-10):
         x = np.zeros_like(b)
-        r = b.copy()
-        p = b.copy()
+        r = copy.deepcopy(b)
+        p = copy.deepcopy(r)
         rdotr = np.dot(r, r)
 
         for i in range(nsteps):
@@ -104,14 +116,11 @@ class TRPO:
             x += alpha * p
             r -= alpha * _Avp
             new_rdotr = np.dot(r, r)
-            beta = new_rdotr / rdotr
+            beta = new_rdotr / (rdotr + 1e-8)
             p = r + beta * p
             rdotr = new_rdotr
-            if rdotr < residual_tol:
-                break
+
         return x
-
-
 
 
     def update_model(self, model, new_variables):
@@ -136,7 +145,7 @@ class TRPO:
         previous_value = np.zeros(1)
         running_advantage = np.zeros(1)
 
-        for t in reversed(range(len(r))):
+        for t in reversed(range(len(r))): #General Advantage Estimation
             running_return = (r[t] + self.gamma * running_return * (1 - d[t])).numpy()
             running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - old_values[t]).numpy()
             running_advantage = (
@@ -171,29 +180,23 @@ class TRPO:
                 mean, log_std = self.max_action * policy[:, :self.action_dim], policy[:, self.action_dim:]
                 std = tf.exp(log_std)
                 dist = tfp.distributions.Normal(loc=mean, scale=std)
-                log_policy = dist.log_prob(s)
+                log_policy = dist.log_prob(a)
 
                 surrogate = tf.reduce_mean(tf.exp(log_policy - tf.stop_gradient(old_log_policy)) * advantages)
+
         policy_grad = tape.gradient(surrogate, self.actor.trainable_variables)
         flatten_policy_grad = tf.concat([tf.reshape(grad, [-1]) for grad in policy_grad], axis=0)
 
+        flattened_actor = tf.concat([tf.reshape(variable, [-1]) for variable in self.actor.trainable_variables], axis=0)
+        self.update_model(self.backup_actor, flattened_actor)
+
         step_dir = self.conjugate_gradient(s, flatten_policy_grad.numpy(), 10)
 
-
-        flattened_actor = tf.concat([tf.reshape(variable, [-1]) for variable in self.actor.trainable_variables], axis=0)
-
-        shs = 0.5 * tf.reduce_sum(step_dir * self.fisher_vector_product(s, step_dir), axis=0, keepdims=True) + 1e-8
-        step_size = 1 / tf.sqrt(shs / self.delta)[0]
+        shs = 0.5 * tf.reduce_sum(step_dir * self.fisher_vector_product(s, step_dir), axis=0)
+        step_size = 1 / tf.sqrt(shs / self.delta)
         full_step = step_size * step_dir
 
-        if self.discrete == True:
-            self.backup_actor = Policy_network(self.state_dim, self.action_dim)
-        else:
-            self.backup_actor = Policy_network(self.state_dim, self.action_dim * 2)
-
-        self.update_model(self.backup_actor, flattened_actor)
-        #copy_weight(self.actor, self.backup_actor)
-        expected_improve = tf.reduce_sum(flatten_policy_grad * full_step, axis=0, keepdims=True)
+        expected_improve = tf.reduce_sum(flatten_policy_grad * full_step, axis=0)
 
         flag = False
         fraction = 1.0
@@ -201,6 +204,7 @@ class TRPO:
         for i in range(self.backtrack_iter):
             new_flattened_actor = flattened_actor + fraction * full_step
             self.update_model(self.actor, new_flattened_actor)
+
             if self.discrete == True:
                 new_policy = self.actor(s, activation='softmax')
                 new_a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
@@ -210,7 +214,7 @@ class TRPO:
                 new_mean, new_log_std = self.max_action * new_policy[:, :self.action_dim], new_policy[:, self.action_dim:]
                 new_std = tf.exp(new_log_std)
                 new_dist = tfp.distributions.Normal(loc=new_mean, scale=new_std)
-                new_log_policy = new_dist.log_prob(s)
+                new_log_policy = new_dist.log_prob(a)
 
             new_surrogate = tf.reduce_mean(tf.exp(new_log_policy - old_log_policy) * advantages)
 
@@ -230,15 +234,16 @@ class TRPO:
                 backup_mean, backup_log_std = self.max_action * backup_policy[:,:self.action_dim], backup_policy[:,self.action_dim:]
                 backup_std = tf.exp(backup_log_std)
                 backup_dist = tfp.distributions.Normal(loc=backup_mean, scale=backup_std)
+
                 new_kl_divergence = tfp.distributions.kl_divergence(new_dist, backup_dist)
 
             new_kl_divergence = tf.reduce_mean(new_kl_divergence)
 
             print('kl: {:.4f}  loss improve: {:.4f}  expected improve: {:.4f}  '
                   'number of line search: {}'
-                  .format(new_kl_divergence.numpy(), loss_improve, expected_improve[0], i))
+                  .format(new_kl_divergence.numpy(), loss_improve, expected_improve, i))
 
-            if new_kl_divergence.numpy() < self.delta and (loss_improve / expected_improve[0]) > self.backtrack_coeff:
+            if new_kl_divergence.numpy() <= self.delta and loss_improve >= expected_improve:
                 flag = True
                 break
 
@@ -246,14 +251,12 @@ class TRPO:
 
         if not flag:
             self.update_model(self.actor, flattened_actor)
-            #copy_weight(self.backup_actor, self.actor)
             print("Policy update failed")
 
         #critic_train
 
         n = len(s)
         arr = np.arange(n)
-        # arr = np.random.choice(arr, self.batch_size, replace=False)
 
         for epoch in range(self.num_epoch):
             np.random.shuffle(arr)
@@ -274,8 +277,8 @@ class TRPO:
             self.critic_optimizer.apply_gradients(zip(critic_gradients, critic_variables))
 
 
-        if flag:
-            self.buffer.delete()
+
+        self.buffer.delete()
 
 
 
