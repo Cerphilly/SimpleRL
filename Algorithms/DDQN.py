@@ -46,7 +46,7 @@ class DDQN:
         if state.ndim == 1:
             state = np.expand_dims(state, axis=0)
 
-        q_value = self.network(state, use_tanh=False).numpy()
+        q_value = self.network(state, activation='linear').numpy()
         best_action = np.argmax(q_value, axis=1)[0]
 
         if np.random.random() < self.epsilon:
@@ -62,14 +62,14 @@ class DDQN:
         for i in range(training_num):
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
-            q_value = tf.expand_dims(tf.argmax(self.network(ns, use_tanh=False), axis=1, output_type=tf.int32), axis=1)
+            q_value = tf.expand_dims(tf.argmax(self.network(ns, activation='linear'), axis=1, output_type=tf.int32), axis=1)
             q_value_one = tf.squeeze(tf.one_hot(q_value, depth=self.action_dim), axis=1)
 
-            target_value = r + self.gamma*(1-d)*tf.reduce_sum(self.target_network(ns, use_tanh=False)*q_value_one, axis=1, keepdims=True)
+            target_value = r + self.gamma*(1-d)*tf.reduce_sum(self.target_network(ns, activation='linear')*q_value_one, axis=1, keepdims=True)
             target_value = tf.stop_gradient(target_value)
 
             with tf.GradientTape() as tape:
-                selected_values = tf.reduce_sum(self.network(s, use_tanh=False)*tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
+                selected_values = tf.reduce_sum(self.network(s, activation='linear')*tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
                 loss = 0.5*tf.math.reduce_mean(tf.square(target_value - selected_values))
 
             variables = self.network.trainable_variables

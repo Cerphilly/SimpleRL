@@ -3,10 +3,9 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
-import gym
+
 from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network
-from Networks.Gaussian_Actor import Gaussian_Actor
 
 
 class REINFORCE:
@@ -46,7 +45,6 @@ class REINFORCE:
             action = np.random.choice(self.action_dim, 1, p=policy)[0]
             
         else:
-
             output = self.network(state)
             mean, log_std = self.max_action*(output[:, :self.action_dim]), output[:, self.action_dim:]
             std = tf.exp(log_std)

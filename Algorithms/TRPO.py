@@ -167,6 +167,9 @@ class TRPO:
             old_dist = tfp.distributions.Normal(loc=old_mean, scale=old_std)
             old_log_policy = old_dist.log_prob(a)
 
+        flattened_actor = tf.concat([tf.reshape(variable, [-1]) for variable in self.actor.trainable_variables], axis=0)
+        self.update_model(self.backup_actor, flattened_actor)
+
         with tf.GradientTape() as tape:
             if self.discrete == True:
                 policy = self.actor(s, activation='softmax')
@@ -187,8 +190,6 @@ class TRPO:
         policy_grad = tape.gradient(surrogate, self.actor.trainable_variables)
         flatten_policy_grad = tf.concat([tf.reshape(grad, [-1]) for grad in policy_grad], axis=0)
 
-        flattened_actor = tf.concat([tf.reshape(variable, [-1]) for variable in self.actor.trainable_variables], axis=0)
-        self.update_model(self.backup_actor, flattened_actor)
 
         step_dir = self.conjugate_gradient(s, flatten_policy_grad.numpy(), 10)
 
@@ -275,8 +276,6 @@ class TRPO:
             critic_variables = self.critic.trainable_variables
             critic_gradients = tape.gradient(critic_loss, critic_variables)
             self.critic_optimizer.apply_gradients(zip(critic_gradients, critic_variables))
-
-
 
         self.buffer.delete()
 
