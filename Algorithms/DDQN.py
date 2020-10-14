@@ -28,8 +28,6 @@ class DDQN:
         self.training_step = training_step
         self.copy_iter = copy_iter
 
-        self.step = 0
-
         if self.network == None:
             self.network = Policy_network(self.state_dim, self.action_dim)
             print("Network made")
@@ -40,6 +38,7 @@ class DDQN:
         copy_weight(self.network, self.target_network)
 
         self.network_list = {'Network': self.network, 'Target_Network': self.target_network}
+        self.name = 'Double DQN'
 
     def get_action(self, state):
         state = np.array(state)
@@ -55,9 +54,6 @@ class DDQN:
             return best_action
 
     def train(self, training_num):
-        self.step += 1
-
-        total_loss = 0
 
         for i in range(training_num):
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
@@ -76,11 +72,8 @@ class DDQN:
             gradients = tape.gradient(loss, variables)
             self.optimizer.apply_gradients(zip(gradients, variables))
 
-            total_loss += loss.numpy()
 
-            if self.step % self.copy_iter == 0:
+            if i % self.copy_iter == 0:
                 copy_weight(self.network, self.target_network)
 
-            del tape
 
-        return total_loss

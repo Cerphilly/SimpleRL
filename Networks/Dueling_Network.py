@@ -33,6 +33,7 @@ class Dueling_Network(tf.keras.Model):
             output = value + (advantage - tf.reduce_mean(advantage, axis=1, keepdims=True))
         elif estimator == 'max':
             output = value + (advantage - tf.reduce_max(advantage, axis=1, keepdims=True))
+
         return output
 
 

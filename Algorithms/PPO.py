@@ -11,12 +11,11 @@ from Networks.Basic_Networks import Policy_network, V_network
 
 
 class PPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, mode='clip', training_step=1, gamma = 0.99,
+    def __init__(self, state_dim, action_dim, discrete=True, actor=None, critic=None, mode='clip', training_step=1, gamma = 0.99,
                  lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, num_epoch=10, clip=0.2, beta=1, dtarg=0.01):
         self.actor = actor
         self.critic = critic
-        self.max_action = max_action
-        self.min_action = min_action
+
 
         self.discrete = discrete
 
@@ -50,6 +49,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             self.critic = V_network(self.state_dim)
 
         self.network_list = {'Actor': self.actor, 'Critic': self.critic}
+        self.name = 'PPO'
 
     def get_action(self, state):
         state = np.array(state)
@@ -61,12 +61,12 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             action = np.random.choice(self.action_dim, 1, p=policy)[0]
         else:
             output = self.actor(state)
-            mean, log_std = self.max_action*(output[:, :self.action_dim]), output[:, self.action_dim:]
+            mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
             std = tf.exp(log_std)
 
             eps = tf.random.normal(tf.shape(mean))
-            action = (mean + std * eps)[0]
-            action = tf.clip_by_value(action, self.min_action, self.max_action)
+            action = (mean + std * eps)[0].numpy()
+            action = np.clip(action, -1, 1)
 
         return action
 
@@ -97,7 +97,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             old_log_policy = tf.reduce_sum(tf.math.log(old_policy) * tf.stop_gradient(old_a_one_hot), axis=1, keepdims=True)
         else:
             old_policy = self.actor(s)
-            old_mean, old_log_std = self.max_action * (old_policy[:, :self.action_dim]), old_policy[:, self.action_dim:]
+            old_mean, old_log_std = old_policy[:, :self.action_dim], old_policy[:, self.action_dim:]
             old_std = tf.exp(old_log_std)
             old_dist = tfp.distributions.Normal(loc=old_mean, scale=old_std)
             old_log_policy = old_dist.log_prob(a)
@@ -150,7 +150,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
                 else:
                     policy = self.actor(batch_s)
-                    mean, log_std = self.max_action * policy[:,:self.action_dim], policy[:,self.action_dim:]
+                    mean, log_std = policy[:,:self.action_dim], policy[:,self.action_dim:]
                     std = tf.exp(log_std)
                     dist = tfp.distributions.Normal(loc=mean, scale=std)
                     log_policy = dist.log_prob(batch_a)

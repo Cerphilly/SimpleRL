@@ -24,6 +24,7 @@ class Policy_network(tf.keras.Model):
 
         if activation == 'tanh':
             output = tf.nn.tanh(output)
+
         elif activation == 'softmax':
             output = tf.nn.softmax(output)
 

@@ -17,10 +17,14 @@ from Algorithms.SAC_v2 import SAC_v2
 
 
 class Online_Gym_trainer:
-    def __init__(self, env, algorithm, render=True, max_episode = 1e6):
+    def __init__(self, env, algorithm, max_action = 1, min_action = -1, render=True, max_episode = 1e6):
 
         self.env = env
         self.algorithm = algorithm
+
+        self.max_action = max_action
+        self.min_action = min_action
+
         self.render = render
         self.max_episode = max_episode
 
@@ -51,16 +55,17 @@ class Online_Gym_trainer:
                 if self.render == True:
                     self.env.render()
 
-                action = self.algorithm.get_action(observation)
-
                 if self.total_step <= self.algorithm.training_start:
                    action = self.env.action_space.sample()
+                   next_observation, reward, done, _ = self.env.step(action)
 
-                next_observation, reward, done, _ = self.env.step(action)
+                else:
+                    action = self.algorithm.get_action(observation)
+                    next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
                 self.episode_reward += reward
 
-                self.algorithm.buffer.add(observation, action, (reward + 8)/8, next_observation, done)
+                self.algorithm.buffer.add(observation, action, reward, next_observation, done)
                 observation = next_observation
 
 
@@ -71,11 +76,13 @@ class Online_Gym_trainer:
 
 
 class Offline_Gym_trainer:
-    def __init__(self, env, algorithm, render, max_episode=1e6):
+    def __init__(self, env, algorithm, max_action = 1, min_action = -1, render=True, max_episode=1e6):
 
         self.env = env
         self.algorithm = algorithm
 
+        self.max_action = max_action
+        self.min_action = min_action
 
         self.render = render
 
@@ -89,9 +96,6 @@ class Offline_Gym_trainer:
         self.train_count = 0
 
     def run(self):
-        if self.render == True:
-            self.env.render()
-
         while True:
             if self.episode > self.max_episode:
                 print("Training finished")
@@ -101,11 +105,8 @@ class Offline_Gym_trainer:
             self.episode_reward = 0
             self.local_step = 0
 
-
-
             observation = self.env.reset()
             done = False
-            self.random = False
 
             while not done:
                 self.local_step += 1
@@ -114,13 +115,14 @@ class Offline_Gym_trainer:
                 if self.render == True:
                     self.env.render()
 
-                action = self.algorithm.get_action(observation)
-
                 if self.total_step <= self.algorithm.training_start:
                     action = self.env.action_space.sample()
-                    self.random = True
+                    next_observation, reward, done, _ = self.env.step(action)
 
-                next_observation, reward, done, _ = self.env.step(action)
+                else:
+                    action = self.algorithm.get_action(observation)
+                    next_observation, reward, done, _ = self.env.step(self.max_action * action)
+
                 self.episode_reward += reward
                 self.algorithm.buffer.add(observation, action, reward, next_observation, done)
                 observation = next_observation
@@ -148,9 +150,9 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedTriplePendulum-v2")
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
-    env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
+    #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
 
-    #env = gym.make("InvertedPendulum-v2")
+    env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
@@ -177,20 +179,20 @@ def main(cpu_only = False, force_gpu = True):
     print("Max action:", max_action)
     print("Min action:", min_action)
 
-    #reinforce = REINFORCE(state_dim, action_dim, max_action, min_action, discrete=False)
-    #vpg = VPG(state_dim, action_dim, max_action, min_action, discrete=False)
-    trpo = TRPO(state_dim, action_dim, max_action, min_action, discrete=False)
-    #ppo = PPO(state_dim, action_dim, max_action, min_action, discrete=False, mode='clip', clip=0.2)
-    #ppo = PPO(state_dim, action_dim, max_action, min_action, discrete=False, mode='Adaptive KL', dtarg=0.01)
-    #ppo = PPO(state_dim, action_dim, max_action, min_action, discrete=False, mode='Fixed KL', beta=3)
+    #reinforce = REINFORCE(state_dim, action_dim, discrete=False)
+    #vpg = VPG(state_dim, action_dim, discrete=False)
+    trpo = TRPO(state_dim, action_dim, discrete=False)
+    #ppo = PPO(state_dim, action_dim, discrete=False, mode='clip', clip=0.2)
+    #ppo = PPO(state_dim, action_dim, discrete=False, mode='Adaptive KL', dtarg=0.01)
+    #ppo = PPO(state_dim, action_dim, discrete=False, mode='Fixed KL', beta=3)
 
-    #ddpg = DDPG(state_dim, action_dim, max_action, min_action)
-    #td3 = TD3(state_dim, action_dim, max_action, min_action)
+    ddpg = DDPG(state_dim, action_dim)
+    #td3 = TD3(state_dim, action_dim)
 
-    #sac_v1 = SAC_v1(state_dim, action_dim, max_action, min_action)
-    #sac_v2 = SAC_v2(state_dim, action_dim, max_action, min_action, auto_alpha=True)
+    #sac_v1 = SAC_v1(state_dim, action_dim)
+    #sac_v2 = SAC_v2(state_dim, action_dim, auto_alpha=True)
 
-    trainer = Offline_Gym_trainer(env=env, algorithm=trpo, render=True)
+    trainer = Offline_Gym_trainer(env=env, algorithm=trpo, max_action=max_action, min_action=min_action, render=True)
     trainer.run()
 
 

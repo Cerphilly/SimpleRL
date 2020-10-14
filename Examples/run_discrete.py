@@ -44,12 +44,13 @@ class Online_Gym_trainer:
                 if self.render == True:
                     self.env.render()
 
-                action = self.algorithm.get_action(observation)
-
                 if self.total_step <= self.algorithm.training_start:
                    action = self.env.action_space.sample()
+                   next_observation, reward, done, _ = self.env.step(action)
 
-                next_observation, reward, done, _ = self.env.step(action)
+                else:
+                    action = self.algorithm.get_action(observation)
+                    next_observation, reward, done, _ = self.env.step(action)
 
                 self.episode_reward += reward
 
@@ -91,7 +92,6 @@ class Offline_Gym_trainer:
 
             observation = self.env.reset()
             done = False
-            self.random = False
 
             while not done:
                 self.local_step += 1
@@ -100,13 +100,15 @@ class Offline_Gym_trainer:
                 if self.render == True:
                     self.env.render()
 
-                action = self.algorithm.get_action(observation)
 
                 if self.total_step <= self.algorithm.training_start:
                     action = self.env.action_space.sample()
-                    self.random = True
+                    next_observation, reward, done, _ = self.env.step(action)
 
-                next_observation, reward, done, _ = self.env.step(action)
+                else:
+                    action = self.algorithm.get_action(observation)
+                    next_observation, reward, done, _ = self.env.step(action)
+
                 self.episode_reward += reward
 
                 self.algorithm.buffer.add(observation, action, reward, next_observation, done)
@@ -138,11 +140,12 @@ def main(cpu_only = False, force_gpu = False):
     print("State dim:", state_dim)
     print("Action dim:", action_dim)
 
-    #dqn = DQN(state_dim, action_dim)
+    dqn = DQN(state_dim, action_dim)
     #ddqn = DDQN(state_dim, action_dim)
     dueling_dqn = Dueling_DQN(state_dim, action_dim)
 
-    trpo = TRPO(state_dim, action_dim)
+
+    #trpo = TRPO(state_dim, action_dim)
     #ppo = PPO(state_dim, action_dim, mode='clip', clip=0.2)
     #ppo = PPO(state_dim, action_dim, mode='Adaptive KL', dtarg=0.01)#?????
     #ppo = PPO(state_dim, action_dim, mode='Fixed KL', beta=3)
@@ -151,7 +154,7 @@ def main(cpu_only = False, force_gpu = False):
 
     #trainer = Online_Gym_trainer(env=env, algorithm=dueling_dqn, render=True)
 
-    trainer = Offline_Gym_trainer(env=env, algorithm=trpo, render=True)
+    trainer = Offline_Gym_trainer(env=env, algorithm=dqn, render=True)
     trainer.run()
 
 

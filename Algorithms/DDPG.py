@@ -9,7 +9,7 @@ from Networks.Basic_Networks import Policy_network, Q_network
 
 
 class DDPG:
-    def __init__(self, state_dim, action_dim, max_action, min_action, actor = None, target_actor = None, critic = None, target_critic=None, training_step=100, batch_size=100, buffer_size=1e6, gamma=0.99, tau = 0.005, actor_lr=0.001, critic_lr=0.001, training_start=500):
+    def __init__(self, state_dim, action_dim, actor = None, target_actor = None, critic = None, target_critic=None, training_step=100, batch_size=100, buffer_size=1e6, gamma=0.99, tau = 0.005, actor_lr=0.001, critic_lr=0.001, training_start=500):
         self.actor = actor
         self.target_actor = target_actor
         self.critic = critic
@@ -22,8 +22,7 @@ class DDPG:
 
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.max_action = max_action
-        self.min_action = min_action
+
 
         self.batch_size = batch_size
         self.gamma = gamma
@@ -45,6 +44,7 @@ class DDPG:
         copy_weight(self.critic, self.target_critic)
 
         self.network_list = {'Actor': self.actor, 'Target_Actor': self.target_actor, 'Critic': self.critic, 'Target_Critic': self.target_critic}
+        self.name = 'DDPG'
 
     def get_action(self, state):
         state = np.array(state)
@@ -53,7 +53,7 @@ class DDPG:
         noise = np.random.normal(loc=0, scale=0.1, size = self.action_dim)
         action = self.actor(state).numpy()[0] + noise
 
-        action = self.max_action*np.clip(action, self.min_action, self.max_action)
+        action = np.clip(action, -1, 1)
 
         return action
 
@@ -81,12 +81,8 @@ class DDPG:
             soft_update(self.actor, self.target_actor, self.tau)
             soft_update(self.critic, self.target_critic, self.tau)
 
-            self.actor_loss += actor_loss.numpy()
-            self.critic_loss += critic_loss.numpy()
 
-            del tape
 
-        return [self.actor_loss, self.critic_loss]
 
 
 

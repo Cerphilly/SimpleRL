@@ -22,13 +22,13 @@ class Dueling_DQN:
         self.training_start = training_start
         self.training_step = training_step
 
-        self.step = 0
 
         if self.network == None:
             self.network = Dueling_Network(self.state_dim, self.action_dim)
             print("Network made")
 
         self.network_list = {'Network': self.network}
+        self.name = 'Dueling DQN'
 
     def get_action(self, state):
         state = np.array(state)
@@ -43,22 +43,22 @@ class Dueling_DQN:
             return np.argmax(q_value, axis=1)[0]
 
     def train(self, training_num):
-        self.step += 1
 
-        s, a, r, ns, d = self.buffer.sample(self.batch_size)
+        for i in range(training_num):
+            s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
-        target_q = r + self.gamma * (1 - d) * tf.reduce_max(self.network(ns), axis=1, keepdims=True)
-        target_q = tf.stop_gradient(target_q)
+            target_q = r + self.gamma * (1 - d) * tf.reduce_max(self.network(ns), axis=1, keepdims=True)
+            target_q = tf.stop_gradient(target_q)
 
-        with tf.GradientTape() as tape:
+            with tf.GradientTape() as tape:
 
-            q_value = tf.reduce_sum(
-                self.network(s) * tf.squeeze(tf.one_hot(tf.dtypes.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
-            loss = 0.5*tf.math.reduce_mean(tf.square(target_q - q_value))
+                q_value = tf.reduce_sum(
+                    self.network(s) * tf.squeeze(tf.one_hot(tf.dtypes.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
+                loss = 0.5*tf.math.reduce_mean(tf.square(target_q - q_value))
 
-        variables = self.network.trainable_variables
-        gradients = tape.gradient(loss, variables)
-        self.optimizer.apply_gradients(zip(gradients, variables))
+            variables = self.network.trainable_variables
+            gradients = tape.gradient(loss, variables)
+            self.optimizer.apply_gradients(zip(gradients, variables))
 
 
 

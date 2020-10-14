@@ -11,12 +11,10 @@ from Networks.Basic_Networks import Policy_network, V_network
 
 
 class VPG:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, actor=None, critic=None, training_step=1, gamma = 0.99, lambda_gae = 0.96, learning_rate = 0.001):
+    def __init__(self, state_dim, action_dim, discrete=True, actor=None, critic=None, training_step=1, gamma = 0.99, lambda_gae = 0.96, learning_rate = 0.001):
 
         self.actor = actor
         self.critic = critic
-        self.max_action = max_action
-        self.min_action = min_action
 
         self.discrete = discrete
 
@@ -44,6 +42,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
             self.critic = V_network(self.state_dim)
 
         self.network_list = {'Actor': self.actor, 'Critic': self.critic}
+        self.name = 'VPG'
 
     def get_action(self, state):
         state = np.array(state)
@@ -55,12 +54,12 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
             action = np.random.choice(self.action_dim, 1, p=policy)[0]
         else:
             output = self.actor(state)
-            mean, log_std = self.max_action*(output[:, :self.action_dim]), output[:, self.action_dim:]
+            mean, log_std = (output[:, :self.action_dim]), output[:, self.action_dim:]
             std = tf.exp(log_std)
 
             eps = tf.random.normal(tf.shape(mean))
-            action = (mean + std * eps)[0]
-            action = tf.clip_by_value(action, self.min_action, self.max_action)
+            action = (mean + std * eps)[0].numpy()
+            action = np.clip(action, -1, 1)
 
 
         return action
@@ -92,7 +91,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
                 log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
             else:
                 output = self.actor(s)
-                mean, log_std = self.max_action*(output[:, :self.action_dim]), output[:, self.action_dim:]
+                mean, log_std = (output[:, :self.action_dim]), output[:, self.action_dim:]
                 std = tf.exp(log_std)
                 dist = tfp.distributions.Normal(loc=mean, scale=std)
                 log_policy = dist.log_prob(a)

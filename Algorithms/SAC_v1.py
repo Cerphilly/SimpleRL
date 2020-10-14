@@ -9,7 +9,7 @@ from Networks.Basic_Networks import Q_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
 class SAC_v1:
-    def __init__(self, state_dim, action_dim, max_action, min_action, actor=None, critic1=None, critic2=None, v_network=None, target_v_network=None, training_step=100,
+    def __init__(self, state_dim, action_dim, actor=None, critic1=None, critic2=None, v_network=None, target_v_network=None, training_step=100,
                  batch_size=100, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, alpha=0.2, reward_scale=1, training_start = 500):
 
         self.actor = actor
@@ -27,10 +27,6 @@ class SAC_v1:
 
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.max_action = max_action
-        self.min_action = min_action
-
-
 
         self.batch_size = batch_size
         self.tau = tau
@@ -54,13 +50,14 @@ class SAC_v1:
         copy_weight(self.v_network, self.target_v_network)
 
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'V_network': self.v_network, 'Target_V_network': self.target_v_network}
+        self.name = 'SAC_v1'
 
     def get_action(self, state):
         state = np.array(state)
         if state.ndim == 1:
             state = np.expand_dims(state, axis=0)
 
-        action = self.max_action * self.actor(state).numpy()[0]
+        action = self.actor(state).numpy()[0]
 
         return action
 

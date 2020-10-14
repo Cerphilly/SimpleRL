@@ -8,7 +8,7 @@ from Common.Utils import copy_weight, soft_update
 from Networks.Basic_Networks import Policy_network, Q_network
 
 class TD3:
-    def __init__(self, state_dim, action_dim, max_action, min_action, actor = None, target_actor = None, critic1 = None, target_critic1=None, critic2 = None, target_critic2=None, training_step=100, batch_size=100, buffer_size=1e6,
+    def __init__(self, state_dim, action_dim, actor = None, target_actor = None, critic1 = None, target_critic1=None, critic2 = None, target_critic2=None, training_step=100, batch_size=100, buffer_size=1e6,
                  gamma=0.99, tau=0.005, actor_lr=0.001, critic_lr=0.001, policy_delay=2, actor_noise=0.1, target_noise=0.2, noise_clip=0.5, training_start=500):
 
         self.actor = actor
@@ -26,9 +26,6 @@ class TD3:
 
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.max_action = max_action
-        self.min_action = min_action
-
 
         self.batch_size = batch_size
         self.gamma = gamma
@@ -42,7 +39,6 @@ class TD3:
         self.training_start = training_start
         self.training_step = training_step
 
-        self.step = 0
 
         if self.actor == None:
             self.actor = Policy_network(self.state_dim, self.action_dim)
@@ -62,7 +58,7 @@ class TD3:
         copy_weight(self.critic2, self.target_critic2)
 
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
-
+        self.name = 'TD3'
 
     def get_action(self, state):
         state = np.array(state)
@@ -72,7 +68,7 @@ class TD3:
 
         action = self.actor(state).numpy()[0] + noise
 
-        action = self.max_action * np.clip(action, self.min_action, self.max_action)
+        action = np.clip(action, -1, 1)
 
         return action
 
@@ -82,10 +78,9 @@ class TD3:
         self.critic2_loss = 0
 
         for i in range(training_num):
-            self.step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
-            target_action = tf.clip_by_value(self.target_actor(ns) + tf.clip_by_value(tf.random.normal(shape=self.target_actor(ns).shape, mean=0, stddev=self.target_noise), -self.noise_clip, self.noise_clip), self.min_action, self.max_action)
+            target_action = tf.clip_by_value(self.target_actor(ns) + tf.clip_by_value(tf.random.normal(shape=self.target_actor(ns).shape, mean=0, stddev=self.target_noise), -self.noise_clip, self.noise_clip), -1, 1)
 
             target_value = tf.stop_gradient(r + self.gamma * (1 - d) * tf.minimum(self.target_critic1(ns, target_action), self.target_critic2(ns, target_action)))
 
@@ -99,7 +94,7 @@ class TD3:
             critic2_grad = tape.gradient(critic2_loss, self.critic2.trainable_variables)
             self.critic2_optimizer.apply_gradients(zip(critic2_grad, self.critic2.trainable_variables))
 
-            if self.step % self.policy_delay == 0:
+            if i % self.policy_delay == 0:
 
                 with tf.GradientTape() as tape2:
                     actor_loss = -tf.reduce_mean(self.critic1(s, self.actor(s)))
@@ -108,17 +103,11 @@ class TD3:
                 self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
                 soft_update(self.actor, self.target_actor, self.tau)
+                soft_update(self.critic1, self.target_critic1, self.tau)
+                soft_update(self.critic2, self.target_critic2, self.tau)
 
-                self.actor_loss += actor_loss.numpy()
 
-                del tape2
 
-            soft_update(self.critic1, self.target_critic1, self.tau)
-            soft_update(self.critic2, self.target_critic2, self.tau)
 
-            self.critic1_loss += critic1_loss.numpy()
-            self.critic2_loss += critic2_loss.numpy()
-
-            del tape
 
 

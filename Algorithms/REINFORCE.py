@@ -9,15 +9,14 @@ from Networks.Basic_Networks import Policy_network
 
 
 class REINFORCE:
-    def __init__(self, state_dim, action_dim, max_action = 1, min_action=1, discrete=True, network=None, training_step=1, gamma=0.99, learning_rate=0.001):
+    def __init__(self, state_dim, action_dim, discrete=True, network=None, training_step=1, gamma=0.99, learning_rate=0.001):
         self.network = network
 
         self.buffer = Buffer()
 
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.max_action = max_action
-        self.min_action = min_action
+
         
         self.discrete = discrete
 
@@ -33,6 +32,7 @@ class REINFORCE:
                 self.network = Policy_network(self.state_dim, self.action_dim*2)
 
         self.network_list = {'Network': self.network}
+        self.name = 'REINFORCE'
 
 
     def get_action(self, state):
@@ -46,13 +46,13 @@ class REINFORCE:
             
         else:
             output = self.network(state)
-            mean, log_std = self.max_action*(output[:, :self.action_dim]), output[:, self.action_dim:]
+            mean, log_std = (output[:, :self.action_dim]), output[:, self.action_dim:]
             std = tf.exp(log_std)
 
             eps = tf.random.normal(tf.shape(mean))
 
-            action = (mean + std*eps)[0]
-            action = tf.clip_by_value(action, self.min_action, self.max_action)
+            action = (mean + std*eps)[0].numpy()
+            action = np.clip(action, -1, 1)
 
         return action
 
@@ -73,7 +73,7 @@ class REINFORCE:
                 log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
             else:
                 output = self.network(s)
-                mean, log_std = self.max_action*(output[:, :self.action_dim]), output[:, self.action_dim:]
+                mean, log_std = (output[:, :self.action_dim]), output[:, self.action_dim:]
                 std = tf.exp(log_std)
                 dist = tfp.distributions.Normal(loc=mean, scale=std)
                 log_policy = dist.log_prob(a)

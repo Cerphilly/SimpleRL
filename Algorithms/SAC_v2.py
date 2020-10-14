@@ -10,7 +10,7 @@ from Networks.Gaussian_Actor import Gaussian_Actor
 
 
 class SAC_v2:
-    def __init__(self, state_dim, action_dim, max_action, min_action, actor=None, critic1=None, target_critic1=None, critic2=None, target_critic2=None, training_step=100,
+    def __init__(self, state_dim, action_dim, actor=None, critic1=None, target_critic1=None, critic2=None, target_critic2=None, training_step=100,
                  batch_size=100, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, alpha=0.2, auto_alpha = False, reward_scale=1, training_start = 500):
 
         self.actor = actor
@@ -27,8 +27,6 @@ class SAC_v2:
 
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.max_action = max_action
-        self.min_action = min_action
 
         self.batch_size = batch_size
         self.tau = tau
@@ -61,6 +59,7 @@ class SAC_v2:
         copy_weight(self.critic2, self.target_critic2)
 
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
+        self.name = 'SAC_v2'
 
 
 
@@ -69,14 +68,12 @@ class SAC_v2:
         if state.ndim == 1:
             state = np.expand_dims(state, axis=0)
 
-        action = self.max_action * self.actor(state).numpy()[0]
+        action = self.actor(state).numpy()[0]
 
         return action
 
     def train(self, training_num):
-        self.actor_loss = 0
-        self.critic1_loss = 0
-        self.critic2_loss = 0
+
 
         for i in range(training_num):
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
@@ -118,8 +115,5 @@ class SAC_v2:
             soft_update(self.critic1, self.target_critic1, self.tau)
             soft_update(self.critic2, self.target_critic2, self.tau)
 
-            self.actor_loss += actor_loss.numpy()
-            self.critic1_loss += critic1_loss.numpy()
-            self.critic2_loss += critic2_loss.numpy()
 
 

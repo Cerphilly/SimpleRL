@@ -30,16 +30,15 @@ class Gaussian_Actor(tf.keras.Model):#use it for SAC
         sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], -20.0, 2.0))
 
         distribution = tfp.distributions.Normal(loc=mu, scale=sigma)
-        sample_action = distribution.sample()
-        tanh_mean = tf.nn.tanh(mu)
-        tanh_sample = tf.nn.tanh(sample_action)
 
         if deterministic == True:
+            tanh_mean = tf.nn.tanh(mu)
             return tanh_mean
         else:
+            sample_action = distribution.sample()
+            tanh_sample = tf.nn.tanh(sample_action)
             return tanh_sample
 
-    @tf.function
     def log_pi(self, input):
         z = self.input_layer(input)
         for layer in self.hidden_layers:
@@ -58,7 +57,6 @@ class Gaussian_Actor(tf.keras.Model):#use it for SAC
         log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=1, keepdims=True)
         return log_pi
 
-    @tf.function
     def mu_sigma(self, input):
         z = self.input_layer(input)
         for layer in self.hidden_layers:
