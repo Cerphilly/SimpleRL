@@ -3,11 +3,12 @@
 #https://spinningup.openai.com/en/latest/algorithms/vpg.html
 
 import tensorflow as tf
-import tensorflow_probability as tfp
 import numpy as np
 
 from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network, V_network
+from Networks.Gaussian_Actor import Gaussian_Actor
+
 
 
 class VPG:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
@@ -36,7 +37,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
             if self.discrete == True:
                 self.actor = Policy_network(self.state_dim, self.action_dim)
             else:
-                self.actor = Policy_network(self.state_dim, self.action_dim*2)
+                self.actor = Gaussian_Actor(self.state_dim, self.action_dim)
 
         if self.critic == None:
             self.critic = V_network(self.state_dim)
@@ -53,14 +54,8 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
             policy = self.actor(state, activation='softmax').numpy()[0]
             action = np.random.choice(self.action_dim, 1, p=policy)[0]
         else:
-            output = self.actor(state)
-            mean, log_std = (output[:, :self.action_dim]), output[:, self.action_dim:]
-            std = tf.exp(log_std)
-
-            eps = tf.random.normal(tf.shape(mean))
-            action = (mean + std * eps)[0].numpy()
+            action = self.actor(state).numpy()[0]
             action = np.clip(action, -1, 1)
-
 
         return action
 
@@ -90,10 +85,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
                 a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
                 log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
             else:
-                output = self.actor(s)
-                mean, log_std = (output[:, :self.action_dim]), output[:, self.action_dim:]
-                std = tf.exp(log_std)
-                dist = tfp.distributions.Normal(loc=mean, scale=std)
+                dist = self.actor.dist(s)
                 log_policy = dist.log_prob(a)
 
             actor_loss = -tf.reduce_sum(log_policy * tf.stop_gradient(advantages))

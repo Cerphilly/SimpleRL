@@ -6,7 +6,7 @@ import numpy as np
 from Common.Buffer import Buffer
 from Common.Utils import copy_weight, soft_update
 from Networks.Basic_Networks import Q_network
-from Networks.Gaussian_Actor import Gaussian_Actor
+from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
 
 
 class SAC_v2:
@@ -45,7 +45,7 @@ class SAC_v2:
             self.alpha_optimizer = tf.keras.optimizers.Adam(learning_rate)
 
         if self.actor == None:
-            self.actor = Gaussian_Actor(self.state_dim, self.action_dim)
+            self.actor = Squashed_Gaussian_Actor(self.state_dim, self.action_dim)
         if self.critic1 == None:
             self.critic1 = Q_network(self.state_dim, self.action_dim)
         if self.target_critic1 == None:

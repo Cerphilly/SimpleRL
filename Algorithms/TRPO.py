@@ -9,6 +9,7 @@ import copy
 
 from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network, V_network
+from Networks.Gaussian_Actor import Gaussian_Actor
 
 class TRPO:
     def __init__(self, state_dim, action_dim, discrete=True, actor=None, critic=None, training_step=1, gamma = 0.99,
@@ -42,8 +43,8 @@ class TRPO:
                 self.actor = Policy_network(self.state_dim, self.action_dim)
                 self.backup_actor = Policy_network(self.state_dim, self.action_dim)
             else:
-                self.actor = Policy_network(self.state_dim, self.action_dim*2)
-                self.backup_actor = Policy_network(self.state_dim, self.action_dim * 2)
+                self.actor = Gaussian_Actor(self.state_dim, self.action_dim)
+                self.backup_actor = Gaussian_Actor(self.state_dim, self.action_dim)
 
         if self.critic == None:
             self.critic = V_network(self.state_dim)
@@ -61,12 +62,7 @@ class TRPO:
             action = np.random.choice(self.action_dim, 1, p=policy)[0]
 
         else:
-            output = self.actor(state)
-            mean, log_std =  (output[:, :self.action_dim]), output[:, self.action_dim:]
-            std = tf.exp(log_std)
-
-            eps = tf.random.normal(tf.shape(mean))
-            action = (mean + std * eps)[0].numpy()
+            action = self.actor(state).numpy()[0]
             action = np.clip(action, -1, 1)
 
         return action
@@ -79,15 +75,8 @@ class TRPO:
                         tfp.distributions.Categorical(probs=self.actor(states, activation='softmax')),
                         tfp.distributions.Categorical(probs=self.backup_actor(states, activation='softmax')))
                 else:
-                    policy = self.actor(states)
-                    mean, log_std = policy[:, :self.action_dim], policy[:, self.action_dim:]
-                    std = tf.exp(log_std)
-                    dist = tfp.distributions.Normal(loc=mean, scale=std)
-
-                    backup_policy = self.backup_actor(states)
-                    backup_mean, backup_log_std = backup_policy[:,: self.action_dim], backup_policy[:,self.action_dim:]
-                    backup_std = tf.exp(backup_log_std)
-                    backup_dist = tfp.distributions.Normal(loc=backup_mean, scale=backup_std)
+                    dist = self.actor.dist(states)
+                    backup_dist = self.backup_actor.dist(states)
 
                     kl_divergence = tfp.distributions.kl_divergence(dist, backup_dist)
                 kl_divergence = tf.reduce_mean(kl_divergence)
@@ -102,7 +91,7 @@ class TRPO:
         return flatten_kl_hessian_p + 0.1 * p
 
 
-    def conjugate_gradient(self, states, b, nsteps, residual_tol=1e-10):
+    def conjugate_gradient(self, states, b, nsteps):
         x = np.zeros_like(b)
         r = copy.deepcopy(b)
         p = copy.deepcopy(r)
@@ -159,10 +148,7 @@ class TRPO:
             old_log_policy = tf.reduce_sum(tf.math.log(old_policy) * tf.stop_gradient(old_a_one_hot), axis=1, keepdims=True)
 
         else:
-            old_policy = self.actor(s)
-            old_mean, old_log_std = (old_policy[:, :self.action_dim]), old_policy[:, self.action_dim:]
-            old_std = tf.exp(old_log_std)
-            old_dist = tfp.distributions.Normal(loc=old_mean, scale=old_std)
+            old_dist = self.actor.dist(s)
             old_log_policy = old_dist.log_prob(a)
 
         flattened_actor = tf.concat([tf.reshape(variable, [-1]) for variable in self.actor.trainable_variables], axis=0)
@@ -177,10 +163,7 @@ class TRPO:
                 surrogate = tf.reduce_mean(tf.exp(log_policy - tf.stop_gradient(old_log_policy)) * advantages)
 
             else:
-                policy = self.actor(s)
-                mean, log_std = policy[:, :self.action_dim], policy[:, self.action_dim:]
-                std = tf.exp(log_std)
-                dist = tfp.distributions.Normal(loc=mean, scale=std)
+                dist = self.actor.dist(s)
                 log_policy = dist.log_prob(a)
 
                 surrogate = tf.reduce_mean(tf.exp(log_policy - tf.stop_gradient(old_log_policy)) * advantages)
@@ -209,10 +192,7 @@ class TRPO:
                 new_a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
                 new_log_policy = tf.reduce_sum(tf.math.log(new_policy) * tf.stop_gradient(new_a_one_hot), axis=1, keepdims=True)
             else:
-                new_policy = self.actor(s)
-                new_mean, new_log_std = new_policy[:, :self.action_dim], new_policy[:, self.action_dim:]
-                new_std = tf.exp(new_log_std)
-                new_dist = tfp.distributions.Normal(loc=new_mean, scale=new_std)
+                new_dist = self.actor.dist(s)
                 new_log_policy = new_dist.log_prob(a)
 
             new_surrogate = tf.reduce_mean(tf.exp(new_log_policy - old_log_policy) * advantages)
@@ -224,23 +204,14 @@ class TRPO:
                 new_kl_divergence = tfp.distributions.kl_divergence(tfp.distributions.Categorical(probs=self.actor(s, activation='softmax')),
                                                                     tfp.distributions.Categorical(probs=self.backup_actor(s, activation='softmax')))
             else:
-                new_policy = self.actor(s)
-                new_mean, new_log_std = new_policy[:, :self.action_dim], new_policy[:, self.action_dim:]
-                new_std = tf.exp(new_log_std)
-                new_dist = tfp.distributions.Normal(loc=new_mean, scale=new_std)
-
-                backup_policy = self.backup_actor(s)
-                backup_mean, backup_log_std = backup_policy[:,:self.action_dim], backup_policy[:,self.action_dim:]
-                backup_std = tf.exp(backup_log_std)
-                backup_dist = tfp.distributions.Normal(loc=backup_mean, scale=backup_std)
+                new_dist = self.actor.dist(s)
+                backup_dist = self.backup_actor.dist(s)
 
                 new_kl_divergence = tfp.distributions.kl_divergence(new_dist, backup_dist)
 
             new_kl_divergence = tf.reduce_mean(new_kl_divergence)
 
-            print('kl: {:.4f}  loss improve: {:.4f}  expected improve: {:.4f}  '
-                  'number of line search: {}'
-                  .format(new_kl_divergence.numpy(), loss_improve, expected_improve, i))
+            #print('kl: {:.4f}  loss improve: {:.4f}  expected improve: {:.4f}  ' 'number of line search: {}'.format(new_kl_divergence.numpy(), loss_improve, expected_improve, i))
 
             if new_kl_divergence.numpy() <= self.delta and loss_improve >= expected_improve:
                 flag = True

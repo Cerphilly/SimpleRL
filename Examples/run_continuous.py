@@ -11,13 +11,13 @@ from Algorithms.VPG import VPG
 from Algorithms.PPO import PPO
 from Algorithms.DDPG import DDPG
 from Algorithms.TD3 import TD3
-from Algorithms.TRPO import TRPO
+from Algorithms.TRPO2 import TRPO
 from Algorithms.SAC_v1 import SAC_v1
 from Algorithms.SAC_v2 import SAC_v2
 
 
 class Online_Gym_trainer:
-    def __init__(self, env, algorithm, max_action = 1, min_action = -1, render=True, max_episode = 1e6):
+    def __init__(self, env, algorithm, max_action, min_action, render=True, max_episode = 1e6):
 
         self.env = env
         self.algorithm = algorithm
@@ -76,7 +76,7 @@ class Online_Gym_trainer:
 
 
 class Offline_Gym_trainer:
-    def __init__(self, env, algorithm, max_action = 1, min_action = -1, render=True, max_episode=1e6):
+    def __init__(self, env, algorithm, max_action, min_action, render=True, max_episode=1e6):
 
         self.env = env
         self.algorithm = algorithm
@@ -111,7 +111,6 @@ class Offline_Gym_trainer:
             while not done:
                 self.local_step += 1
                 self.total_step += 1
-
                 if self.render == True:
                     self.env.render()
 
@@ -186,7 +185,7 @@ def main(cpu_only = False, force_gpu = True):
     #ppo = PPO(state_dim, action_dim, discrete=False, mode='Adaptive KL', dtarg=0.01)
     #ppo = PPO(state_dim, action_dim, discrete=False, mode='Fixed KL', beta=3)
 
-    ddpg = DDPG(state_dim, action_dim)
+    #ddpg = DDPG(state_dim, action_dim)
     #td3 = TD3(state_dim, action_dim)
 
     #sac_v1 = SAC_v1(state_dim, action_dim)

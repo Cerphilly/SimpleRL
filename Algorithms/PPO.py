@@ -8,11 +8,12 @@ import numpy as np
 
 from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network, V_network
+from Networks.Gaussian_Actor import Gaussian_Actor
 
 
 class PPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, discrete=True, actor=None, critic=None, mode='clip', training_step=1, gamma = 0.99,
-                 lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, num_epoch=10, clip=0.2, beta=1, dtarg=0.01):
+    def __init__(self, state_dim, action_dim, discrete=True, actor=None, critic=None, mode='clip', training_step=10, gamma = 0.99,
+                 lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, clip=0.2, beta=1, dtarg=0.01):
         self.actor = actor
         self.critic = critic
 
@@ -26,7 +27,6 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         self.gamma = gamma
         self.lambda_gae = lambda_gae
         self.batch_size = batch_size
-        self.num_epoch = num_epoch
         self.clip = clip
         self.beta = beta
         self.dtarg = dtarg
@@ -43,7 +43,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             if self.discrete == True:
                 self.actor = Policy_network(self.state_dim, self.action_dim)
             else:
-                self.actor = Policy_network(self.state_dim, self.action_dim*2)
+                self.actor = Gaussian_Actor(self.state_dim, self.action_dim)
 
         if self.critic == None:
             self.critic = V_network(self.state_dim)
@@ -60,12 +60,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             policy = self.actor(state, activation='softmax').numpy()[0]
             action = np.random.choice(self.action_dim, 1, p=policy)[0]
         else:
-            output = self.actor(state)
-            mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
-            std = tf.exp(log_std)
-
-            eps = tf.random.normal(tf.shape(mean))
-            action = (mean + std * eps)[0].numpy()
+            action = self.actor(state).numpy()[0]
             action = np.clip(action, -1, 1)
 
         return action
@@ -96,16 +91,14 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             old_a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
             old_log_policy = tf.reduce_sum(tf.math.log(old_policy) * tf.stop_gradient(old_a_one_hot), axis=1, keepdims=True)
         else:
-            old_policy = self.actor(s)
-            old_mean, old_log_std = old_policy[:, :self.action_dim], old_policy[:, self.action_dim:]
-            old_std = tf.exp(old_log_std)
-            old_dist = tfp.distributions.Normal(loc=old_mean, scale=old_std)
+            old_mean, old_std = self.actor.mu_sigma(s)
+            old_dist = self.actor.dist(s)
             old_log_policy = old_dist.log_prob(a)
 
         n = len(s)
         arr = np.arange(n)
 
-        for epoch in range(self.num_epoch):
+        for epoch in range(training_num):
             np.random.shuffle(arr)
 
             if n//self.batch_size > 0:
@@ -149,10 +142,8 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                             print(self.beta)
 
                 else:
-                    policy = self.actor(batch_s)
-                    mean, log_std = policy[:,:self.action_dim], policy[:,self.action_dim:]
-                    std = tf.exp(log_std)
-                    dist = tfp.distributions.Normal(loc=mean, scale=std)
+
+                    dist = self.actor.dist(batch_s)
                     log_policy = dist.log_prob(batch_a)
 
                     ratio = tf.exp(log_policy - batch_old_log_policy)

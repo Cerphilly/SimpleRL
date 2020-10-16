@@ -6,7 +6,7 @@ import numpy as np
 from Common.Buffer import Buffer
 from Common.Utils import copy_weight, soft_update
 from Networks.Basic_Networks import Q_network, V_network
-from Networks.Gaussian_Actor import Gaussian_Actor
+from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
 
 class SAC_v1:
     def __init__(self, state_dim, action_dim, actor=None, critic1=None, critic2=None, v_network=None, target_v_network=None, training_step=100,
@@ -37,7 +37,7 @@ class SAC_v1:
         self.training_step = training_step
 
         if self.actor == None:
-            self.actor = Gaussian_Actor(self.state_dim, self.action_dim)
+            self.actor = Squashed_Gaussian_Actor(self.state_dim, self.action_dim)
         if self.critic1 == None:
             self.critic1 = Q_network(self.state_dim, self.action_dim)
         if self.critic2 == None:
