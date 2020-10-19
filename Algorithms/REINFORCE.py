@@ -9,7 +9,7 @@ from Networks.Gaussian_Actor import Gaussian_Actor
 
 
 class REINFORCE:
-    def __init__(self, state_dim, action_dim, discrete=True, network=None, training_step=1, gamma=0.99, learning_rate=0.001):
+    def __init__(self, state_dim, action_dim, discrete, network=None, training_step=1, gamma=0.99, learning_rate=0.001):
         self.network = network
 
         self.buffer = Buffer()

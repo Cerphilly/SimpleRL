@@ -12,7 +12,7 @@ from Networks.Basic_Networks import Policy_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
 class TRPO:
-    def __init__(self, state_dim, action_dim, discrete=True, actor=None, critic=None, training_step=1, gamma = 0.99,
+    def __init__(self, state_dim, action_dim, discrete, actor=None, critic=None, training_step=1, gamma = 0.99,
                  lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, backtrack_iter=10, backtrack_coeff=0.8, delta=0.05, num_epoch=10):
 
         self.actor = actor

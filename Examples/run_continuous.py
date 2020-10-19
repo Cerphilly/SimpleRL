@@ -11,7 +11,7 @@ from Algorithms.VPG import VPG
 from Algorithms.PPO import PPO
 from Algorithms.DDPG import DDPG
 from Algorithms.TD3 import TD3
-from Algorithms.TRPO2 import TRPO
+from Algorithms.TRPO import TRPO
 from Algorithms.SAC_v1 import SAC_v1
 from Algorithms.SAC_v2 import SAC_v2
 
