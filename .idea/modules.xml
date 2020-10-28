@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/../BoxRL/.idea/BoxRL.iml" filepath="$PROJECT_DIR$/../BoxRL/.idea/BoxRL.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/SimpleRL.iml" filepath="$PROJECT_DIR$/.idea/SimpleRL.iml" />
     </modules>
   </component>
