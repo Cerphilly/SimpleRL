@@ -5,7 +5,6 @@ import pybullet_envs
 
 import sys
 import datetime
-sys.path.append('../')
 
 from Algorithms.REINFORCE import REINFORCE
 from Algorithms.VPG import VPG
@@ -42,6 +41,8 @@ class Gym_trainer:
             self.train_mode = self.offline_train
         elif train_mode == 'online':
             self.train_mode = self.online_train
+        elif train_mode == 'batch':
+            self.train_mode = self.batch_train
 
     def offline_train(self, d, local_step):
         if d:
@@ -50,6 +51,13 @@ class Gym_trainer:
 
     def online_train(self, d, local_step):
         return True
+
+    def batch_train(self, d, local_step):#VPG, TRPO, PPO only
+        if d or local_step == self.algorithm.batch_size:
+            return True
+        return False
+
+
 
     def run(self):
 
@@ -61,7 +69,6 @@ class Gym_trainer:
             self.episode += 1
             self.episode_reward = 0
             self.local_step = 0
-            self.losses = 0
 
             observation = self.env.reset()
             done = False
@@ -109,7 +116,7 @@ def main(cpu_only = False, force_gpu = True):
 
     #discrete env
     #################################################################################
-    env = gym.make("CartPole-v0")
+    #env = gym.make("CartPole-v0")
     #env = gym.make("MountainCar-v0")
     #env = gym.make("Acrobot-v1")
 
@@ -125,12 +132,12 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
 
-    #env = gym.make("InvertedPendulum-v2")
+    env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
     #env = gym.make("Hopper-v2")
-    #env = gym.make("Humanoid-v2")
+    #env = gym.make("Humanoid-v3")
     #env = gym.make("HumanoidStandup-v2")
     #env = gym.make("Reacher-v2")
     #env = gym.make("Swimmer-v2")
@@ -157,7 +164,7 @@ def main(cpu_only = False, force_gpu = True):
 
     #algorithm for discrete env
     #################################################################################
-    algorithm = DQN(state_dim, action_dim)
+    #algorithm = DQN(state_dim, action_dim)
     #algorithm = DDQN(state_dim, action_dim)
     #algorithm = Dueling_DQN(state_dim, action_dim)
 
@@ -173,7 +180,7 @@ def main(cpu_only = False, force_gpu = True):
     #algorithm for both env
     #################################################################################
     #offline training only for REINFORCE, VPG, TRPO, PPO
-    #algorithm = TRPO(state_dim, action_dim, discrete)
+    algorithm = TRPO(state_dim, action_dim, discrete)
     #algorithm = PPO(state_dim, action_dim, discrete, mode='clip', clip=0.2)
     #algorithm= PPO(state_dim, action_dim, discrete, mode='Adaptive KL', dtarg=0.01)
     #algorithm = PPO(state_dim, action_dim, discrete, mode='Fixed KL', beta=3)
@@ -189,7 +196,7 @@ def main(cpu_only = False, force_gpu = True):
     print("Min action:", min_action)
     print("Discrete: ", discrete)
 
-    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='offline', render=True)
+    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='batch', render=False)
     trainer.run()
 
 
