@@ -17,11 +17,8 @@ class Buffer:
 
         if element.ndim == 0:
             return np.expand_dims(element, axis=0)
-        if element.ndim == 1:
+        else:
             return element
-        if element.ndim > 1:
-            raise ValueError
-
 
     def add(self, s, a, r, ns, d):
 

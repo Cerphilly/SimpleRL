@@ -46,9 +46,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         self.name = 'VPG'
 
     def get_action(self, state):
-        state = np.array(state)
-        if state.ndim == 1:
-            state = np.expand_dims(state, axis=0)
+        state = np.expand_dims(np.array(state), axis=0)
 
         if self.discrete == True:
             policy = self.actor(state, activation='softmax').numpy()[0]

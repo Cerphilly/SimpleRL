@@ -36,10 +36,8 @@ class REINFORCE:
 
 
     def get_action(self, state):
-        state = np.array(state)
-        if state.ndim == 1:
-            state = np.expand_dims(state, axis=0)
-            
+        state = np.expand_dims(np.array(state), axis=0)
+
         if self.discrete == True:
             policy = self.network(state, activation='softmax').numpy()[0]
             action = np.random.choice(self.action_dim, 1, p=policy)[0]

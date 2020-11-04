@@ -53,9 +53,7 @@ class SAC_v1:
         self.name = 'SAC_v1'
 
     def get_action(self, state):
-        state = np.array(state)
-        if state.ndim == 1:
-            state = np.expand_dims(state, axis=0)
+        state = np.expand_dims(np.array(state), axis=0)
 
         action = self.actor(state).numpy()[0]
 

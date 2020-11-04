@@ -47,9 +47,7 @@ class DDPG:
         self.name = 'DDPG'
 
     def get_action(self, state):
-        state = np.array(state)
-        if state.ndim == 1:
-            state = np.expand_dims(state, axis=0)
+        state = np.expand_dims(np.array(state), axis=0)
         noise = np.random.normal(loc=0, scale=0.1, size = self.action_dim)
         action = self.actor(state).numpy()[0] + noise
 
