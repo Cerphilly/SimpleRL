@@ -1,7 +1,6 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-
 class Gaussian_Actor(tf.keras.Model):
     def __init__(self, state_dim, action_dim, hidden_units=(256, 256), activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
         super(Gaussian_Actor, self).__init__()
@@ -17,9 +16,8 @@ class Gaussian_Actor(tf.keras.Model):
 
         self.output_layer = tf.keras.layers.Dense(self.action_dim * 2, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Output')
-
     @tf.function
-    def __call__(self, input, activation='tanh'):
+    def call(self, input, activation='tanh'):
         z = self.input_layer(input)
         for layer in self.hidden_layers:
             z = layer(z)
@@ -32,9 +30,9 @@ class Gaussian_Actor(tf.keras.Model):
         mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
         std = tf.exp(log_std)
 
-        # eps = tf.random.normal(tf.shape(mean))
-        # action = (mean + std * eps)[0]
-        # action = tf.clip_by_value(action, -1, 1).numpy()
+        #eps = tf.random.normal(tf.shape(mean))
+        #action = (mean + std * eps)
+        #action = tf.clip_by_value(action, -1, 1).numpy()
 
         dist = tfp.distributions.Normal(loc=mean, scale=std)
         action = dist.sample()
@@ -99,14 +97,15 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         mu = z[:,: self.action_dim]
         sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], -20.0, 2.0))
 
-        distribution = tfp.distributions.Normal(loc=mu, scale=sigma)
-
         if deterministic == True:
             tanh_mean = tf.nn.tanh(mu)
             return tanh_mean
         else:
-            sample_action = distribution.sample()
+            dist = tfp.distributions.Normal(loc=mu, scale=sigma)
+            action = dist.sample()
+            sample_action = tf.clip_by_value(action, -1, 1)
             tanh_sample = tf.nn.tanh(sample_action)
+
             return tanh_sample
 
     def log_pi(self, input):
@@ -124,7 +123,7 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         tanh_sample = tf.nn.tanh(sample_action)
 
         log_prob = distribution.log_prob(sample_action + 1e-6)
-        log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=1, keepdims=True)
+        log_pi = log_prob -  tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=1, keepdims=True)
         return log_pi
 
     def mu_sigma(self, input):

@@ -10,7 +10,7 @@ from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
 
 
 class SAC_v2:
-    def __init__(self, state_dim, action_dim, actor=None, critic1=None, target_critic1=None, critic2=None, target_critic2=None, training_step=100,
+    def __init__(self, state_dim, action_dim, actor=None, critic1=None, target_critic1=None, critic2=None, target_critic2=None, training_step=200,
                  batch_size=100, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, alpha=0.2, auto_alpha = False, reward_scale=1, training_start = 500):
 
         self.actor = actor
@@ -60,8 +60,6 @@ class SAC_v2:
 
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
         self.name = 'SAC_v2'
-
-
 
     def get_action(self, state):
         state = np.expand_dims(np.array(state), axis=0)

@@ -9,7 +9,7 @@ from Networks.Basic_Networks import Q_network, V_network
 from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
 
 class SAC_v1:
-    def __init__(self, state_dim, action_dim, actor=None, critic1=None, critic2=None, v_network=None, target_v_network=None, training_step=100,
+    def __init__(self, state_dim, action_dim, actor=None, critic1=None, critic2=None, v_network=None, target_v_network=None, training_step=200,
                  batch_size=100, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, alpha=0.2, reward_scale=1, training_start = 500):
 
         self.actor = actor
@@ -82,7 +82,7 @@ class SAC_v1:
 
                 min_aq_rep = tf.minimum(self.critic1(s, output), self.critic2(s, output))
 
-                actor_loss = tf.reduce_mean(self.alpha * self.actor.log_pi(s) - min_aq)
+                actor_loss = tf.reduce_mean(self.alpha * self.actor.log_pi(s) - min_aq_rep)
 
             v_gradients = tape.gradient(v_loss, self.v_network.trainable_variables)
             self.v_network_optimizer.apply_gradients(zip(v_gradients, self.v_network.trainable_variables))

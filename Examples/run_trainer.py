@@ -123,7 +123,7 @@ def main(cpu_only = False, force_gpu = True):
     #################################################################################
     #continuous env
     #################################################################################
-    #env = gym.make("Pendulum-v0")
+    env = gym.make("Pendulum-v0")
     #env = gym.make("MountainCarContinuous-v0")
 
     #env = gym.make("InvertedTriplePendulumSwing-v2")
@@ -132,7 +132,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedDoublePendulum-v2")
     #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
 
-    env = gym.make("InvertedPendulum-v2")
+    #env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
@@ -174,13 +174,13 @@ def main(cpu_only = False, force_gpu = True):
     #################################################################################
     #algorithm = DDPG(state_dim, action_dim)
     #algorithm = TD3(state_dim, action_dim)
-    #algorithm = SAC_v1(state_dim, action_dim)
-    #algorithm = SAC_v2(state_dim, action_dim, auto_alpha=True)
+    #algorithm = SAC_v1(state_dim, action_dim, alpha=0.1, training_step=200)
+    algorithm = SAC_v2(state_dim, action_dim, auto_alpha=False, training_step=200)
 
     #algorithm for both env
     #################################################################################
     #offline training only for REINFORCE, VPG, TRPO, PPO
-    algorithm = TRPO(state_dim, action_dim, discrete)
+    #algorithm = TRPO(state_dim, action_dim, discrete)
     #algorithm = PPO(state_dim, action_dim, discrete, mode='clip', clip=0.2)
     #algorithm= PPO(state_dim, action_dim, discrete, mode='Adaptive KL', dtarg=0.01)
     #algorithm = PPO(state_dim, action_dim, discrete, mode='Fixed KL', beta=3)
@@ -196,7 +196,7 @@ def main(cpu_only = False, force_gpu = True):
     print("Min action:", min_action)
     print("Discrete: ", discrete)
 
-    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='batch', render=False)
+    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='offline', render=True)
     trainer.run()
 
 
