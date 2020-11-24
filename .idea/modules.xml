@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/SimpleRL.iml" filepath="$PROJECT_DIR$/.idea/SimpleRL.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../SimpleRL_Pytorch/.idea/SimpleRL_Pytorch.iml" filepath="$PROJECT_DIR$/../SimpleRL_Pytorch/.idea/SimpleRL_Pytorch.iml" />
     </modules>
   </component>
 </project>

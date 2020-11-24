@@ -58,10 +58,6 @@ class TD3:
         return action
 
     def train(self, training_num):
-        self.actor_loss = 0
-        self.critic1_loss = 0
-        self.critic2_loss = 0
-
         for i in range(training_num):
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
