@@ -33,14 +33,13 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         self.training_step = training_step
 
 
-        if self.actor == None:
-            if self.discrete == True:
-                self.actor = Policy_network(self.state_dim, self.action_dim)
-            else:
-                self.actor = Gaussian_Actor(self.state_dim, self.action_dim)
+        if self.discrete == True:
+            self.actor = Policy_network(self.state_dim, self.action_dim)
+        else:
+            self.actor = Gaussian_Actor(self.state_dim, self.action_dim)
 
-        if self.critic == None:
-            self.critic = V_network(self.state_dim)
+
+        self.critic = V_network(self.state_dim)
 
         self.network_list = {'Actor': self.actor, 'Critic': self.critic}
         self.name = 'VPG'

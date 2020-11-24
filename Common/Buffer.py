@@ -1,6 +1,8 @@
 import numpy as np
 import tensorflow as tf
 
+from Common.Utils import random_crop
+
 
 class Buffer:
     def __init__(self, max_size=1e6):#1000000: save the last 1000 episode at most
@@ -14,7 +16,6 @@ class Buffer:
     def check(self, element):
 
         element = np.asarray(element)
-
         if element.ndim == 0:
             return np.expand_dims(element, axis=0)
         else:
@@ -81,6 +82,7 @@ class Buffer:
 
     def ERE_sample(self, i, update_len, batch_size, cmin = 100, eta = 0.996):
         #Boosting Soft Actor-Critic: Emphasizing Recent Experience without Forgetting the Past, Che Wang, Keith Ross. arXiv:1906.04009T
+        #not very useful
         N = len(self.s)
         cmin = cmin*batch_size
         ck = max(N*eta**(i*1000/update_len), cmin)
@@ -100,5 +102,34 @@ class Buffer:
         dones = tf.convert_to_tensor(dones, tf.float32)
 
         return states, actions, rewards, states_next, dones
+
+    def cpc_sample(self, batch_size, image_size=84):
+        ids = np.random.randint(low=0, high=len(self.s), size=batch_size)
+
+        states = np.asarray([self.s[i] for i in ids])
+        actions = np.asarray([self.a[i] for i in ids])  # (batch_size, 1)
+        rewards = np.asarray([self.r[i] for i in ids])
+        states_next = np.asarray([self.ns[i] for i in ids])
+        dones = np.asarray([self.d[i] for i in ids])
+        pos = states.copy()
+
+        states = random_crop(states, image_size)
+        states_next = random_crop(states_next, image_size)
+        pos = random_crop(pos, image_size)
+
+        states = tf.convert_to_tensor(states, tf.float32)
+        actions = tf.convert_to_tensor(actions, tf.float32)
+        rewards = tf.convert_to_tensor(rewards, tf.float32)
+        states_next = tf.convert_to_tensor(states_next, tf.float32)
+        dones = tf.convert_to_tensor(dones, tf.float32)
+        pos = tf.convert_to_tensor(pos, tf.float32)
+
+        cpc_kwargs = dict(obs_anchor=states, obs_pos=pos, time_anchor=None, time_pos=None)
+
+        return states, actions, rewards, states_next, dones, cpc_kwargs
+
+
+
+
 
 

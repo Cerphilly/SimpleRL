@@ -8,15 +8,8 @@ from Common.Utils import copy_weight, soft_update
 from Networks.Basic_Networks import Policy_network, Q_network
 
 class TD3:
-    def __init__(self, state_dim, action_dim, actor = None, target_actor = None, critic1 = None, target_critic1=None, critic2 = None, target_critic2=None, training_step=100, batch_size=100, buffer_size=1e6,
+    def __init__(self, state_dim, action_dim, training_step=100, batch_size=100, buffer_size=1e6,
                  gamma=0.99, tau=0.005, actor_lr=0.001, critic_lr=0.001, policy_delay=2, actor_noise=0.1, target_noise=0.2, noise_clip=0.5, training_start=500):
-
-        self.actor = actor
-        self.target_actor = target_actor
-        self.critic1 = critic1
-        self.target_critic1 = target_critic1
-        self.critic2 = critic2
-        self.target_critic2 = target_critic2
 
         self.buffer = Buffer(buffer_size)
 
@@ -39,19 +32,12 @@ class TD3:
         self.training_start = training_start
         self.training_step = training_step
 
-
-        if self.actor == None:
-            self.actor = Policy_network(self.state_dim, self.action_dim)
-        if self.target_actor == None:
-            self.target_actor = Policy_network(self.state_dim, self.action_dim)
-        if self.critic1 == None:
-            self.critic1 = Q_network(self.state_dim, self.action_dim)
-        if self.target_critic1 == None:
-            self.target_critic1 = Q_network(self.state_dim, self.action_dim)
-        if self.critic2 == None:
-            self.critic2 = Q_network(self.state_dim, self.action_dim)
-        if self.target_critic2 == None:
-            self.target_critic2 = Q_network(self.state_dim, self.action_dim)
+        self.actor = Policy_network(self.state_dim, self.action_dim)
+        self.target_actor = Policy_network(self.state_dim, self.action_dim)
+        self.critic1 = Q_network(self.state_dim, self.action_dim)
+        self.target_critic1 = Q_network(self.state_dim, self.action_dim)
+        self.critic2 = Q_network(self.state_dim, self.action_dim)
+        self.target_critic2 = Q_network(self.state_dim, self.action_dim)
 
         copy_weight(self.actor, self.target_actor)
         copy_weight(self.critic1, self.target_critic1)

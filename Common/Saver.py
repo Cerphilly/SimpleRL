@@ -6,7 +6,7 @@ import datetime
 class Saver:
     def __init__(self, algorithm_name, save_name='test', log=False):
         #example: Algorithm_name_TF2_save_name
-        self.path = '/home/cocel/PycharmProjects/SimpleRL/saved_models'
+        self.path = 'SimpleRL/saved_models'
 
         self.save_name = save_name
         self.algorithm_name = algorithm_name

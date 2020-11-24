@@ -6,6 +6,7 @@ class Policy_network(tf.keras.Model):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
+
         self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim, ), name='Input')
         self.hidden_layers = []
         for i in range(len(hidden_units)):
@@ -83,4 +84,7 @@ class V_network(tf.keras.Model):
         output = self.output_layer(z)
 
         return output
+
+
+
 

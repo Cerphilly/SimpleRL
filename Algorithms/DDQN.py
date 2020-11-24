@@ -9,9 +9,7 @@ from Networks.Basic_Networks import Policy_network
 
 
 class DDQN:
-    def __init__(self, state_dim, action_dim, network=None, target_network=None, training_step=100, batch_size=100, buffer_size=1e6, gamma=0.99, learning_rate=0.001, epsilon=0.1, training_start=200, copy_iter=5):
-        self.network = network
-        self.target_network = target_network
+    def __init__(self, state_dim, action_dim, training_step=100, batch_size=100, buffer_size=1e6, gamma=0.99, learning_rate=0.001, epsilon=0.1, training_start=200, copy_iter=5):
 
         self.buffer = Buffer(buffer_size)
 
@@ -28,12 +26,8 @@ class DDQN:
         self.training_step = training_step
         self.copy_iter = copy_iter
 
-        if self.network == None:
-            self.network = Policy_network(self.state_dim, self.action_dim)
-            print("Network made")
-        if self.target_network == None:
-            self.target_network = Policy_network(self.state_dim, self.action_dim)
-            print("Target network made")
+        self.network = Policy_network(self.state_dim, self.action_dim)
+        self.target_network = Policy_network(self.state_dim, self.action_dim)
 
         copy_weight(self.network, self.target_network)
 

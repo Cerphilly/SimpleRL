@@ -10,14 +10,8 @@ from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
 
 
 class SAC_v2:
-    def __init__(self, state_dim, action_dim, actor=None, critic1=None, target_critic1=None, critic2=None, target_critic2=None, training_step=200,
+    def __init__(self, state_dim, action_dim, training_step=200,
                  batch_size=100, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, alpha=0.2, auto_alpha = False, reward_scale=1, training_start = 500):
-
-        self.actor = actor
-        self.critic1 = critic1
-        self.target_critic1 = target_critic1
-        self.critic2 = critic2
-        self.target_critic2 = target_critic2
 
         self.buffer = Buffer(buffer_size)
 
@@ -44,16 +38,11 @@ class SAC_v2:
             self.target_alpha = -action_dim
             self.alpha_optimizer = tf.keras.optimizers.Adam(learning_rate)
 
-        if self.actor == None:
-            self.actor = Squashed_Gaussian_Actor(self.state_dim, self.action_dim)
-        if self.critic1 == None:
-            self.critic1 = Q_network(self.state_dim, self.action_dim)
-        if self.target_critic1 == None:
-            self.target_critic1 = Q_network(self.state_dim, self.action_dim)
-        if self.critic2 == None:
-            self.critic2 = Q_network(self.state_dim, self.action_dim)
-        if self.target_critic2 == None:
-            self.target_critic2 = Q_network(self.state_dim, self.action_dim)
+        self.actor = Squashed_Gaussian_Actor(self.state_dim, self.action_dim)
+        self.critic1 = Q_network(self.state_dim, self.action_dim)
+        self.target_critic1 = Q_network(self.state_dim, self.action_dim)
+        self.critic2 = Q_network(self.state_dim, self.action_dim)
+        self.target_critic2 = Q_network(self.state_dim, self.action_dim)
 
         copy_weight(self.critic1, self.target_critic1)
         copy_weight(self.critic2, self.target_critic2)

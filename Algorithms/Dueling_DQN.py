@@ -7,9 +7,7 @@ from Common.Buffer import Buffer
 from Networks.Dueling_Network import Dueling_Network
 
 class Dueling_DQN:
-    def __init__(self, state_dim, action_dim, network=None, training_step=100, batch_size=100, buffer_size=1e6, gamma=0.99, learning_rate=0.001, epsilon=0.2, training_start=200):
-        self.network = network
-
+    def __init__(self, state_dim, action_dim, training_step=100, batch_size=100, buffer_size=1e6, gamma=0.99, learning_rate=0.001, epsilon=0.2, training_start=200):
         self.buffer = Buffer(buffer_size)
         self.optimizer = tf.optimizers.Adam(learning_rate)
 
@@ -22,10 +20,7 @@ class Dueling_DQN:
         self.training_start = training_start
         self.training_step = training_step
 
-
-        if self.network == None:
-            self.network = Dueling_Network(self.state_dim, self.action_dim)
-            print("Network made")
+        self.network = Dueling_Network(self.state_dim, self.action_dim)
 
         self.network_list = {'Network': self.network}
         self.name = 'Dueling DQN'
