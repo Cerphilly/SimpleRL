@@ -94,7 +94,7 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
 
         z = self.output_layer(z)
 
-        mu = z[:,: self.action_dim]
+        mu = z[:,:self.action_dim]
         sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], -10.0, 2.0))
 
         if deterministic == True:

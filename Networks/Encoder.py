@@ -22,7 +22,7 @@ class PixelEncoder(tf.keras.Model):
         self.ln = tf.keras.layers.LayerNormalization()
 
     @tf.function
-    def call(self, input, detach=False, activation=None):
+    def call(self, input, detach_conv=False, activation=None):
 
         input = tf.divide(tf.cast(input, tf.float32),
                              tf.constant(255.))
@@ -32,7 +32,7 @@ class PixelEncoder(tf.keras.Model):
         for conv in self.conv_layers:
             z = conv(z)
 
-        if detach == True:
+        if detach_conv == True:
             z = tf.stop_gradient(z)
 
         z = self.fc(z)

@@ -8,7 +8,7 @@ class CURL(tf.keras.Model):
         self.W = tf.Variable(initial_value=tf.random.normal((z_dim, z_dim)), trainable=True)
 
     @tf.function
-    def encode(self, x, encoder, target_encoder, detach=False, ema=False):
+    def encode(self, x, encoder, target_encoder, detach=False, ema=False):#not used
         if ema == True:
             z_out = tf.stop_gradient(target_encoder(x))
         else:

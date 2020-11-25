@@ -60,6 +60,8 @@ class CURL_SACv1:
         self.encoder_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.cpc_optimizer = tf.keras.optimizers.Adam(learning_rate)
 
+        self.name = 'CURL_SACv1'
+
     def get_action(self, obs):
 
         if obs.shape[-1] != self.image_size:
@@ -187,6 +189,8 @@ class CURL_SACv2:
         self.encoder_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.cpc_optimizer = tf.keras.optimizers.Adam(learning_rate)
 
+        self.name = 'CURL_SACv2'
+
     def get_action(self, obs):
         if obs.shape[-1] != self.image_size:
             obs = center_crop_image(obs, self.image_size)
@@ -305,6 +309,10 @@ class CURL_SACv2_alpha:
         self.encoder_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.cpc_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.log_alpha_optimizer = tf.keras.optimizers.Adam(0.1 * learning_rate, beta_1=0.5)
+
+        self.name = 'CURL_SACv2_alpha'
+
+
 
     @property
     def alpha(self):
@@ -437,6 +445,8 @@ class CURL_TD3:
 
         self.encoder_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.cpc_optimizer = tf.keras.optimizers.Adam(learning_rate)
+
+        self.name = 'CURL_TD3'
 
     def get_action(self, obs):
 
