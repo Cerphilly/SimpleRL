@@ -10,7 +10,7 @@ from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
 
 
 class SAC_v2:
-    def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=1, alpha=0.1,
+    def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=1, alpha=0.1, train_alpha=True,
                  batch_size=100, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, reward_scale=1, training_start = 500):
 
         self.buffer = Buffer(buffer_size)
@@ -29,10 +29,10 @@ class SAC_v2:
         self.training_start = training_start
         self.training_step = training_step
 
-        #self.log_alpha = tf.Variable(0., dtype=tf.float32)
         self.log_alpha = tf.Variable(np.log(alpha), dtype=tf.float32, trainable=True)
-        self.target_alpha = -action_dim
+        self.target_entropy = -action_dim
         self.alpha_optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.train_alpha = train_alpha
 
         self.actor = Squashed_Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
         self.critic1 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
@@ -91,14 +91,15 @@ class SAC_v2:
 
             del tape2
 
-            with tf.GradientTape() as tape3:
-                alpha_loss = -(tf.exp(self.log_alpha) * (tf.stop_gradient(self.actor.log_pi(s) + self.target_alpha)))
-                alpha_loss = tf.nn.compute_average_loss(alpha_loss)#from softlearning package
+            if self.train_alpha == True:
+                with tf.GradientTape() as tape3:
+                    alpha_loss = -(tf.exp(self.log_alpha) * (tf.stop_gradient(self.actor.log_pi(s) + self.target_entropy)))
+                    alpha_loss = tf.nn.compute_average_loss(alpha_loss)#from softlearning package
 
-            alpha_grad = tape3.gradient(alpha_loss, [self.log_alpha])
-            self.alpha_optimizer.apply_gradients(zip(alpha_grad, [self.log_alpha]))
+                alpha_grad = tape3.gradient(alpha_loss, [self.log_alpha])
+                self.alpha_optimizer.apply_gradients(zip(alpha_grad, [self.log_alpha]))
 
-            del tape3
+                del tape3
 
             soft_update(self.critic1, self.target_critic1, self.tau)
             soft_update(self.critic2, self.target_critic2, self.tau)
