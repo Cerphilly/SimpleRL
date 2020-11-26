@@ -9,7 +9,7 @@ from Networks.Basic_Networks import Q_network, V_network
 from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
 
 class SAC_v1:
-    def __init__(self, state_dim, action_dim, training_step=200,
+    def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=1,
                  batch_size=100, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, alpha=0.2, reward_scale=1, training_start = 500):
 
         self.buffer = Buffer(buffer_size)
@@ -30,11 +30,11 @@ class SAC_v1:
         self.training_start = training_start
         self.training_step = training_step
 
-        self.actor = Squashed_Gaussian_Actor(self.state_dim, self.action_dim)
-        self.critic1 = Q_network(self.state_dim, self.action_dim)
-        self.critic2 = Q_network(self.state_dim, self.action_dim)
-        self.v_network = V_network(self.state_dim)
-        self.target_v_network = V_network(self.state_dim)
+        self.actor = Squashed_Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.critic1 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.critic2 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.v_network = V_network(self.state_dim, (hidden_dim, hidden_dim))
+        self.target_v_network = V_network(self.state_dim, (hidden_dim, hidden_dim))
 
         copy_weight(self.v_network, self.target_v_network)
 
@@ -50,41 +50,51 @@ class SAC_v1:
 
 
     def train(self, training_num):
-
         for i in range(training_num):
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
-            with tf.GradientTape(persistent=True) as tape:
-                min_aq = tf.minimum(self.critic1(s, self.actor(s)), self.critic2(s, self.actor(s)))
 
-                target_v = tf.stop_gradient(min_aq - self.alpha * self.actor.log_pi(s))
+            min_aq = tf.minimum(self.critic1(s, self.actor(s)), self.critic2(s, self.actor(s)))
+
+            target_v = tf.stop_gradient(min_aq - self.alpha * self.actor.log_pi(s))
+
+            with tf.GradientTape(persistent=True) as tape1:
                 v_loss = 0.5 * tf.reduce_mean(tf.square(self.v_network(s) - target_v))
 
-                target_q = tf.stop_gradient(r + self.gamma * (1 - d) * self.target_v_network(ns))
+            v_gradients = tape1.gradient(v_loss, self.v_network.trainable_variables)
+            self.v_network_optimizer.apply_gradients(zip(v_gradients, self.v_network.trainable_variables))
+
+            del tape1
+
+            target_q = tf.stop_gradient(r + self.gamma * (1 - d) * self.target_v_network(ns))
+
+            with tf.GradientTape(persistent=True) as tape2:
 
                 critic1_loss = 0.5 * tf.reduce_mean(tf.square(self.critic1(s, a) - target_q))
                 critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(s, a) - target_q))
 
-                mu, sigma = self.actor.mu_sigma(s)
-                output = mu + tf.random.normal(shape=mu.shape) * sigma
+            critic1_gradients = tape2.gradient(critic1_loss, self.critic1.trainable_variables)
+            self.critic1_optimizer.apply_gradients(zip(critic1_gradients, self.critic1.trainable_variables))
 
+            critic2_gradients = tape2.gradient(critic2_loss, self.critic2.trainable_variables)
+            self.critic2_optimizer.apply_gradients(zip(critic2_gradients, self.critic2.trainable_variables))
+
+            del tape2
+
+            with tf.GradientTape() as tape3:
+                mu, sigma = self.actor.mu_sigma(s)
+                output = mu + tf.random.normal(shape=sigma.shape) * sigma
 
                 min_aq_rep = tf.minimum(self.critic1(s, output), self.critic2(s, output))
 
                 actor_loss = tf.reduce_mean(self.alpha * self.actor.log_pi(s) - min_aq_rep)
 
-            v_gradients = tape.gradient(v_loss, self.v_network.trainable_variables)
-            self.v_network_optimizer.apply_gradients(zip(v_gradients, self.v_network.trainable_variables))
+            actor_grad = tape3.gradient(actor_loss, self.actor.trainable_variables)
+            self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
+
+            del tape3
 
             soft_update(self.v_network, self.target_v_network, self.tau)
 
-            critic1_gradients = tape.gradient(critic1_loss, self.critic1.trainable_variables)
-            self.critic1_optimizer.apply_gradients(zip(critic1_gradients, self.critic1.trainable_variables))
-
-            critic2_gradients = tape.gradient(critic2_loss, self.critic2.trainable_variables)
-            self.critic2_optimizer.apply_gradients(zip(critic2_gradients, self.critic2.trainable_variables))
-
-            actor_grad = tape.gradient(actor_loss, self.actor.trainable_variables)
-            self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
 
 

@@ -3,7 +3,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 
-from Algorithms.ImageRL.CURL import CURL_SACv1, CURL_SACv2, CURL_SACv2_alpha
+from Algorithms.ImageRL.CURL import CURL_SACv1, CURL_SACv2, CURL_SACv2_alpha, CURL_TD3
 from Common.Utils import FrameStack
 from Common.Buffer import Buffer
 
@@ -119,6 +119,7 @@ def main(cpu_only = False, force_gpu = True):
     algorithm = CURL_SACv1(obs_shape, action_shape)
     #algorithm = CURL_SACv2(obs_shape, action_shape)
     #algorithm = CURL_SACv2_alpha(obs_shape, action_shape)
+    algorithm = CURL_TD3(obs_shape, action_shape)
 
     trainer = Image_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='online', render=False)
     trainer.run()

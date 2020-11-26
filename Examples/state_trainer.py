@@ -3,6 +3,7 @@ import gym
 from gym.spaces import Discrete, Box
 import pybullet_envs
 import dmc2gym
+import numpy as np
 
 import sys
 import datetime
@@ -132,7 +133,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedTriplePendulum-v2")
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
-    #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
+    env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
 
     #env = gym.make("InvertedPendulum-v2")
 
@@ -145,7 +146,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("Swimmer-v2")
     #env = gym.make("Walker2d-v2")
 
-    env = dmc2gym.make("cartpole", "swingup")
+    #env = dmc2gym.make("cartpole", "swingup", seed=np.random.randint(1, 1000))
 
     #################################################################################
 
@@ -179,8 +180,8 @@ def main(cpu_only = False, force_gpu = True):
     #################################################################################
     #algorithm = DDPG(state_dim, action_dim)
     #algorithm = TD3(state_dim, action_dim)
-    #algorithm = SAC_v1(state_dim, action_dim, alpha=0.2, training_step=200)
-    algorithm = SAC_v2(state_dim, action_dim, auto_alpha=False, training_step=200)
+    #algorithm = SAC_v1(state_dim, action_dim)
+    algorithm = SAC_v2(state_dim, action_dim)
 
     #algorithm for both env
     #################################################################################
@@ -201,7 +202,7 @@ def main(cpu_only = False, force_gpu = True):
     print("Min action:", min_action)
     print("Discrete: ", discrete)
 
-    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='offline', render=False)
+    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='online', render=False)
     trainer.run()
 
 
