@@ -104,6 +104,7 @@ class Buffer:
         return states, actions, rewards, states_next, dones
 
     def cpc_sample(self, batch_size, image_size=84):
+        #ImageRL/CURL
         ids = np.random.randint(low=0, high=len(self.s), size=batch_size)
 
         states = np.asarray([self.s[i] for i in ids])
@@ -127,6 +128,34 @@ class Buffer:
         cpc_kwargs = dict(obs_anchor=states, obs_pos=pos, time_anchor=None, time_pos=None)
 
         return states, actions, rewards, states_next, dones, cpc_kwargs
+
+
+    def dbc_sample(self, batch_size):
+        ids = np.random.randint(low=0, high=len(self.s), size=batch_size)
+
+        states = np.asarray([self.s[i] for i in ids])
+        actions = np.asarray([self.a[i] for i in ids])
+        rewards = np.asarray([self.r[i] for i in ids])
+        states_next = np.asarray([self.ns[i] for i in ids])
+        dones = np.asarray([self.d[i] for i in ids])
+
+        np.random.shuffle(ids)
+
+        states2 = np.asarray([self.s[i] for i in ids])
+        actions2 = np.asarray([self.a[i] for i in ids])
+        rewards2 = np.asarray([self.r[i] for i in ids])
+        states_next2 = np.asarray([self.ns[i] for i in ids])
+        dones2 = np.asarray([self.d[i] for i in ids])
+
+        return (states, actions, rewards, states_next, dones), (states2, actions2, rewards2, states_next2, dones2)
+
+
+
+
+
+
+
+
 
 
 

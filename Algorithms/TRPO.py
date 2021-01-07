@@ -12,7 +12,7 @@ from Networks.Basic_Networks import Policy_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
 class TRPO:
-    def __init__(self, state_dim, action_dim, discrete, training_step=1, gamma = 0.99,
+    def __init__(self, state_dim, action_dim, discrete, hidden_dim=256, training_step=1, gamma = 0.99,
                  lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, backtrack_iter=10, backtrack_coeff=0.8, delta=0.05, num_epoch=10):
 
 
@@ -37,11 +37,11 @@ class TRPO:
         self.training_step = training_step
 
         if self.discrete == True:
-            self.actor = Policy_network(self.state_dim, self.action_dim)
-            self.backup_actor = Policy_network(self.state_dim, self.action_dim)
+            self.actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+            self.backup_actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
         else:
-            self.actor = Gaussian_Actor(self.state_dim, self.action_dim)
-            self.backup_actor = Gaussian_Actor(self.state_dim, self.action_dim)
+            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+            self.backup_actor = Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
 
         self.critic = V_network(self.state_dim)
 

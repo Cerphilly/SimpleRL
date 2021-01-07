@@ -9,7 +9,7 @@ from Networks.Basic_Networks import Policy_network, Q_network
 
 
 class DDPG:
-    def __init__(self, state_dim, action_dim, training_step=100, batch_size=100, buffer_size=1e6, gamma=0.99, tau = 0.005, actor_lr=0.001, critic_lr=0.001, training_start=500):
+    def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=100, batch_size=128, buffer_size=1e6, gamma=0.99, tau = 0.005, actor_lr=0.001, critic_lr=0.001, training_start=500):
 
         self.buffer = Buffer(buffer_size)
 
@@ -27,10 +27,10 @@ class DDPG:
         self.training_step = training_step
 
 
-        self.actor = Policy_network(self.state_dim, self.action_dim)
-        self.target_actor = Policy_network(self.state_dim, self.action_dim)
-        self.critic = Q_network(self.state_dim, self.action_dim)
-        self.target_critic = Q_network(self.state_dim, self.action_dim)
+        self.actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.target_actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.critic = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.target_critic = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
 
         copy_weight(self.actor, self.target_actor)
         copy_weight(self.critic, self.target_critic)

@@ -91,25 +91,27 @@ class CURL_SACv1:
             v_gradients = tape1.gradient(v_loss, self.v_network.trainable_variables)
             self.v_network_optimizer.apply_gradients(zip(v_gradients, self.v_network.trainable_variables))
 
+            del tape1
+
             target_q = tf.stop_gradient(r + self.gamma * (1 - d) * self.target_v_network(self.target_encoder(ns)))
 
-            with tf.GradientTape() as tape2:
+            with tf.GradientTape(persistent=True) as tape2:
                 critic1_loss = 0.5 * tf.reduce_mean(tf.square(self.critic1(self.encoder(s), a) - target_q))
+                critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
 
             critic1_gradients = tape2.gradient(critic1_loss,
                                                self.encoder.trainable_variables + self.critic1.trainable_variables)
+
+            critic2_gradients = tape2.gradient(critic2_loss,
+                                               self.encoder.trainable_variables + self.critic2.trainable_variables)
+
             self.critic1_optimizer.apply_gradients(
                 zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
 
-            with tf.GradientTape() as tape3:
-                critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
-
-            critic2_gradients = tape3.gradient(critic2_loss,
-                                               self.encoder.trainable_variables + self.critic2.trainable_variables)
             self.critic2_optimizer.apply_gradients(
                 zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
 
-            with tf.GradientTape() as tape4:
+            with tf.GradientTape() as tape3:
                 mu, sigma = self.actor.mu_sigma(tf.stop_gradient(self.encoder(s)))
                 output = mu + tf.random.normal(shape=mu.shape) * sigma
 
@@ -118,13 +120,15 @@ class CURL_SACv1:
 
                 actor_loss = tf.reduce_mean(self.alpha * self.actor.log_pi(tf.stop_gradient(self.encoder(s))) - min_aq_rep)
 
-            actor_gradients = tape4.gradient(actor_loss, self.actor.trainable_variables)
+            del tape3
+
+            actor_gradients = tape3.gradient(actor_loss, self.actor.trainable_variables)
             self.actor_optimizer.apply_gradients(zip(actor_gradients, self.actor.trainable_variables))
 
             soft_update(self.v_network, self.target_v_network, self.tau)
 
 
-        with tf.GradientTape(persistent=True) as tape5:
+        with tf.GradientTape(persistent=True) as tape4:
             z_a = self.encoder(obs_anchor)
             z_pos = tf.stop_gradient(self.target_encoder(obs_pos))
 
@@ -133,15 +137,15 @@ class CURL_SACv1:
 
             cpc_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels, logits))
 
-        cpc_gradients = tape5.gradient(cpc_loss, self.curl.trainable_variables)
+        cpc_gradients = tape4.gradient(cpc_loss, self.curl.trainable_variables)
         self.cpc_optimizer.apply_gradients((zip(cpc_gradients, self.curl.trainable_variables)))
 
-        encoder_gradients = tape5.gradient(cpc_loss, self.encoder.trainable_variables)
+        encoder_gradients = tape4.gradient(cpc_loss, self.encoder.trainable_variables)
         self.encoder_optimizer.apply_gradients(zip(encoder_gradients, self.encoder.trainable_variables))
 
         soft_update(self.encoder, self.target_encoder, self.encoder_tau)
 
-        del tape5
+        del tape4
 
 
 class CURL_SACv2:
@@ -195,7 +199,7 @@ class CURL_SACv2:
         self.cpc_optimizer = tf.keras.optimizers.Adam(learning_rate)
         self.log_alpha_optimizer = tf.keras.optimizers.Adam(0.1 * learning_rate, beta_1=0.5)
 
-        self.name = 'CURL_SACv2_alpha'
+        self.name = 'CURL_SACv2'
 
     @property
     def alpha(self):

@@ -8,7 +8,7 @@ from Common.Utils import copy_weight, soft_update
 from Networks.Basic_Networks import Policy_network, Q_network
 
 class TD3:
-    def __init__(self, state_dim, action_dim, training_step=100, batch_size=100, buffer_size=1e6,
+    def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=100, batch_size=128, buffer_size=1e6,
                  gamma=0.99, tau=0.005, actor_lr=0.001, critic_lr=0.001, policy_delay=2, actor_noise=0.1, target_noise=0.2, noise_clip=0.5, training_start=500):
 
         self.buffer = Buffer(buffer_size)
@@ -32,12 +32,12 @@ class TD3:
         self.training_start = training_start
         self.training_step = training_step
 
-        self.actor = Policy_network(self.state_dim, self.action_dim)
-        self.target_actor = Policy_network(self.state_dim, self.action_dim)
-        self.critic1 = Q_network(self.state_dim, self.action_dim)
-        self.target_critic1 = Q_network(self.state_dim, self.action_dim)
-        self.critic2 = Q_network(self.state_dim, self.action_dim)
-        self.target_critic2 = Q_network(self.state_dim, self.action_dim)
+        self.actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.target_actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.critic1 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.target_critic1 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.critic2 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.target_critic2 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
 
         copy_weight(self.actor, self.target_actor)
         copy_weight(self.critic1, self.target_critic1)

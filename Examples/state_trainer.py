@@ -59,10 +59,7 @@ class Gym_trainer:
             return True
         return False
 
-
-
     def run(self):
-
         while True:
             if self.episode > self.max_episode:
                 print("Training finished")
@@ -90,7 +87,9 @@ class Gym_trainer:
                     action = self.algorithm.get_action(observation)
                     next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
-                done = 0. if self.local_step + 1 == self.env._max_episode_steps else float(done)
+                    #done: terminal state 1 True nonterminal state 0 False
+
+                #done = 0. if self.local_step + 1 == self.env._max_episode_steps else float(done)
                 self.episode_reward += reward
 
                 self.algorithm.buffer.add(observation, action, reward, next_observation, done)
@@ -121,7 +120,7 @@ def main(cpu_only = False, force_gpu = True):
     #################################################################################
     #env = gym.make("CartPole-v0")
     #env = gym.make("MountainCar-v0")
-    #env = gym.make("Acrobot-v1")
+    env = gym.make("Acrobot-v1")
 
     #################################################################################
     #continuous env
@@ -133,7 +132,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedTriplePendulum-v2")
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
-    env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
+    #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
 
     #env = gym.make("InvertedPendulum-v2")
 
@@ -170,7 +169,7 @@ def main(cpu_only = False, force_gpu = True):
 
     #algorithm for discrete env
     #################################################################################
-    #algorithm = DQN(state_dim, action_dim)
+    algorithm = DQN(state_dim, action_dim)
     #algorithm = DDQN(state_dim, action_dim)
     #algorithm = Dueling_DQN(state_dim, action_dim)
 
@@ -181,7 +180,7 @@ def main(cpu_only = False, force_gpu = True):
     #algorithm = DDPG(state_dim, action_dim)
     #algorithm = TD3(state_dim, action_dim)
     #algorithm = SAC_v1(state_dim, action_dim)
-    algorithm = SAC_v2(state_dim, action_dim)
+    #algorithm = SAC_v2(state_dim, action_dim)
 
     #algorithm for both env
     #################################################################################
@@ -202,7 +201,7 @@ def main(cpu_only = False, force_gpu = True):
     print("Min action:", min_action)
     print("Discrete: ", discrete)
 
-    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='online', render=False)
+    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='offline', render=True)
     trainer.run()
 
 

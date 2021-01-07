@@ -17,7 +17,7 @@ class Gaussian_Actor(tf.keras.Model):
         self.output_layer = tf.keras.layers.Dense(self.action_dim * 2, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Output')
     @tf.function
-    def call(self, input, activation='tanh'):
+    def call(self, input, activation='tanh', deterministic=False):
         z = self.input_layer(input)
         for layer in self.hidden_layers:
             z = layer(z)
@@ -30,15 +30,20 @@ class Gaussian_Actor(tf.keras.Model):
         mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
         std = tf.exp(log_std)
 
-        #eps = tf.random.normal(tf.shape(mean))
-        #action = (mean + std * eps)
-        #action = tf.clip_by_value(action, -1, 1).numpy()
+        if deterministic == True:
+            return mean
 
-        dist = tfp.distributions.Normal(loc=mean, scale=std)
-        action = dist.sample()
+        else:
+            eps = tf.random.normal(tf.shape(mean))
+            action = (mean + std * eps)
+            action = tf.clip_by_value(action, -1, 1).numpy()
 
-        return action
+            #dist = tfp.distributions.Normal(loc=mean, scale=std)
+            #action = dist.sample()
 
+            return action
+
+    @tf.function
     def dist(self, input):
 
         z = self.input_layer(input)
@@ -56,6 +61,7 @@ class Gaussian_Actor(tf.keras.Model):
 
         return dist
 
+    @tf.function
     def mu_sigma(self, input):
         z = self.input_layer(input)
         for layer in self.hidden_layers:

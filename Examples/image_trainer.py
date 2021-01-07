@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from Algorithms.ImageRL.CURL import CURL_SACv1, CURL_SACv2, CURL_TD3
+from Algorithms.ImageRL.DBC import DBC_SACv2, DBC_TD3
 from Common.Utils import FrameStack
 from Common.Buffer import Buffer
 
@@ -83,7 +84,6 @@ class Image_trainer:
                 self.algorithm.buffer.add(observation, action, reward, next_observation, done)
                 observation = next_observation
 
-
                 if self.total_step >= self.algorithm.training_start and self.train_mode(done, self.local_step):
                     self.algorithm.train(self.local_step)
 
@@ -106,8 +106,8 @@ def main(cpu_only = False, force_gpu = True):
     IMAGE_SIZE = 84
     PRE_IMAGE_SIZE = 100
 
-    env = dmc2gym.make(domain_name="cartpole", task_name="swingup", visualize_reward=False, from_pixels=True,
-                       height=PRE_IMAGE_SIZE, width=PRE_IMAGE_SIZE, frame_skip=8)
+    env = dmc2gym.make(domain_name="acrobot", task_name='swingup', seed=np.random.randint(1, 9999), visualize_reward=False, from_pixels=True,
+                       height=IMAGE_SIZE, width=IMAGE_SIZE, frame_skip=4)#Pre image size for curl, image size for dbc
     env = FrameStack(env, k=FRAME_STACK)
 
     obs_shape = (3 * FRAME_STACK, IMAGE_SIZE, IMAGE_SIZE)
@@ -116,9 +116,11 @@ def main(cpu_only = False, force_gpu = True):
     max_action = env.action_space.high[0]
     min_action = env.action_space.low[0]
 
-    #algorithm = CURL_SACv1(obs_shape, action_shape)
-    algorithm = CURL_SACv2(obs_shape, action_shape)
-    #algorithm = CURL_TD3(obs_shape, action_shape)
+    #algorithm = CURL_SACv1(obs_shape, action_shape)#frame_skip: 8, image_size: 100
+    #algorithm = CURL_SACv2(obs_shape, action_shape)#frame_skip: 8, image_size: 100
+    #algorithm = CURL_TD3(obs_shape, action_shape)#frame_skip: 8, image_size: 100
+    algorithm = DBC_SACv2(obs_shape, action_shape, train_alpha = True)#frame_skip:3, image_size: 84 #100000 step 500?
+    #algorithm = DBC_TD3(obs_shape, action_shape, training_start=10000)
 
     trainer = Image_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='online', render=False)
     trainer.run()

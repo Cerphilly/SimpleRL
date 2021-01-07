@@ -12,7 +12,7 @@ from Networks.Gaussian_Actor import Gaussian_Actor
 
 
 class PPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, discrete, mode='clip', training_step=10, gamma = 0.99,
+    def __init__(self, state_dim, action_dim, discrete, mode='clip', hidden_dim=256, training_step=10, gamma = 0.99,
                  lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, clip=0.2, beta=1, dtarg=0.01):
 
         self.discrete = discrete
@@ -37,9 +37,9 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         self.training_step = training_step
 
         if self.discrete == True:
-            self.actor = Policy_network(self.state_dim, self.action_dim)
+            self.actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
         else:
-            self.actor = Gaussian_Actor(self.state_dim, self.action_dim)
+            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
 
         self.critic = V_network(self.state_dim)
 

@@ -5,7 +5,7 @@ import datetime
 
 class Saver:
     def __init__(self, algorithm_name, save_name='test', log=False):
-        #example: Algorithm_name_TF2_save_name
+        #example: Algorithm_name_date
         self.path = 'SimpleRL/saved_models'
 
         self.save_name = save_name

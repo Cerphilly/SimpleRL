@@ -9,7 +9,7 @@ from Networks.Gaussian_Actor import Gaussian_Actor
 
 
 class REINFORCE:
-    def __init__(self, state_dim, action_dim, discrete, training_step=1, gamma=0.99, learning_rate=0.001):
+    def __init__(self, state_dim, action_dim, discrete, hidden_dim=256, training_step=1, gamma=0.99, learning_rate=0.001):
 
         self.buffer = Buffer()
 
@@ -25,9 +25,9 @@ class REINFORCE:
         self.optimizer = tf.keras.optimizers.Adam(learning_rate)
 
         if discrete == True:
-            self.network = Policy_network(self.state_dim, self.action_dim)
+            self.network = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
         else:
-            self.network = Gaussian_Actor(self.state_dim, self.action_dim)
+            self.network = Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
 
         self.network_list = {'Network': self.network}
         self.name = 'REINFORCE'

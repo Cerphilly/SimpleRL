@@ -11,7 +11,7 @@ from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
 
 class SAC_v2:
     def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=1, alpha=0.1, train_alpha=True,
-                 batch_size=100, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, reward_scale=1, training_start = 500):
+                 batch_size=128, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, reward_scale=1, training_start = 500):
 
         self.buffer = Buffer(buffer_size)
 

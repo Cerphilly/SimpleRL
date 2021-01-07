@@ -8,7 +8,7 @@ from Common.Utils import copy_weight
 from Networks.Basic_Networks import Policy_network
 
 class DQN:
-    def __init__(self, state_dim, action_dim, training_step=100, batch_size=100, buffer_size=1e6, gamma=0.99, learning_rate=0.001, epsilon=0.1, training_start=200, copy_iter=5):
+    def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=100, batch_size=128, buffer_size=1e6, gamma=0.99, learning_rate=0.001, epsilon=0.1, training_start=200, copy_iter=5):
 
         self.buffer = Buffer(buffer_size)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate)
@@ -24,9 +24,8 @@ class DQN:
         self.training_step = training_step
         self.copy_iter = copy_iter
 
-
-        self.network = Policy_network(self.state_dim, self.action_dim)
-        self.target_network = Policy_network(self.state_dim, self.action_dim)
+        self.network = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.target_network = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
 
         copy_weight(self.network, self.target_network)
 
@@ -34,19 +33,16 @@ class DQN:
         self.name = 'DQN'
 
     def get_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
-        q_value = self.network(state, activation='linear').numpy()
-        best_action = np.argmax(q_value, axis=1)[0]
-
         if np.random.random() < self.epsilon:
             return np.random.randint(low=0, high=self.action_dim)
         else:
+            state = np.expand_dims(np.array(state), axis=0)
+            q_value = self.network(state, activation='linear').numpy()
+            best_action = np.argmax(q_value, axis=1)[0]
             return best_action
 
     def train(self, training_num):
-
         for i in range(training_num):
-
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
             target_q = tf.reduce_max(self.target_network(ns, activation='linear'), axis=1, keepdims=True)

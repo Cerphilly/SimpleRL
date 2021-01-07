@@ -11,7 +11,7 @@ class PixelEncoder(tf.keras.Model):
         self.layer_num = layer_num
         self.filter_num = filter_num
 
-        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim), name='Input')
+        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim), name='Input')#state_dim: (3,84,84)
 
         self.conv_layers = [tf.keras.layers.Conv2D(filter_num, kernel_size=3, strides=2, activation=activation, data_format=data_format)]
         for i in range(layer_num - 1):
@@ -22,7 +22,7 @@ class PixelEncoder(tf.keras.Model):
         self.ln = tf.keras.layers.LayerNormalization()
 
     @tf.function
-    def call(self, input, detach_conv=False, activation=None):
+    def call(self, input, activation=None):
 
         input = tf.divide(tf.cast(input, tf.float32),
                              tf.constant(255.))
@@ -31,9 +31,6 @@ class PixelEncoder(tf.keras.Model):
 
         for conv in self.conv_layers:
             z = conv(z)
-
-        if detach_conv == True:
-            z = tf.stop_gradient(z)
 
         z = self.fc(z)
         z = self.ln(z)
