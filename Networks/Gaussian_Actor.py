@@ -34,16 +34,15 @@ class Gaussian_Actor(tf.keras.Model):
             return mean
 
         else:
-            eps = tf.random.normal(tf.shape(mean))
-            action = (mean + std * eps)
-            action = tf.clip_by_value(action, -1, 1).numpy()
+            #eps = tf.random.normal(tf.shape(mean))
+            #action = (mean + std * eps)
+            #action = tf.clip_by_value(action, -1, 1).numpy()
 
-            #dist = tfp.distributions.Normal(loc=mean, scale=std)
-            #action = dist.sample()
+            dist = tfp.distributions.Normal(loc=mean, scale=std)
+            action = dist.sample()
 
             return action
 
-    @tf.function
     def dist(self, input):
 
         z = self.input_layer(input)
@@ -61,7 +60,6 @@ class Gaussian_Actor(tf.keras.Model):
 
         return dist
 
-    @tf.function
     def mu_sigma(self, input):
         z = self.input_layer(input)
         for layer in self.hidden_layers:
@@ -132,11 +130,12 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=1, keepdims=True)
         '''
         distribution = tfp.distributions.Normal(loc=mu, scale=sigma)
-        sample_action = mu + tf.random.normal(shape=sigma.shape) * sigma
+        #sample_action = mu + tf.random.normal(shape=sigma.shape) * sigma
+        sample_action = distribution.sample()
         tanh_sample = tf.nn.tanh(sample_action)
 
         log_prob = distribution.log_prob(sample_action + 1e-6)
-        log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=1, keepdims=True)
+        log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample)), axis=1, keepdims=True)
 
         return log_pi
 

@@ -77,7 +77,6 @@ class SAC_v2:
 
             del tape1
 
-
             with tf.GradientTape() as tape2:
                 mu, sigma = self.actor.mu_sigma(s)
                 output = mu + tf.random.normal(shape=mu.shape) * sigma

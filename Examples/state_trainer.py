@@ -99,8 +99,15 @@ class Gym_trainer:
                 if self.total_step >= self.algorithm.training_start and self.train_mode(done, self.local_step):
                     self.algorithm.train(training_num=self.algorithm.training_step)
 
+                # if self.total_step % 10000 == 1:
+                #     file_path = 'C:/Users/cocel/PycharmProjects/SimpleRL/Saved_models/Humanoid/'
+                #     layer_name = ['W1', 'b1', 'W2', 'b2', 'W3', 'b3']
+                #     for layer in range(len(self.algorithm.actor.trainable_variables)):
+                #         np.save(file_path + layer_name[layer], self.algorithm.actor.trainable_variables[layer].numpy())
 
-            print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward, self.local_step, self.total_step))
+
+
+            print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {},".format(self.episode, self.episode_reward, self.local_step, self.total_step))
 
 
 def main(cpu_only = False, force_gpu = True):
@@ -120,7 +127,7 @@ def main(cpu_only = False, force_gpu = True):
     #################################################################################
     #env = gym.make("CartPole-v0")
     #env = gym.make("MountainCar-v0")
-    env = gym.make("Acrobot-v1")
+    #env = gym.make("Acrobot-v1")
 
     #################################################################################
     #continuous env
@@ -139,7 +146,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
     #env = gym.make("Hopper-v2")
-    #env = gym.make("Humanoid-v3")
+    env = gym.make("Humanoid-v3")
     #env = gym.make("HumanoidStandup-v2")
     #env = gym.make("Reacher-v2")
     #env = gym.make("Swimmer-v2")
@@ -169,7 +176,7 @@ def main(cpu_only = False, force_gpu = True):
 
     #algorithm for discrete env
     #################################################################################
-    algorithm = DQN(state_dim, action_dim)
+    #algorithm = DQN(state_dim, action_dim)
     #algorithm = DDQN(state_dim, action_dim)
     #algorithm = Dueling_DQN(state_dim, action_dim)
 
@@ -179,8 +186,8 @@ def main(cpu_only = False, force_gpu = True):
     #################################################################################
     #algorithm = DDPG(state_dim, action_dim)
     #algorithm = TD3(state_dim, action_dim)
-    #algorithm = SAC_v1(state_dim, action_dim)
-    #algorithm = SAC_v2(state_dim, action_dim)
+    #algorithm = SAC_v1(state_dim, action_dim, alpha=0.05)
+    algorithm = SAC_v2(state_dim, action_dim, alpha=0.05, train_alpha=False, training_start=10000)
 
     #algorithm for both env
     #################################################################################
@@ -201,7 +208,7 @@ def main(cpu_only = False, force_gpu = True):
     print("Min action:", min_action)
     print("Discrete: ", discrete)
 
-    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='offline', render=True)
+    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='online', render=True)
     trainer.run()
 
 
