@@ -17,6 +17,7 @@ Personal repo in Tensorflow 2 that I use to implement reinforcement learning alg
 
 > **Image based RL**<br>
 > > **CURL(Contrastive Unsupervised Representation Learning)**<br>
+> > > - CURL + SAC, CURL + TD3 <br>
 > > **DBC(Deep Bisimulation for Control) : finished the code, but couldn't reproduce the result.**<br>
 
 
