@@ -7,7 +7,7 @@ from Common.Buffer import Buffer
 from Common.Utils import copy_weight, soft_update
 from Networks.Basic_Networks import Q_network
 from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
-
+from Networks.D2RL_Networks import D2RL_Squashed_Gaussian, D2RL_Q
 
 class SAC_v2:
     def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=1, alpha=0.1, train_alpha=True,

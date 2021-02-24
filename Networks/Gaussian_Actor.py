@@ -34,10 +34,6 @@ class Gaussian_Actor(tf.keras.Model):
             return mean
 
         else:
-            #eps = tf.random.normal(tf.shape(mean))
-            #action = (mean + std * eps)
-            #action = tf.clip_by_value(action, -1, 1).numpy()
-
             dist = tfp.distributions.Normal(loc=mean, scale=std)
             action = dist.sample()
 
@@ -134,8 +130,8 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         sample_action = distribution.sample()
         tanh_sample = tf.nn.tanh(sample_action)
 
-        log_prob = distribution.log_prob(sample_action + 1e-6)
-        log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample)), axis=1, keepdims=True)
+        log_prob = distribution.log_prob(sample_action)
+        log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-10), axis=1, keepdims=True)
 
         return log_pi
 

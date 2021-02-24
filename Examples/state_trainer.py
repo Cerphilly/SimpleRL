@@ -22,6 +22,9 @@ from Algorithms.TD3 import TD3
 from Algorithms.SAC_v1 import SAC_v1
 from Algorithms.SAC_v2 import SAC_v2
 
+from Algorithms.D2RL import D2RL_TD3, D2RL_SAC_v1, D2RL_SAC_v2
+
+from Common.Utils import d2rl_algorithm
 
 class Gym_trainer:
     def __init__(self, env, algorithm, max_action, min_action,  train_mode, render=True, max_episode = 1e6):
@@ -85,11 +88,13 @@ class Gym_trainer:
 
                 else:
                     action = self.algorithm.get_action(observation)
+                    if np.isnan(action):
+                        print("nan")
                     next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
                     #done: terminal state 1 True nonterminal state 0 False
 
-                #done = 0. if self.local_step + 1 == self.env._max_episode_steps else float(done)
+                done = 0. if self.local_step + 1 == self.env._max_episode_steps else float(done)
                 self.episode_reward += reward
 
                 self.algorithm.buffer.add(observation, action, reward, next_observation, done)
@@ -146,13 +151,13 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
     #env = gym.make("Hopper-v2")
-    env = gym.make("Humanoid-v3")
+    #env = gym.make("Humanoid-v3")
     #env = gym.make("HumanoidStandup-v2")
     #env = gym.make("Reacher-v2")
     #env = gym.make("Swimmer-v2")
     #env = gym.make("Walker2d-v2")
 
-    #env = dmc2gym.make("cartpole", "swingup", seed=np.random.randint(1, 1000))
+    env = dmc2gym.make("cartpole", "swingup", seed=np.random.randint(1, 1000))
 
     #################################################################################
 
@@ -187,8 +192,12 @@ def main(cpu_only = False, force_gpu = True):
     #algorithm = DDPG(state_dim, action_dim)
     #algorithm = TD3(state_dim, action_dim)
     #algorithm = SAC_v1(state_dim, action_dim, alpha=0.05)
-    algorithm = SAC_v2(state_dim, action_dim, alpha=0.05, train_alpha=False, training_start=10000)
-
+    #algorithm = SAC_v2(state_dim, action_dim, alpha=0.05, train_alpha=False, training_start=10000)
+    algorithm = D2RL_SAC_v1(state_dim, action_dim)
+    #algorithm = D2RL_SAC_v2(state_dim, action_dim, train_alpha=True)
+    #d2rl_algorithm(algorithm)
+    #print(algorithm.actor, algorithm.critic, algorithm.target_actor, algorithm.target_critic)
+    #d2rl_algorithm(algorithm)
     #algorithm for both env
     #################################################################################
     #offline training only for REINFORCE, VPG, TRPO, PPO
@@ -208,7 +217,7 @@ def main(cpu_only = False, force_gpu = True):
     print("Min action:", min_action)
     print("Discrete: ", discrete)
 
-    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='online', render=True)
+    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='online', render=False)
     trainer.run()
 
 

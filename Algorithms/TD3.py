@@ -6,6 +6,7 @@ import numpy as np
 from Common.Buffer import Buffer
 from Common.Utils import copy_weight, soft_update
 from Networks.Basic_Networks import Policy_network, Q_network
+from Networks.D2RL_Networks import D2RL_Policy, D2RL_Q
 
 class TD3:
     def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=100, batch_size=128, buffer_size=1e6,
@@ -86,9 +87,6 @@ class TD3:
                 soft_update(self.actor, self.target_actor, self.tau)
                 soft_update(self.critic1, self.target_critic1, self.tau)
                 soft_update(self.critic2, self.target_critic2, self.tau)
-
-
-
 
 
 

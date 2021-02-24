@@ -5,6 +5,10 @@ import tensorflow as tf
 from collections import deque
 from skimage.util.shape import view_as_windows
 
+from Networks.Basic_Networks import *
+from Networks.Gaussian_Actor import *
+from Networks.D2RL_Networks import *
+
 def copy_weight(network, target_network):
     variable1 = network.trainable_variables
     variable2 = target_network.trainable_variables
@@ -64,7 +68,6 @@ def center_crop_image(image, output_size):
     image = image[:, top:top + new_h, left:left + new_w]
     return image
 
-
 class FrameStack(gym.Wrapper):
     def __init__(self, env, k):
         gym.Wrapper.__init__(self, env)
@@ -93,3 +96,4 @@ class FrameStack(gym.Wrapper):
     def _get_obs(self):
         assert len(self._frames) == self._k
         return np.concatenate(list(self._frames), axis=0)
+
