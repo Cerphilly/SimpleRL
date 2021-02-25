@@ -28,6 +28,7 @@ class SAC_v2:
         self.reward_scale = reward_scale
         self.training_start = training_start
         self.training_step = training_step
+        self.current_step = 0
 
         self.log_alpha = tf.Variable(np.log(alpha), dtype=tf.float32, trainable=True)
         self.target_entropy = -action_dim
@@ -59,6 +60,7 @@ class SAC_v2:
 
     def train(self, training_num):
         for i in range(training_num):
+            self.current_step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
             target_min_aq = tf.minimum(self.target_critic1(ns, self.actor(ns)), self.target_critic2(ns, self.actor(ns)))
@@ -84,9 +86,6 @@ class SAC_v2:
                 min_aq_rep = tf.minimum(self.critic1(s, output), self.critic2(s, output))
 
                 actor_loss = tf.reduce_mean(self.alpha.numpy() * self.actor.log_pi(s) - min_aq_rep)
-
-            tf.debugging.assert_all_finite(self.actor.log_pi(s), "log_pi")
-            tf.debugging.assert_all_finite(actor_loss, "actor")
 
             actor_gradients = tape2.gradient(actor_loss, self.actor.trainable_variables)
             self.actor_optimizer.apply_gradients(zip(actor_gradients, self.actor.trainable_variables))

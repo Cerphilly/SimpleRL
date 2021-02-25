@@ -29,6 +29,7 @@ class SAC_v1:
         self.reward_scale = reward_scale
         self.training_start = training_start
         self.training_step = training_step
+        self.current_step = 0
 
         self.actor = Squashed_Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
         self.critic1 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
@@ -51,6 +52,7 @@ class SAC_v1:
 
     def train(self, training_num):
         for i in range(training_num):
+            self.current_step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
             min_aq = tf.minimum(self.critic1(s, self.actor(s)), self.critic2(s, self.actor(s)))
