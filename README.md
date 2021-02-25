@@ -14,6 +14,8 @@ Personal repo in Tensorflow 2 that I use to implement reinforcement learning alg
 > **DDPG(Deep Deterministic Policy Gradient**<br>
 > **TD3(Twin Deep Deterministic Delayed Policy Gradient)**<br>
 > **SAC(Soft Actor Critic)**<br>
+> 
+> **D2RL(Deep Dense Architectures in Reinforcement Learning)**<br>
 
 > **Image based RL**<br>
 > > **CURL(Contrastive Unsupervised Representation Learning)**<br>
