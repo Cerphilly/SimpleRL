@@ -32,6 +32,7 @@ class TD3:
         self.noise_clip = noise_clip
         self.training_start = training_start
         self.training_step = training_step
+        self.current_step = 0
 
         self.actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
         self.target_actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
@@ -60,6 +61,7 @@ class TD3:
 
     def train(self, training_num):
         for i in range(training_num):
+            self.current_step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
             target_action = tf.clip_by_value(self.target_actor(ns) + tf.clip_by_value(tf.random.normal(shape=self.target_actor(ns).shape, mean=0, stddev=self.target_noise), -self.noise_clip, self.noise_clip), -1, 1)
@@ -76,7 +78,7 @@ class TD3:
             critic2_grad = tape.gradient(critic2_loss, self.critic2.trainable_variables)
             self.critic2_optimizer.apply_gradients(zip(critic2_grad, self.critic2.trainable_variables))
 
-            if i % self.policy_delay == 0:
+            if self.current_step % self.policy_delay == 0:
 
                 with tf.GradientTape() as tape2:
                     actor_loss = -tf.reduce_mean(self.critic1(s, self.actor(s)))

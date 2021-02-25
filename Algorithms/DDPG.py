@@ -25,7 +25,7 @@ class DDPG:
         self.tau = tau
         self.training_start = training_start
         self.training_step = training_step
-
+        self.current_step = 0
 
         self.actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
         self.target_actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
@@ -52,7 +52,7 @@ class DDPG:
         self.critic_loss = 0
 
         for i in range(training_num):
-
+            self.current_step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
             value_next = tf.stop_gradient(self.target_critic(ns, self.target_actor(ns)))

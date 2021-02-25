@@ -144,13 +144,13 @@ class D2RL_Squashed_Gaussian(Squashed_Gaussian_Actor):
         z = self.output_layer(z)
 
         mu = z[:, :self.action_dim]
-        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], -10.0, 2.0))
+        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], -10.0, 2.0))  + 1e-6
 
         if deterministic == True:
             tanh_mean = tf.nn.tanh(mu)
             return tanh_mean
         else:
-            dist = tfp.distributions.Normal(loc=mu, scale=sigma, allow_nan_stats=False)
+            dist = tfp.distributions.Normal(loc=mu, scale=sigma)
 
             #dist = tfp.distributions.MultivariateNormalDiag(loc=mu, scale_diag=sigma)
             sample_action = dist.sample()
@@ -169,7 +169,7 @@ class D2RL_Squashed_Gaussian(Squashed_Gaussian_Actor):
         z = self.output_layer(z)
 
         mu = z[:, : self.action_dim]
-        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], -10.0, 2.0))
+        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], -10.0, 2.0))  + 1e-6
         '''
         distribution = tfp.distributions.MultivariateNormalDiag(loc=mu, scale_diag=sigma)
         sample_action = distribution.sample()
@@ -178,7 +178,7 @@ class D2RL_Squashed_Gaussian(Squashed_Gaussian_Actor):
         log_prob = distribution.log_prob(sample_action + 1e-6)
         log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=1, keepdims=True)
         '''
-        distribution = tfp.distributions.Normal(loc=mu, scale=sigma, allow_nan_stats=False)
+        distribution = tfp.distributions.Normal(loc=mu, scale=sigma)
         # sample_action = mu + tf.random.normal(shape=sigma.shape) * sigma
         sample_action = distribution.sample()
         tanh_sample = tf.nn.tanh(sample_action)
@@ -200,7 +200,7 @@ class D2RL_Squashed_Gaussian(Squashed_Gaussian_Actor):
         z = self.output_layer(z)
 
         mu = z[:, :self.action_dim]
-        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], -10.0, 2.0))
+        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], -10.0, 2.0))  + 1e-6
 
         return mu, sigma
 

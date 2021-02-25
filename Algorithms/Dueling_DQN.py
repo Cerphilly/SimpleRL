@@ -19,6 +19,7 @@ class Dueling_DQN:
         self.eps = epsilon
         self.training_start = training_start
         self.training_step = training_step
+        self.current_step = 0
 
         self.network = Dueling_Network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
 
@@ -38,6 +39,7 @@ class Dueling_DQN:
     def train(self, training_num):
 
         for i in range(training_num):
+            self.current_step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
             target_q = r + self.gamma * (1 - d) * tf.reduce_max(self.network(ns), axis=1, keepdims=True)

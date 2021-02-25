@@ -85,6 +85,9 @@ class SAC_v2:
 
                 actor_loss = tf.reduce_mean(self.alpha.numpy() * self.actor.log_pi(s) - min_aq_rep)
 
+            tf.debugging.assert_all_finite(self.actor.log_pi(s), "log_pi")
+            tf.debugging.assert_all_finite(actor_loss, "actor")
+
             actor_gradients = tape2.gradient(actor_loss, self.actor.trainable_variables)
             self.actor_optimizer.apply_gradients(zip(actor_gradients, self.actor.trainable_variables))
 

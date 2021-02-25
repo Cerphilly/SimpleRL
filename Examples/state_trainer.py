@@ -24,7 +24,6 @@ from Algorithms.SAC_v2 import SAC_v2
 
 from Algorithms.D2RL import D2RL_TD3, D2RL_SAC_v1, D2RL_SAC_v2
 
-from Common.Utils import d2rl_algorithm
 
 class Gym_trainer:
     def __init__(self, env, algorithm, max_action, min_action,  train_mode, render=True, max_episode = 1e6):
@@ -48,6 +47,8 @@ class Gym_trainer:
             self.train_mode = self.online_train
         elif train_mode == 'batch':
             self.train_mode = self.batch_train
+
+        assert self.train_mode is not None
 
     def offline_train(self, d, local_step):
         if d:
@@ -88,8 +89,7 @@ class Gym_trainer:
 
                 else:
                     action = self.algorithm.get_action(observation)
-                    if np.isnan(action):
-                        print("nan")
+
                     next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
                     #done: terminal state 1 True nonterminal state 0 False
@@ -144,7 +144,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedTriplePendulum-v2")
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
-    #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
+    env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
 
     #env = gym.make("InvertedPendulum-v2")
 
@@ -157,7 +157,7 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("Swimmer-v2")
     #env = gym.make("Walker2d-v2")
 
-    env = dmc2gym.make("cartpole", "swingup", seed=np.random.randint(1, 1000))
+    #env = dmc2gym.make("cartpole", "swingup", seed=np.random.randint(1, 1000))
 
     #################################################################################
 
@@ -191,10 +191,11 @@ def main(cpu_only = False, force_gpu = True):
     #################################################################################
     #algorithm = DDPG(state_dim, action_dim)
     #algorithm = TD3(state_dim, action_dim)
-    #algorithm = SAC_v1(state_dim, action_dim, alpha=0.05)
+    #algorithm = SAC_v1(state_dim, action_dim)
     #algorithm = SAC_v2(state_dim, action_dim, alpha=0.05, train_alpha=False, training_start=10000)
-    algorithm = D2RL_SAC_v1(state_dim, action_dim)
+    #algorithm = D2RL_SAC_v1(state_dim, action_dim)
     #algorithm = D2RL_SAC_v2(state_dim, action_dim, train_alpha=True)
+    algorithm = D2RL_TD3(state_dim, action_dim, training_step=1)
     #d2rl_algorithm(algorithm)
     #print(algorithm.actor, algorithm.critic, algorithm.target_actor, algorithm.target_critic)
     #d2rl_algorithm(algorithm)

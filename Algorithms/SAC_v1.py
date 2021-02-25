@@ -80,7 +80,7 @@ class SAC_v1:
 
             del tape2
 
-            with tf.GradientTape() as tape3:
+            with tf.GradientTape(persistent=True) as tape3:
                 mu, sigma = self.actor.mu_sigma(s)
                 output = mu + tf.random.normal(shape=sigma.shape) * sigma
 

@@ -22,6 +22,7 @@ class DQN:
         self.epsilon = epsilon
         self.training_start = training_start
         self.training_step = training_step
+        self.current_step = 0
         self.copy_iter = copy_iter
 
         self.network = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
@@ -43,6 +44,7 @@ class DQN:
 
     def train(self, training_num):
         for i in range(training_num):
+            self.current_step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
             target_q = tf.reduce_max(self.target_network(ns, activation='linear'), axis=1, keepdims=True)
@@ -59,7 +61,7 @@ class DQN:
             self.optimizer.apply_gradients(zip(gradients, variables))
 
 
-            if i % self.copy_iter == 0:
+            if self.current_step % self.copy_iter == 0:
                 copy_weight(self.network, self.target_network)
 
 
