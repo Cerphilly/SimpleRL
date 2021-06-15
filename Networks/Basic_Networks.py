@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 class Policy_network(tf.keras.Model):
     def __init__(self, state_dim, action_dim, hidden_units=(256, 256), activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
@@ -15,6 +16,8 @@ class Policy_network(tf.keras.Model):
 
         self.output_layer = tf.keras.layers.Dense(self.action_dim, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Output')
+
+
     @tf.function
     def call(self, input, activation = 'tanh'):
         z = self.input_layer(input)
@@ -48,6 +51,7 @@ class Q_network(tf.keras.Model):
         self.output_layer = tf.keras.layers.Dense(1, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Output')
 
+
     @tf.function
     def call(self, input1, input2):
         input = tf.concat([input1, input2], axis=1)
@@ -74,6 +78,7 @@ class V_network(tf.keras.Model):
                                       bias_initializer=bias_initializer, name='Layer{}'.format(i)))
 
         self.output_layer = tf.keras.layers.Dense(1, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, name='Output')
+
 
     @tf.function
     def call(self, input):

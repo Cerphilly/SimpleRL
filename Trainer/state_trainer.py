@@ -25,7 +25,7 @@ from Algorithms.SAC_v2 import SAC_v2
 from Algorithms.D2RL import D2RL_TD3, D2RL_SAC_v1, D2RL_SAC_v2
 
 
-class Gym_trainer:
+class State_trainer:
     def __init__(self, env, algorithm, max_action, min_action,  train_mode, render=True, max_episode = 1e6):
         self.env = env
         self.algorithm = algorithm
@@ -89,11 +89,9 @@ class Gym_trainer:
 
                 else:
                     action = self.algorithm.get_action(observation)
-
                     next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
-                    #done: terminal state 1 True nonterminal state 0 False
-
+                #done: terminal state 1 True nonterminal state 0 False
                 done = 0. if self.local_step + 1 == self.env._max_episode_steps else float(done)
                 self.episode_reward += reward
 
@@ -104,11 +102,6 @@ class Gym_trainer:
                 if self.total_step >= self.algorithm.training_start and self.train_mode(done, self.local_step):
                     self.algorithm.train(training_num=self.algorithm.training_step)
 
-                # if self.total_step % 10000 == 1:
-                #     file_path = 'C:/Users/cocel/PycharmProjects/SimpleRL/Saved_models/Humanoid/'
-                #     layer_name = ['W1', 'b1', 'W2', 'b2', 'W3', 'b3']
-                #     for layer in range(len(self.algorithm.actor.trainable_variables)):
-                #         np.save(file_path + layer_name[layer], self.algorithm.actor.trainable_variables[layer].numpy())
 
 
 
@@ -144,9 +137,9 @@ def main(cpu_only = False, force_gpu = True):
     #env = gym.make("InvertedTriplePendulum-v2")
     #env = gym.make("InvertedDoublePendulumSwing-v2")
     #env = gym.make("InvertedDoublePendulum-v2")
-    env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
+    #env = gym.make("InvertedPendulumSwing-v2")#around 10000 steps
 
-    #env = gym.make("InvertedPendulum-v2")
+    env = gym.make("InvertedPendulum-v2")
 
     #env = gym.make("Ant-v2")
     #env = gym.make("HalfCheetah-v2")
@@ -195,14 +188,14 @@ def main(cpu_only = False, force_gpu = True):
     #algorithm = SAC_v2(state_dim, action_dim, alpha=0.05, train_alpha=False, training_start=10000)
     #algorithm = D2RL_SAC_v1(state_dim, action_dim)
     #algorithm = D2RL_SAC_v2(state_dim, action_dim, train_alpha=True)
-    algorithm = D2RL_TD3(state_dim, action_dim, training_step=1)
+    #algorithm = D2RL_TD3(state_dim, action_dim)
     #d2rl_algorithm(algorithm)
     #print(algorithm.actor, algorithm.critic, algorithm.target_actor, algorithm.target_critic)
     #d2rl_algorithm(algorithm)
     #algorithm for both env
     #################################################################################
     #offline training only for REINFORCE, VPG, TRPO, PPO
-    #algorithm = TRPO(state_dim, action_dim, discrete)
+    algorithm = TRPO(state_dim, action_dim, discrete)
     #algorithm = PPO(state_dim, action_dim, discrete, mode='clip', clip=0.2)
     #algorithm= PPO(state_dim, action_dim, discrete, mode='Adaptive KL', dtarg=0.01)
     #algorithm = PPO(state_dim, action_dim, discrete, mode='Fixed KL', beta=3)
@@ -218,7 +211,7 @@ def main(cpu_only = False, force_gpu = True):
     print("Min action:", min_action)
     print("Discrete: ", discrete)
 
-    trainer = Gym_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='online', render=False)
+    trainer = State_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='batch', render=False)
     trainer.run()
 
 

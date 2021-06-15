@@ -86,6 +86,8 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         self.output_layer = tf.keras.layers.Dense(self.action_dim*2, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Output')
 
+
+
     @tf.function
     def call(self, input, deterministic=False):
         z = self.input_layer(input)
@@ -133,6 +135,22 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=1, keepdims=True)
 
         return log_pi
+
+    def dist(self, input):
+        z = self.input_layer(input)
+        for layer in self.hidden_layers:
+            z = layer(z)
+
+        z = self.output_layer(z)
+
+        mu = z[:,:self.action_dim]
+        sigma = tf.exp(z[:, self.action_dim:])
+
+
+        dist = tfp.distributions.Normal(loc=mu, scale=sigma)
+
+        return dist
+
 
     @tf.function
     def mu_sigma(self, input):

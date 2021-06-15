@@ -128,11 +128,8 @@ class D2RL_Gaussian(Gaussian_Actor):
 class D2RL_Squashed_Gaussian(Squashed_Gaussian_Actor):
     def __init__(self, state_dim, action_dim, hidden_units=(256, 256, 256, 256), activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
         super(D2RL_Squashed_Gaussian, self).__init__(state_dim, action_dim, hidden_units, activation=activation, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer)
-        # import numpy as np
-        # dummy_state = tf.constant(np.zeros(shape=(1,state_dim), dtype=np.float32))
-        # dummy_action = tf.constant(np.zeros(shape=(1, action_dim), dtype=np.float32))
-        # self(dummy_state, dummy_action)
-        # print(self.summary())
+
+
     @tf.function
     def call(self, input, deterministic=False):
         z = self.input_layer(input)

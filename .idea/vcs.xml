@@ -3,6 +3,5 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/Custom_Gym" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/../SimpleRL_Pytorch" vcs="Git" />
   </component>
 </project>

@@ -79,7 +79,6 @@ class TD3:
             self.critic2_optimizer.apply_gradients(zip(critic2_grad, self.critic2.trainable_variables))
 
             if self.current_step % self.policy_delay == 0:
-
                 with tf.GradientTape() as tape2:
                     actor_loss = -tf.reduce_mean(self.critic1(s, self.actor(s)))
 
