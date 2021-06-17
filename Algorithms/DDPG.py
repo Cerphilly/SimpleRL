@@ -9,28 +9,29 @@ from Networks.Basic_Networks import Policy_network, Q_network
 
 
 class DDPG:
-    def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=100, batch_size=128, buffer_size=1e6, gamma=0.99, tau = 0.005, actor_lr=0.001, critic_lr=0.001, training_start=500):
+    def __init__(self, state_dim, action_dim, args):
 
-        self.buffer = Buffer(buffer_size)
+        self.buffer = Buffer(args.buffer_size)
 
-        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
-        self.critic_optimizer = tf.keras.optimizers.Adam(critic_lr)
+        self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
+        self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
         self.state_dim = state_dim
         self.action_dim = action_dim
 
 
-        self.batch_size = batch_size
-        self.gamma = gamma
-        self.tau = tau
-        self.training_start = training_start
-        self.training_step = training_step
+        self.batch_size = args.batch_size
+        self.gamma = args.gamma
+        self.tau = args.tau
+        self.noise_scale = args.noise_scale
+        self.training_start = args.training_start
+        self.training_step = args.training_step
         self.current_step = 0
 
-        self.actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.target_actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.critic = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.target_critic = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.target_actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.critic = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.target_critic = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
 
         copy_weight(self.actor, self.target_actor)
         copy_weight(self.critic, self.target_critic)
@@ -40,7 +41,7 @@ class DDPG:
 
     def get_action(self, state):
         state = np.expand_dims(np.array(state), axis=0)
-        noise = np.random.normal(loc=0, scale=0.1, size = self.action_dim)
+        noise = np.random.normal(loc=0, scale=self.noise_scale, size = self.action_dim)
         action = self.actor(state).numpy()[0] + noise
 
         action = np.clip(action, -1, 1)
@@ -48,8 +49,8 @@ class DDPG:
         return action
 
     def train(self, training_num):
-        self.actor_loss = 0
-        self.critic_loss = 0
+        total_a_loss = 0
+        total_c_loss = 0
 
         for i in range(training_num):
             self.current_step += 1
@@ -70,6 +71,14 @@ class DDPG:
 
             soft_update(self.actor, self.target_actor, self.tau)
             soft_update(self.critic, self.target_critic, self.tau)
+
+            del tape
+
+            total_a_loss += actor_loss.numpy()
+            total_c_loss += critic_loss.numpy()
+
+
+        return [['Loss/Actor', total_a_loss], ['Loss/Critic', total_c_loss]]
 
 
 

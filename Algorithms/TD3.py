@@ -9,37 +9,36 @@ from Networks.Basic_Networks import Policy_network, Q_network
 from Networks.D2RL_Networks import D2RL_Policy, D2RL_Q
 
 class TD3:
-    def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=100, batch_size=128, buffer_size=1e6,
-                 gamma=0.99, tau=0.005, actor_lr=0.001, critic_lr=0.001, policy_delay=2, actor_noise=0.1, target_noise=0.2, noise_clip=0.5, training_start=500):
+    def __init__(self, state_dim, action_dim, args):
 
-        self.buffer = Buffer(buffer_size)
+        self.buffer = Buffer(args.buffer_size)
 
-        self.actor_optimizer = tf.keras.optimizers.Adam(actor_lr)
-        self.critic1_optimizer = tf.keras.optimizers.Adam(critic_lr)
-        self.critic2_optimizer = tf.keras.optimizers.Adam(critic_lr)
+        self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
+        self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        self.batch_size = batch_size
-        self.gamma = gamma
-        self.tau = tau
-        self.actor_lr = actor_lr
-        self.critic_lr = critic_lr
-        self.policy_delay = policy_delay
-        self.actor_noise = actor_noise
-        self.target_noise = target_noise
-        self.noise_clip = noise_clip
-        self.training_start = training_start
-        self.training_step = training_step
+        self.batch_size = args.batch_size
+        self.gamma = args.gamma
+        self.tau = args.tau
+        self.actor_lr = args.actor_lr
+        self.critic_lr = args.critic_lr
+        self.policy_delay = args.policy_delay
+        self.actor_noise = args.actor_noise
+        self.target_noise = args.target_noise
+        self.noise_clip = args.noise_clip
+        self.training_start = args.training_start
+        self.training_step = args.training_step
         self.current_step = 0
 
-        self.actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.target_actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.critic1 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.target_critic1 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.critic2 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.target_critic2 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.target_actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.critic1 = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.target_critic1 = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.critic2 = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.target_critic2 = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
 
         copy_weight(self.actor, self.target_actor)
         copy_weight(self.critic1, self.target_critic1)
@@ -60,6 +59,8 @@ class TD3:
         return action
 
     def train(self, training_num):
+        total_a_loss = 0
+        total_c1_loss, total_c2_loss = 0, 0
         for i in range(training_num):
             self.current_step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
@@ -88,6 +89,13 @@ class TD3:
                 soft_update(self.actor, self.target_actor, self.tau)
                 soft_update(self.critic1, self.target_critic1, self.tau)
                 soft_update(self.critic2, self.target_critic2, self.tau)
+
+            del tape, tape2
+            total_a_loss += actor_loss.numpy()
+            total_c1_loss += critic1_loss.numpy()
+            total_c2_loss += critic2_loss.numpy()
+
+        return [['Loss/Actor', total_a_loss], ['Loss/Critic1', total_c1_loss], ['Loss/Critic2', total_c2_loss]]
 
 
 

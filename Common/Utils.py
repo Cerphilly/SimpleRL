@@ -1,5 +1,5 @@
 import numpy as np
-import gym
+import gym, dmc2gym
 import tensorflow as tf
 
 from collections import deque

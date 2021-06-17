@@ -9,31 +9,29 @@ from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
-
-
 class VPG:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, discrete, hidden_dim=256, training_step=1, gamma = 0.99, lambda_gae = 0.96, learning_rate = 0.001):
+    def __init__(self, state_dim, action_dim, args):
 
-        self.discrete = discrete
+        self.discrete = args.discrete
 
-        self.buffer = Buffer()
+        self.buffer = Buffer(args.buffer_size)
 
-        self.gamma = gamma
-        self.lambda_gae = lambda_gae
+        self.gamma = args.gamma
+        self.lambda_gae = args.lambda_gae
 
-        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
+        self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.training_start = 0
-        self.training_step = training_step
+        self.training_step = 1
 
 
         if self.discrete == True:
-            self.actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+            self.actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
         else:
-            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim)
 
 
         self.critic = V_network(self.state_dim)
@@ -54,6 +52,9 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         return action
 
     def train(self, training_num):
+        total_a_loss = 0
+        total_c_loss = 0
+
         s, a, r, ns, d = self.buffer.all_sample()
         values = self.critic(s)
 
@@ -94,8 +95,12 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         self.actor_optimizer.apply_gradients(zip(actor_gradients, actor_variables))
         self.critic_optimizer.apply_gradients(zip(critic_gradients, critic_variables))
 
+        total_a_loss += actor_loss.numpy()
+        total_c_loss += critic_loss.numpy()
+
         self.buffer.delete()
 
+        return [['Loss/Actor', total_a_loss], ['Loss/Critic', total_c_loss]]
 
 
 

@@ -12,34 +12,33 @@ from Networks.Gaussian_Actor import Gaussian_Actor, Squashed_Gaussian_Actor
 
 
 class PPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, discrete, mode='clip', hidden_dim=256, training_step=10, gamma = 0.99,
-                 lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, clip=0.2, beta=1, dtarg=0.01):
+    def __init__(self, state_dim, action_dim, args):
 
-        self.discrete = discrete
+        self.discrete = args.discrete
 
-        self.buffer = Buffer()
+        self.buffer = Buffer(args.buffer_size)
 
-        self.mode = mode #mode: 'clip', 'Adaptive KL', 'Fixed KL'
+        self.ppo_mode = args.ppo_mode #mode: 'clip', 'Adaptive KL', 'Fixed KL'
 
-        self.gamma = gamma
-        self.lambda_gae = lambda_gae
-        self.batch_size = batch_size
-        self.clip = clip
-        self.beta = beta
-        self.dtarg = dtarg
+        self.gamma = args.gamma
+        self.lambda_gae = args.lambda_gae
+        self.batch_size = args.batch_size
+        self.clip = args.clip
+        self.beta = args.beta
+        self.dtarg = args.dtarg
 
-        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
+        self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.training_start = 0
-        self.training_step = training_step
+        self.training_step = args.training_step
 
         if self.discrete == True:
-            self.actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+            self.actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
         else:
-            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim)
 
         self.critic = V_network(self.state_dim)
 
@@ -59,6 +58,9 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         return action
 
     def train(self, training_num):
+        total_a_loss = 0
+        total_c_loss = 0
+
         s, a, r, ns, d = self.buffer.all_sample()
 
         old_values = self.critic(s)
@@ -117,7 +119,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                     ratio = tf.exp(log_policy - batch_old_log_policy)
                     surrogate = ratio * batch_advantages
 
-                    if self.mode == 'clip':
+                    if self.ppo_mode == 'clip':
                         clipped_surrogate = tf.clip_by_value(surrogate, 1-self.clip, 1+self.clip)*batch_advantages
                         actor_loss = -tf.reduce_mean(tf.minimum(surrogate, clipped_surrogate))
 
@@ -126,7 +128,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                         kl_divergence = np.reshape(kl_divergence, [-1, 1])
                         actor_loss = -tf.reduce_mean(surrogate - self.beta*kl_divergence)
 
-                        if self.mode == 'Adaptive KL':
+                        if self.ppo_mode == 'Adaptive KL':
                             d = np.mean(kl_divergence)
                             if d < self.dtarg/1.5:
                                 self.beta = self.beta/2
@@ -142,7 +144,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                     ratio = tf.exp(log_policy - batch_old_log_policy)
                     surrogate = ratio * batch_advantages
 
-                    if self.mode == 'clip':
+                    if self.ppo_mode == 'clip':
                         clipped_surrogate = tf.clip_by_value(surrogate, 1-self.clip, 1+self.clip)*batch_advantages
                         actor_loss = -tf.reduce_mean(tf.minimum(surrogate, clipped_surrogate))
 
@@ -154,7 +156,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
                         actor_loss = -tf.reduce_mean(surrogate - self.beta*kl_divergence)
 
-                        if self.mode == 'Adaptive KL':
+                        if self.ppo_mode == 'Adaptive KL':
                             d = np.mean(kl_divergence)
                             if d < self.dtarg / 1.5:
                                 self.beta = self.beta / 2
@@ -172,6 +174,10 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             self.actor_optimizer.apply_gradients(zip(actor_gradients, actor_variables))
             self.critic_optimizer.apply_gradients(zip(critic_gradients, critic_variables))
 
+            total_a_loss += actor_loss.numpy()
+            total_c_loss += critic_loss.numpy()
+
         self.buffer.delete()
+        return [['Loss/Actor', total_a_loss], ['Loss/Critic', total_c_loss]]
 
 

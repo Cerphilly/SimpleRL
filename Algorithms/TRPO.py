@@ -12,36 +12,33 @@ from Networks.Basic_Networks import Policy_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
 class TRPO:
-    def __init__(self, state_dim, action_dim, discrete, hidden_dim=256, training_step=1, gamma = 0.99,
-                 lambda_gae = 0.95, learning_rate = 3e-4, batch_size=64, backtrack_iter=10, backtrack_coeff=0.8, delta=0.05, num_epoch=10):
+    def __init__(self, state_dim, action_dim, args):
 
+        self.discrete = args.discrete
 
-        self.discrete = discrete
+        self.buffer = Buffer(args.buffer_size)
 
-        self.buffer = Buffer()
+        self.gamma = args.gamma
+        self.lambda_gae = args.lambda_gae
+        self.batch_size = args.batch_size
+        self.backtrack_iter = args.backtrack_iter
+        self.backtrack_coeff = args.backtrack_coeff
+        self.delta = args.delta
 
-        self.gamma = gamma
-        self.lambda_gae = lambda_gae
-        self.batch_size = batch_size
-        self.backtrack_iter = backtrack_iter
-        self.backtrack_coeff = backtrack_coeff
-        self.delta = delta
-        self.num_epoch = num_epoch
-
-        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
+        self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.training_start = 0
-        self.training_step = training_step
+        self.training_step = args.training_step
 
         if self.discrete == True:
-            self.actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-            self.backup_actor = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+            self.actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
+            self.backup_actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
         else:
-            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-            self.backup_actor = Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim)
+            self.backup_actor = Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim)
 
         self.critic = V_network(self.state_dim)
 
@@ -115,6 +112,7 @@ class TRPO:
             index += variable_length
 
     def train(self, training_num):
+        total_c_loss = 0
         s, a, r, ns, d = self.buffer.all_sample()
 
         old_values = self.critic(s)
@@ -222,7 +220,7 @@ class TRPO:
         n = len(s)
         arr = np.arange(n)
 
-        for epoch in range(self.num_epoch):
+        for epoch in range(self.training_step):
             np.random.shuffle(arr)
 
             if n // self.batch_size > 0:
@@ -240,8 +238,10 @@ class TRPO:
             critic_gradients = tape.gradient(critic_loss, critic_variables)
             self.critic_optimizer.apply_gradients(zip(critic_gradients, critic_variables))
 
-        self.buffer.delete()
+            total_c_loss += critic_loss.numpy()
 
+        self.buffer.delete()
+        return [['Loss/Critic', total_c_loss]]
 
 
 

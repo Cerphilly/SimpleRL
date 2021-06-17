@@ -62,8 +62,8 @@ class Buffer:
 
 
     def sample(self, batch_size):
-        ids = np.random.randint(low=0, high=len(self.s), size=batch_size)
-        #ids = np.random.choice(len(self.s), self.batch_size, replace=False)
+        #ids = np.random.randint(low=0, high=len(self.s), size=batch_size)
+        ids = np.random.choice(len(self.s), batch_size, replace=False)
 
         states = np.asarray([self.s[i] for i in ids]) # (batch_size, states_dim)
         actions = np.asarray([self.a[i] for i in ids]) # (batch_size, 1)

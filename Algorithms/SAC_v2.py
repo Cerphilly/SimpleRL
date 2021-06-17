@@ -7,39 +7,36 @@ from Common.Buffer import Buffer
 from Common.Utils import copy_weight, soft_update
 from Networks.Basic_Networks import Q_network
 from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
-from Networks.D2RL_Networks import D2RL_Squashed_Gaussian, D2RL_Q
 
 class SAC_v2:
-    def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=1, alpha=0.1, train_alpha=True,
-                 batch_size=128, buffer_size=1e6, tau=0.005, learning_rate=0.0003, gamma=0.99, reward_scale=1, training_start = 500):
+    def __init__(self, state_dim, action_dim, args):
 
-        self.buffer = Buffer(buffer_size)
+        self.buffer = Buffer(args.buffer_size)
 
-        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.critic1_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.critic2_optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
+        self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        self.batch_size = batch_size
-        self.tau = tau
-        self.gamma = gamma
-        self.reward_scale = reward_scale
-        self.training_start = training_start
-        self.training_step = training_step
+        self.batch_size = args.batch_size
+        self.tau = args.tau
+        self.gamma = args.gamma
+        self.training_start = args.training_start
+        self.training_step = args.training_step
         self.current_step = 0
 
-        self.log_alpha = tf.Variable(np.log(alpha), dtype=tf.float32, trainable=True)
+        self.log_alpha = tf.Variable(np.log(args.alpha), dtype=tf.float32, trainable=True)
         self.target_entropy = -action_dim
-        self.alpha_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.train_alpha = train_alpha
+        self.alpha_optimizer = tf.keras.optimizers.Adam(args.alpha_lr)
+        self.train_alpha = args.train_alpha
 
-        self.actor = Squashed_Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.critic1 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.target_critic1 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.critic2 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.target_critic2 = Q_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.actor = Squashed_Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim, args.log_std_min, args.log_std_max)
+        self.critic1 = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.target_critic1 = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.critic2 = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.target_critic2 = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
 
         copy_weight(self.critic1, self.target_critic1)
         copy_weight(self.critic2, self.target_critic2)
@@ -53,12 +50,14 @@ class SAC_v2:
 
     def get_action(self, state):
         state = np.expand_dims(np.array(state), axis=0)
-
         action = self.actor(state).numpy()[0]
 
         return action
 
     def train(self, training_num):
+        total_a_loss = 0
+        total_c1_loss, total_c2_loss = 0, 0
+        total_alpha_loss = 0
         for i in range(training_num):
             self.current_step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
@@ -69,8 +68,8 @@ class SAC_v2:
 
             with tf.GradientTape(persistent=True) as tape1:
 
-                critic1_loss = tf.reduce_mean(tf.square(self.critic1(s, a) - target_q))
-                critic2_loss = tf.reduce_mean(tf.square(self.critic2(s, a) - target_q))
+                critic1_loss = 0.5 * tf.reduce_mean(tf.square(self.critic1(s, a) - target_q))
+                critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(s, a) - target_q))
 
             critic1_gradients = tape1.gradient(critic1_loss, self.critic1.trainable_variables)
             self.critic1_optimizer.apply_gradients(zip(critic1_gradients, self.critic1.trainable_variables))
@@ -85,7 +84,7 @@ class SAC_v2:
 
                 min_aq_rep = tf.minimum(self.critic1(s, output), self.critic2(s, output))
 
-                actor_loss = tf.reduce_mean(self.alpha.numpy() * self.actor.log_pi(s) - min_aq_rep)
+                actor_loss = 0.5 * tf.reduce_mean(self.alpha.numpy() * self.actor.log_pi(s) - min_aq_rep)
 
             actor_gradients = tape2.gradient(actor_loss, self.actor.trainable_variables)
             self.actor_optimizer.apply_gradients(zip(actor_gradients, self.actor.trainable_variables))
@@ -104,6 +103,15 @@ class SAC_v2:
 
             soft_update(self.critic1, self.target_critic1, self.tau)
             soft_update(self.critic2, self.target_critic2, self.tau)
+
+            total_a_loss += actor_loss.numpy()
+            total_c1_loss += critic1_loss.numpy()
+            total_c2_loss += critic2_loss.numpy()
+            if self.train_alpha == True:
+                total_alpha_loss += alpha_loss.numpy()
+
+        return [['Loss/Actor', total_a_loss], ['Loss/Critic1', total_c1_loss], ['Loss/Critic2', total_c2_loss], ['Loss/alpha', total_alpha_loss]]
+
 
 
 

@@ -9,25 +9,25 @@ from Networks.Gaussian_Actor import Gaussian_Actor
 
 
 class REINFORCE:
-    def __init__(self, state_dim, action_dim, discrete, hidden_dim=256, training_step=1, gamma=0.99, learning_rate=0.001):
+    def __init__(self, state_dim, action_dim, args):
 
-        self.buffer = Buffer()
+        self.buffer = Buffer(args.buffer_size)
 
         self.state_dim = state_dim
         self.action_dim = action_dim
 
         
-        self.discrete = discrete
+        self.discrete = args.discrete
 
-        self.gamma = gamma
+        self.gamma = args.gamma
         self.training_start = 0
-        self.training_step = training_step
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.training_step = 1
+        self.optimizer = tf.keras.optimizers.Adam(args.learning_rate)
 
-        if discrete == True:
-            self.network = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        if args.discrete == True:
+            self.network = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
         else:
-            self.network = Gaussian_Actor(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+            self.network = Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim)
 
         self.network_list = {'Network': self.network}
         self.name = 'REINFORCE'
@@ -48,6 +48,7 @@ class REINFORCE:
 
 
     def train(self, training_num):
+        total_loss = 0
         s, a, r, ns, d = self.buffer.all_sample()
         returns = np.zeros_like(r.numpy())
 
@@ -74,5 +75,9 @@ class REINFORCE:
 
         self.optimizer.apply_gradients(zip(gradients, variables))
 
+        total_loss += loss.numpy()
+
         self.buffer.delete()
+
+        return [['Loss/Loss', total_loss]]
 

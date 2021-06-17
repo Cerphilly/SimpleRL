@@ -7,21 +7,21 @@ from Common.Buffer import Buffer
 from Networks.Dueling_Network import Dueling_Network
 
 class Dueling_DQN:
-    def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=100, batch_size=128, buffer_size=1e6, gamma=0.99, learning_rate=0.001, epsilon=0.2, training_start=200):
-        self.buffer = Buffer(buffer_size)
-        self.optimizer = tf.optimizers.Adam(learning_rate)
+    def __init__(self, state_dim, action_dim, args):
+        self.buffer = Buffer(args.buffer_size)
+        self.optimizer = tf.optimizers.Adam(args.learning_rate)
 
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        self.batch_size = batch_size
-        self.gamma = gamma
-        self.eps = epsilon
-        self.training_start = training_start
-        self.training_step = training_step
+        self.batch_size = args.batch_size
+        self.gamma = args.gamma
+        self.eps = args.epsilon
+        self.training_start = args.training_start
+        self.training_step = args.training_step
         self.current_step = 0
 
-        self.network = Dueling_Network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.network = Dueling_Network(self.state_dim, self.action_dim, args.hidden_dim)
 
         self.network_list = {'Network': self.network}
         self.name = 'Dueling DQN'
@@ -37,6 +37,7 @@ class Dueling_DQN:
             return np.argmax(q_value, axis=1)[0]
 
     def train(self, training_num):
+        total_loss = 0
 
         for i in range(training_num):
             self.current_step += 1
@@ -54,6 +55,10 @@ class Dueling_DQN:
             variables = self.network.trainable_variables
             gradients = tape.gradient(loss, variables)
             self.optimizer.apply_gradients(zip(gradients, variables))
+
+            total_loss += loss.numpy()
+
+        return [['Loss/Loss', total_loss]]
 
 
 

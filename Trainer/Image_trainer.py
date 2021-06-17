@@ -1,6 +1,7 @@
 import dmc2gym
 import tensorflow as tf
 import matplotlib.pyplot as plt
+
 import numpy as np
 
 from Algorithms.ImageRL.CURL import CURL_SACv2
@@ -8,29 +9,30 @@ from Common.Utils import FrameStack
 
 
 class Image_trainer:
-    def __init__(self, env, algorithm, max_action, min_action,  train_mode, render=True, max_episode = 1e6):
+    def __init__(self, env, algorithm, max_action, min_action, args):
         self.env = env
         self.algorithm = algorithm
 
         self.max_action = max_action
         self.min_action = min_action
 
-        self.render = render
-        self.max_episode = max_episode
+        self.render = args.render
+        self.max_episode = args.max_episode
 
         self.episode = 0
         self.episode_reward = 0
         self.total_step = 0
         self.local_step = 0
 
-        if train_mode == 'offline':
+        self.train_mode = None
+
+        if args.train_mode == 'offline':
             self.train_mode = self.offline_train
-        elif train_mode == 'online':
+        elif args.train_mode == 'online':
             self.train_mode = self.online_train
-        elif train_mode == 'batch':
+        elif args.train_mode == 'batch':
             self.train_mode = self.batch_train
-        else:
-            print("no training mode")
+        assert self.train_mode is not None
 
     def offline_train(self, d, local_step):
         if d:
@@ -84,7 +86,7 @@ class Image_trainer:
                 observation = next_observation
 
                 if self.total_step >= self.algorithm.training_start and self.train_mode(done, self.local_step):
-                    self.algorithm.train(self.local_step)
+                    self.algorithm.train(self.algorithm.training_step)
 
 
             print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward, self.local_step, self.total_step))

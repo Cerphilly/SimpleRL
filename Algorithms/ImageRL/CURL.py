@@ -12,53 +12,50 @@ from Common.Utils import copy_weight, soft_update, center_crop_image
 from Common.Buffer import Buffer
 
 class CURL_SACv1:
-    def __init__(self, obs_dim, action_dim, hidden_dim=512, gamma=0.99, alpha=0.1, learning_rate=0.001, batch_size=128, buffer_size=1e6,
-                 feature_dim=50, curl_latent_dim=128, layer_num=4, filter_num=32, tau=0.01, encoder_tau=0.05, training_start=1000):
+    def __init__(self, obs_dim, action_dim, args):
 
-        self.buffer = Buffer(buffer_size)
+        self.buffer = Buffer(args.buffer_size)
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.image_size = obs_dim[-1]
 
+        self.gamma = args.gamma
+        self.alpha = args.alpha
 
-        self.hidden_dim = hidden_dim
-        self.gamma = gamma
-        self.alpha = alpha
-        self.learning_rate = learning_rate
+        self.batch_size = args.batch_size
+        self.feature_dim = args.feature_dim
+        self.curl_latent_dim = args.curl_latent_dim
 
-        self.batch_size = batch_size
-        self.feature_dim = feature_dim
-        self.curl_latent_dim = curl_latent_dim
+        self.layer_num = args.layer_num
+        self.filter_num = args.filter_num
+        self.tau = args.tau
+        self.encoder_tau = args.encoder_tau
 
-        self.layer_num = layer_num
-        self.filter_num = filter_num
-        self.tau = tau
-        self.encoder_tau = encoder_tau
+        self.training_start = args.training_start
+        self.training_step = args.training_step
 
-        self.training_start = training_start
+        self.encoder = PixelEncoder(self.obs_dim, self.feature_dim, self.layer_num, self.filter_num)
+        self.target_encoder = PixelEncoder(self.obs_dim, self.feature_dim, self.layer_num, self.filter_num)
 
-        self.encoder = PixelEncoder(self.obs_dim, feature_dim, layer_num, filter_num)
-        self.target_encoder = PixelEncoder(self.obs_dim, feature_dim, layer_num, filter_num)
+        self.actor = Squashed_Gaussian_Actor(self.feature_dim, self.action_dim, args.hidden_dim, args.log_std_min, args.log_std_max, kernel_initializer=tf.keras.initializers.orthogonal())
+        self.critic1 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim, kernel_initializer=tf.keras.initializers.orthogonal())
+        self.critic2 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim, kernel_initializer=tf.keras.initializers.orthogonal())
+        self.v_network = V_network(self.feature_dim, args.hidden_dim, kernel_initializer=tf.keras.initializers.orthogonal())
+        self.target_v_network = V_network(self.feature_dim, args.hidden_dim, kernel_initializer=tf.keras.initializers.orthogonal())
 
-        self.actor = Squashed_Gaussian_Actor(feature_dim, action_dim, (hidden_dim, hidden_dim), kernel_initializer=tf.keras.initializers.orthogonal())
-        self.critic1 = Q_network(feature_dim, action_dim, (hidden_dim, hidden_dim), kernel_initializer=tf.keras.initializers.orthogonal())
-        self.critic2 = Q_network(feature_dim, action_dim, (hidden_dim, hidden_dim), kernel_initializer=tf.keras.initializers.orthogonal())
-        self.v_network = V_network(feature_dim, (hidden_dim, hidden_dim), kernel_initializer=tf.keras.initializers.orthogonal())
-        self.target_v_network = V_network(feature_dim, (hidden_dim, hidden_dim), kernel_initializer=tf.keras.initializers.orthogonal())
-
-        self.curl = CURL(feature_dim, self.curl_latent_dim)
+        self.curl = CURL(self.feature_dim, self.curl_latent_dim)
 
         copy_weight(self.v_network, self.target_v_network)
         copy_weight(self.encoder, self.target_encoder)
 
-        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.critic1_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.critic2_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.v_network_optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
+        self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        self.v_network_optimizer = tf.keras.optimizers.Adam(args.v_lr)
 
-        self.encoder_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.cpc_optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.encoder_optimizer = tf.keras.optimizers.Adam(args.encoder_lr)
+        self.cpc_optimizer = tf.keras.optimizers.Adam(args.cpc_lr)
 
         self.name = 'CURL_SACv1'
 
@@ -149,55 +146,53 @@ class CURL_SACv1:
 
 
 class CURL_SACv2:
-    def __init__(self, obs_dim, action_dim, hidden_dim=1024, gamma=0.99, learning_rate=0.001, batch_size=128, buffer_size=1e6,
-                 feature_dim=50, curl_latent_dim=128, layer_num=4, filter_num=32, tau=0.01, encoder_tau=0.05, training_start=1000, train_alpha=True, alpha=0.1):
+    def __init__(self, obs_dim, action_dim, args):
 
-        self.buffer = Buffer(buffer_size)
+        self.buffer = Buffer(args.buffer_size)
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.image_size = obs_dim[-1]
 
-        self.log_alpha = tf.Variable(initial_value=tf.math.log(alpha), trainable=True)
+        self.log_alpha = tf.Variable(initial_value=tf.math.log(args.alpha), trainable=True)
         self.target_entropy = -action_dim
-        self.hidden_dim = hidden_dim
-        self.gamma = gamma
-        self.learning_rate = learning_rate
+        self.gamma = args.gamma
 
-        self.batch_size = batch_size
-        self.feature_dim = feature_dim
-        self.curl_latent_dim = curl_latent_dim
+        self.batch_size = args.batch_size
+        self.feature_dim = args.feature_dim
+        self.curl_latent_dim = args.curl_latent_dim
 
-        self.layer_num = layer_num
-        self.filter_num = filter_num
-        self.tau = tau
-        self.encoder_tau = encoder_tau
+        self.layer_num = args.layer_num
+        self.filter_num = args.filter_num
+        self.tau = args.tau
+        self.encoder_tau = args.encoder_tau
 
-        self.training_start = training_start
-        self.train_alpha = train_alpha
+        self.training_start = args.training_start
+        self.training_step = args.training_step
+        self.train_alpha = args.train_alpha
 
-        self.actor = Squashed_Gaussian_Actor(feature_dim, action_dim, (hidden_dim, hidden_dim))
-        self.critic1 = Q_network(feature_dim, action_dim, (hidden_dim, hidden_dim))
-        self.critic2 = Q_network(feature_dim, action_dim, (hidden_dim, hidden_dim))
-        self.target_critic1 = Q_network(feature_dim, action_dim, (hidden_dim, hidden_dim))
-        self.target_critic2 = Q_network(feature_dim, action_dim, (hidden_dim, hidden_dim))
+        self.actor = Squashed_Gaussian_Actor(self.feature_dim, self.action_dim, args.hidden_dim, args.log_std_min, args.log_std_max)
+        self.critic1 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim)
+        self.critic2 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim)
+        self.target_critic1 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim)
+        self.target_critic2 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim)
 
-        self.encoder = PixelEncoder(self.obs_dim, feature_dim, layer_num, filter_num)
-        self.target_encoder = PixelEncoder(self.obs_dim, feature_dim, layer_num, filter_num)
+        self.encoder = PixelEncoder(self.obs_dim, self.feature_dim, self.layer_num, self.filter_num)
+        self.target_encoder = PixelEncoder(self.obs_dim, self.feature_dim, self.layer_num, self.filter_num)
 
         copy_weight(self.critic1, self.target_critic1)
         copy_weight(self.critic2, self.target_critic2)
         copy_weight(self.encoder, self.target_encoder)
 
-        self.curl = CURL(feature_dim, self.curl_latent_dim)
+        self.curl = CURL(self.feature_dim, self.curl_latent_dim)
 
-        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.critic1_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.critic2_optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
+        self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
-        self.encoder_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.cpc_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.log_alpha_optimizer = tf.keras.optimizers.Adam(0.1 * learning_rate, beta_1=0.5)
+        self.encoder_optimizer = tf.keras.optimizers.Adam(args.encoder_lr)
+        self.cpc_optimizer = tf.keras.optimizers.Adam(args.cpc_lr)
+        self.log_alpha_optimizer = tf.keras.optimizers.Adam(args.alpha_lr, beta_1=0.5)
 
         self.name = 'CURL_SACv2'
 
@@ -291,60 +286,56 @@ class CURL_SACv2:
         del tape4
 
 
-
 class CURL_TD3:
-    def __init__(self, obs_dim, action_dim, hidden_dim=512, gamma=0.99, learning_rate=0.001, batch_size=128, policy_delay=2, actor_noise=0.1, target_noise=0.2, noise_clip=0.5, buffer_size=1e6,
-                 feature_dim=50, curl_latent_dim=128, layer_num=4, filter_num=32, tau=0.01, encoder_tau=0.05, training_start=1000):
+    def __init__(self, obs_dim, action_dim, args):
 
-        self.buffer = Buffer(buffer_size)
+        self.buffer = Buffer(args.buffer_size)
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.image_size = obs_dim[-1]
 
-        self.hidden_dim = hidden_dim
-        self.gamma = gamma
-        self.learning_rate = learning_rate
+        self.gamma = args.gamma
 
-        self.batch_size = batch_size
-        self.feature_dim = feature_dim
-        self.curl_latent_dim = curl_latent_dim
+        self.batch_size = args.batch_size
+        self.feature_dim = args.feature_dim
+        self.curl_latent_dim = args.curl_latent_dim
 
-        self.layer_num = layer_num
-        self.filter_num = filter_num
-        self.tau = tau
-        self.encoder_tau = encoder_tau
+        self.layer_num = args.layer_num
+        self.filter_num = args.filter_num
+        self.tau = args.tau
+        self.encoder_tau = args.encoder_tau
 
-        self.policy_delay = policy_delay
-        self.actor_noise = actor_noise
-        self.target_noise = target_noise
-        self.noise_clip = noise_clip
+        self.policy_delay = args.policy_delay
+        self.actor_noise = args.actor_noise
+        self.target_noise = args.target_noise
+        self.noise_clip = args.noise_clip
 
-        self.training_start = training_start
+        self.training_start = args.training_start
 
-        self.actor = Policy_network(feature_dim, action_dim, (hidden_dim, hidden_dim))
-        self.target_actor = Policy_network(feature_dim, action_dim, (hidden_dim, hidden_dim))
-        self.critic1 = Q_network(feature_dim, action_dim, (hidden_dim, hidden_dim))
-        self.critic2 = Q_network(feature_dim, action_dim, (hidden_dim, hidden_dim))
-        self.target_critic1 = Q_network(feature_dim, action_dim, (hidden_dim, hidden_dim))
-        self.target_critic2 = Q_network(feature_dim, action_dim, (hidden_dim, hidden_dim))
+        self.actor = Policy_network(self.feature_dim, self.action_dim, args.hidden_dim)
+        self.target_actor = Policy_network(self.feature_dim, self.action_dim, args.hidden_dim)
+        self.critic1 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim)
+        self.critic2 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim)
+        self.target_critic1 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim)
+        self.target_critic2 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim)
 
-        self.encoder = PixelEncoder(self.obs_dim, feature_dim, layer_num, filter_num)
-        self.target_encoder = PixelEncoder(self.obs_dim, feature_dim, layer_num, filter_num)
+        self.encoder = PixelEncoder(self.obs_dim, self.feature_dim, self.layer_num, self.filter_num)
+        self.target_encoder = PixelEncoder(self.obs_dim, self.feature_dim, self.layer_num, self.filter_num)
 
         copy_weight(self.actor, self.target_actor)
         copy_weight(self.critic1, self.target_critic1)
         copy_weight(self.critic2, self.target_critic2)
         copy_weight(self.encoder, self.target_encoder)
 
-        self.curl = CURL(feature_dim, self.curl_latent_dim)
+        self.curl = CURL(self.feature_dim, self.curl_latent_dim)
 
-        self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.critic1_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.critic2_optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
+        self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
-        self.encoder_optimizer = tf.keras.optimizers.Adam(learning_rate)
-        self.cpc_optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.encoder_optimizer = tf.keras.optimizers.Adam(args.encoder_lr)
+        self.cpc_optimizer = tf.keras.optimizers.Adam(args.cpc_lr)
 
         self.name = 'CURL_TD3'
 

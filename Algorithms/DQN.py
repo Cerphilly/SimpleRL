@@ -8,25 +8,25 @@ from Common.Utils import copy_weight
 from Networks.Basic_Networks import Policy_network
 
 class DQN:
-    def __init__(self, state_dim, action_dim, hidden_dim=256, training_step=100, batch_size=128, buffer_size=1e6, gamma=0.99, learning_rate=0.001, epsilon=0.1, training_start=200, copy_iter=5):
+    def __init__(self, state_dim, action_dim, args):
 
-        self.buffer = Buffer(buffer_size)
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate)
+        self.buffer = Buffer(args.buffer_size)
+        self.optimizer = tf.keras.optimizers.Adam(args.learning_rate)
 
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        self.batch_size = batch_size
-        self.gamma = gamma
-        self.learning_rate = learning_rate
-        self.epsilon = epsilon
-        self.training_start = training_start
-        self.training_step = training_step
+        self.batch_size = args.batch_size
+        self.gamma = args.gamma
+        self.learning_rate = args.learning_rate
+        self.epsilon = args.epsilon
+        self.training_start = args.training_start
+        self.training_step = args.training_step
         self.current_step = 0
-        self.copy_iter = copy_iter
+        self.copy_iter = args.copy_iter
 
-        self.network = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
-        self.target_network = Policy_network(self.state_dim, self.action_dim, (hidden_dim, hidden_dim))
+        self.network = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.target_network = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
 
         copy_weight(self.network, self.target_network)
 
@@ -43,6 +43,7 @@ class DQN:
             return best_action
 
     def train(self, training_num):
+        total_loss = 0
         for i in range(training_num):
             self.current_step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
@@ -60,9 +61,13 @@ class DQN:
 
             self.optimizer.apply_gradients(zip(gradients, variables))
 
-
             if self.current_step % self.copy_iter == 0:
                 copy_weight(self.network, self.target_network)
+
+            total_loss += loss.numpy()
+
+        return [['Loss/Loss', total_loss]]
+
 
 
 
