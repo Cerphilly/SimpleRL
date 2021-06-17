@@ -13,6 +13,7 @@ def hyperparameters():
     parser = argparse.ArgumentParser(description='Contrastive Unsupervised Representations for Reinforcement Learning (CURL) example')
     #environment
     parser.add_argument('--algorithm', default='SACv2', help='SACv1, SACv2, TD3')
+    parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='cartpole_swingup', help='DM Control Suite domain name + task name')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')

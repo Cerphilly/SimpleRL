@@ -11,6 +11,7 @@ from Trainer.State_trainer import State_trainer
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Double Deep Q Network(DDQN) example')
     #environment
+    parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='CartPole-v0', help='CartPole-v0, MountainCar-v0, Acrobot-v1, and atari games(not yet)')
     parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--training-start', default=100, type=int, help='First step to start training')

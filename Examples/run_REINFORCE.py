@@ -11,6 +11,7 @@ from Trainer.State_trainer import State_trainer
 def hyperparameters():
     parser = argparse.ArgumentParser(description='REINFORCE example')
     #environment
+    parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='CartPole-v0', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
     parser.add_argument('--discrete', default=True, type=bool, help='whether the environment is discrete or not')
     parser.add_argument('--render', default=False, type=bool)

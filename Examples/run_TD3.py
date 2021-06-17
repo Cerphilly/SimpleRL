@@ -11,6 +11,7 @@ from Trainer.State_trainer import State_trainer
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Deep Delayed Deterministic Policy Gradient(TD3) example')
     #environment
+    parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='cartpole_swingup', help='Pendulum-v0, MountainCarContinuous-v0')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
