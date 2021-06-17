@@ -1,7 +1,7 @@
 # SimpleRL
 Personal repo in Tensorflow 2 that I use to implement reinforcement learning algorithms I want
 
-Tensorflow 2.5**<br>
+Tensorflow 2.5<br>
 Windows 10
 
 
