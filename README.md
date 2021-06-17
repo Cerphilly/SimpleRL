@@ -1,6 +1,9 @@
 # SimpleRL
 Personal repo in Tensorflow 2 that I use to implement reinforcement learning algorithms I want
 
+Tensorflow 2.5**<br>
+Windows 10
+
 
 ## Current algorithms
 
@@ -19,7 +22,7 @@ Personal repo in Tensorflow 2 that I use to implement reinforcement learning alg
 
 > **Image based RL**<br>
 > > **CURL(Contrastive Unsupervised Representation Learning)**<br>
-> > **DBC(Deep Bisimulation for Control) : finished the code, but couldn't reproduce the result.**<br>
+
 
 
 ## Going to add
