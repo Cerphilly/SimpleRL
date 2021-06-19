@@ -27,7 +27,7 @@ def hyperparameters():
     parser.add_argument('--image-size', default=84, type=int)
     parser.add_argument('--pre-image-size', default=100, type=int)
     #sac
-    parser.add_argument('--batch-size', default=128, type=int, help='Mini-batch size')
+    parser.add_argument('--batch-size', default=512, type=int, help='Mini-batch size')
     parser.add_argument('--buffer-size', default=100000, type=int, help='Buffer maximum size')
     parser.add_argument('--train-mode', default='online', help='offline, online')
     parser.add_argument('--training-step', default=1, type=int)
@@ -39,7 +39,8 @@ def hyperparameters():
     parser.add_argument('--v-lr', default=0.001, type=float)
     parser.add_argument('--alpha-lr', default=0.0001, type=float)
     parser.add_argument('--tau', default=0.01, type=float)
-    parser.add_argument('--hidden-dim', default=(256, 256), help='hidden dimension of network')
+    parser.add_argument('--critic-update', default=2, type=int)
+    parser.add_argument('--hidden-dim', default=(1024, 1024), help='hidden dimension of network')
     parser.add_argument('--log_std_min', default=-10, type=int, help='For squashed gaussian actor')
     parser.add_argument('--log_std_max', default=2, type=int, help='For squashed gaussian actor')
     #td3
@@ -82,7 +83,7 @@ def main(args):
 
     domain_name = args.env_name.split('_')[0]
     task_name = args.env_name.split('_')[1]
-    env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=np.random.randint(1, 9999), visualize_reward=False, from_pixels=True,
+    env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
                        height=args.pre_image_size, width=args.pre_image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
     env = FrameStack(env, k=args.frame_stack)
 

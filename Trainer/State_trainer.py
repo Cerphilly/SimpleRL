@@ -96,7 +96,7 @@ class State_trainer:
                     if self.domain_type == 'gym':
                         self.env.render()
                     else:
-                        cv2.imshow("env", self.env.render(mode='rgb_array', height=240, width=320))
+                        cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array', height=240, width=320))
                         cv2.waitKey(1)
 
                 if self.total_step <= self.algorithm.training_start:
@@ -107,7 +107,7 @@ class State_trainer:
                     action = self.algorithm.get_action(observation)
                     next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
-                #done = 0. if self.local_step + 1 == self.env._max_episode_steps else float(done)
+                done = 0. if self.local_step + 1 == self.env._max_episode_steps else float(done)
                 self.episode_reward += reward
 
                 self.algorithm.buffer.add(observation, action, reward, next_observation, done)
@@ -115,14 +115,16 @@ class State_trainer:
 
                 if self.total_step >= self.algorithm.training_start and self.train_mode(done, self.local_step):
                     loss_list = self.algorithm.train(training_num=self.algorithm.training_step)
-                    for loss in loss_list:
-                        self.writer.log(loss[0], loss[1], self.total_step, str(self.episode))
+                    if self.log == True:
+                        for loss in loss_list:
+                            self.writer.log(loss[0], loss[1], self.total_step, str(self.episode))
 
 
             print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {},".format(self.episode, self.episode_reward, self.local_step, self.total_step))
 
-            self.writer.log('Reward/Train', self.episode_reward, self.episode)
-            self.writer.log('Step/Train', self.local_step, self.episode)
+            if self.log == True:
+                self.writer.log('Reward/Train', self.episode_reward, self.episode)
+                self.writer.log('Step/Train', self.local_step, self.episode)
 
 
 

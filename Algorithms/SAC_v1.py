@@ -43,8 +43,8 @@ class SAC_v1:
 
     def get_action(self, state):
         state = np.expand_dims(np.array(state), axis=0)
-        action = self.actor(state).numpy()[0]
-        action = np.clip(action, -1, 1)
+        action, _ = self.actor(state)
+        action = np.clip(action.numpy()[0], -1, 1)
 
         return action
 
@@ -57,11 +57,11 @@ class SAC_v1:
             self.current_step += 1
 
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
+            s_action, s_logpi = self.actor(s)
+            min_aq = tf.minimum(self.critic1(s, s_action), self.critic2(s, s_action))
+            target_v = tf.stop_gradient(min_aq - self.alpha * s_logpi)
 
-            min_aq = tf.minimum(self.critic1(s, self.actor(s)), self.critic2(s, self.actor(s)))
-            target_v = tf.stop_gradient(min_aq - self.alpha * self.actor.log_pi(s))
-
-            with tf.GradientTape(persistent=True) as tape1:
+            with tf.GradientTape() as tape1:
                 v_loss = 0.5 * tf.reduce_mean(tf.square(self.v_network(s) - target_v))
 
             target_q = tf.stop_gradient(r + self.gamma * (1 - d) * self.target_v_network(ns))
@@ -71,12 +71,11 @@ class SAC_v1:
                 critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(s, a) - target_q))
 
 
-            with tf.GradientTape(persistent=True) as tape3:
-                mu, sigma = self.actor.mu_sigma(s)
-                output = mu + tf.random.normal(shape=sigma.shape) * sigma
+            with tf.GradientTape() as tape3:
+                s_action, s_logpi = self.actor(s)
 
-                min_aq_rep = tf.minimum(self.critic1(s, output), self.critic2(s, output))
-                actor_loss = tf.reduce_mean(self.alpha * self.actor.log_pi(s) - min_aq_rep)
+                min_aq_rep = tf.minimum(self.critic1(s, s_action), self.critic2(s, s_action))
+                actor_loss = tf.reduce_mean(self.alpha * s_logpi - min_aq_rep)
 
             v_gradients = tape1.gradient(v_loss, self.v_network.trainable_variables)
             self.v_network_optimizer.apply_gradients(zip(v_gradients, self.v_network.trainable_variables))
@@ -101,6 +100,5 @@ class SAC_v1:
 
 
         return [['Loss/Actor', total_a_loss], ['Loss/Critic1', total_c1_loss], ['Loss/Critic2', total_c2_loss], ['Loss/V', total_v_loss]]
-
 
 

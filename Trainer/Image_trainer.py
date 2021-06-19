@@ -3,15 +3,17 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 import numpy as np
+import cv2
 
-from Algorithms.ImageRL.CURL import CURL_SACv2
 from Common.Utils import FrameStack
+from Common.Logger import Logger
 
 
 class Image_trainer:
     def __init__(self, env, algorithm, max_action, min_action, args):
         self.env = env
         self.algorithm = algorithm
+        self.domain_type = args.domain_type
 
         self.max_action = max_action
         self.min_action = min_action
@@ -33,6 +35,10 @@ class Image_trainer:
         elif args.train_mode == 'batch':
             self.train_mode = self.batch_train
         assert self.train_mode is not None
+
+        self.log = args.log
+        if self.log == True:
+            self.writer = Logger(env, algorithm, args, console=args.console, tensorboard=args.tensorboard)
 
     def offline_train(self, d, local_step):
         if d:
@@ -66,9 +72,11 @@ class Image_trainer:
                 self.total_step += 1
 
                 if self.render == True:
-                    plt.imshow(np.transpose(observation, [1,2,0])[:,:,-3])
-                    plt.show(block=False)
-                    plt.pause(0.001)
+                    if self.domain_type == 'gym':
+                        self.env.render()
+                    else:
+                        cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array', height=240, width=320))
+                        cv2.waitKey(1)
 
                 if self.total_step <= self.algorithm.training_start:
                    action = self.env.action_space.sample()
@@ -86,10 +94,17 @@ class Image_trainer:
                 observation = next_observation
 
                 if self.total_step >= self.algorithm.training_start and self.train_mode(done, self.local_step):
-                    self.algorithm.train(self.algorithm.training_step)
+                    loss_list = self.algorithm.train(self.algorithm.training_step)
+                    if self.log == True:
+                        for loss in loss_list:
+                            self.writer.log(loss[0], loss[1], self.total_step, str(self.episode))
 
 
             print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward, self.local_step, self.total_step))
+
+            if self.log == True:
+                self.writer.log('Reward/Train', self.episode_reward, self.episode)
+                self.writer.log('Step/Train', self.local_step, self.episode)
 
 
 def main(cpu_only = False, force_gpu = True):
@@ -117,13 +132,13 @@ def main(cpu_only = False, force_gpu = True):
     max_action = env.action_space.high[0]
     min_action = env.action_space.low[0]
 
-    #algorithm = CURL_SACv1(obs_shape, action_shape)#frame_skip: 8, image_size: 100
-    algorithm = CURL_SACv2(obs_shape, action_shape)#frame_skip: 8, image_size: 100
-    #algorithm = CURL_TD3(obs_shape, action_shape)#frame_skip: 8, image_size: 100
-
-
-    trainer = Image_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='online', render=False)
-    trainer.run()
+    # #algorithm = CURL_SACv1(obs_shape, action_shape)#frame_skip: 8, image_size: 100
+    # algorithm = CURL_SACv2(obs_shape, action_shape)#frame_skip: 8, image_size: 100
+    # #algorithm = CURL_TD3(obs_shape, action_shape)#frame_skip: 8, image_size: 100
+    #
+    #
+    # trainer = Image_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='online', render=False)
+    # trainer.run()
 
 
 if __name__ == '__main__':

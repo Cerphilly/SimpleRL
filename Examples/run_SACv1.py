@@ -13,8 +13,8 @@ def hyperparameters():
     #environment
     parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='cartpole_swingup', help='Pendulum-v0, MountainCarContinuous-v0, cartpole_swingup')
-    parser.add_argument('--render', default=True, type=bool)
-    parser.add_argument('--training-start', default=10000, type=int, help='First step to start training')
+    parser.add_argument('--render', default=False, type=bool)
+    parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
     parser.add_argument('--max-episode', default=1000000, type=int, help='Maximum training step')
     parser.add_argument('--eval-step', default=200, type=int, help='Frequency in performance evaluation')
     parser.add_argument('--eval-episode', default=1, type=int, help='Number of episodes to perform evaluation')
@@ -66,7 +66,7 @@ def main(args):
         env.action_space.seed(random_seed)
     else:
         #deepmind control suite
-        env = dmc2gym.make(domain_name=args.env_name.split('_')[0], task_name=args.env_name.split('_')[1], seed=random_seed)#cartpole 존나 안됨
+        env = dmc2gym.make(domain_name=args.env_name.split('_')[0], task_name=args.env_name.split('_')[1], seed=random_seed)
         assert env.action_space.low.min() >= -1
         assert env.action_space.high.max() <= 1
 
@@ -91,5 +91,3 @@ if __name__ == '__main__':
     args = hyperparameters()
     main(args)
 
-#가능성: mu와 std 레이어 분리
-# log_prob랑 action 같이 내놓기(log_prob 삭제)

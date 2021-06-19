@@ -73,8 +73,9 @@ class Gaussian_Actor(tf.keras.Model):
 
         return mean, std
 
+
 class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
-    def __init__(self, state_dim, action_dim, hidden_units=(256, 256), log_std_min=-10, log_std_max=2, activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
+    def __init__(self, state_dim, action_dim, hidden_units=(256, 256), log_std_min=-10, log_std_max=2, activation='relu', kernel_initializer='RandomNormal', bias_initializer='RandomNormal'):
         super(Squashed_Gaussian_Actor, self).__init__()
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -89,8 +90,10 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
                 tf.keras.layers.Dense(hidden_units[i], activation=activation, kernel_initializer=kernel_initializer,
                                       bias_initializer=bias_initializer, name='Layer{}'.format(i)))
 
-        self.output_layer = tf.keras.layers.Dense(self.action_dim*2,  kernel_initializer=kernel_initializer,
-                                                  bias_initializer=bias_initializer, name='Output')
+        self.mean_layer = tf.keras.layers.Dense(self.action_dim, kernel_initializer=kernel_initializer,
+                                                  bias_initializer=bias_initializer, name='Mean')
+        self.logstd_layer = tf.keras.layers.Dense(self.action_dim, kernel_initializer=kernel_initializer,
+                                                  bias_initializer=bias_initializer, name='Logstd')
 
         self(tf.constant(np.zeros(shape=(1,) + (self.state_dim, ), dtype=np.float32)))
 
@@ -100,10 +103,9 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         z = self.input_layer(input)
         for layer in self.hidden_layers:
             z = layer(z)
-        z = self.output_layer(z)
 
-        mu = z[:,:self.action_dim]
-        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], self.log_std_min, self.log_std_max))
+        mu = self.mean_layer(z)
+        sigma = tf.exp(tf.clip_by_value(self.logstd_layer(z), self.log_std_min, self.log_std_max))
 
         if deterministic == True:
             tanh_mean = tf.nn.tanh(mu)
@@ -113,27 +115,10 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
             sample_action = dist.sample()
             tanh_sample = tf.nn.tanh(sample_action)
 
-            return tanh_sample
+            log_prob = dist.log_prob(sample_action)
+            log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=1, keepdims=True)
 
-    def log_pi(self, input):
-        z = self.input_layer(input)
-        for layer in self.hidden_layers:
-            z = layer(z)
-
-        z = self.output_layer(z)
-
-        mu = z[:, : self.action_dim]
-        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], self.log_std_min, self.log_std_max))
-
-        distribution = tfp.distributions.Normal(loc=mu, scale=sigma, validate_args=True, allow_nan_stats=False)
-        sample_action = mu + tf.random.normal(shape=sigma.shape) * sigma
-        #sample_action = distribution.sample()
-        tanh_sample = tf.nn.tanh(sample_action)
-
-        log_prob = distribution.log_prob(sample_action)
-        log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=1, keepdims=True)
-
-        return log_pi
+            return tanh_sample, log_pi
 
 
     def dist(self, input):
@@ -141,10 +126,8 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         for layer in self.hidden_layers:
             z = layer(z)
 
-        z = self.output_layer(z)
-
-        mu = z[:,:self.action_dim]
-        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], self.log_std_min, self.log_std_max))
+        mu = self.mean_layer(z)
+        sigma = tf.exp(tf.clip_by_value(self.logstd_layer(z), self.log_std_min, self.log_std_max))
         dist = tfp.distributions.Normal(loc=mu, scale=sigma, validate_args=True, allow_nan_stats=False)
 
         return dist
@@ -154,10 +137,8 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         for layer in self.hidden_layers:
             z = layer(z)
 
-        z = self.output_layer(z)
-
-        mu = z[:, :self.action_dim]
-        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], self.log_std_min, self.log_std_max))
+        mu = self.mean_layer(z)
+        sigma = tf.exp(tf.clip_by_value(self.logstd_layer(z), self.log_std_min, self.log_std_max))
 
         return mu, sigma
 

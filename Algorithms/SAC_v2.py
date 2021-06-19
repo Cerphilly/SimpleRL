@@ -8,6 +8,7 @@ from Common.Utils import copy_weight, soft_update
 from Networks.Basic_Networks import Q_network
 from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
 
+
 class SAC_v2:
     def __init__(self, state_dim, action_dim, args):
 
@@ -26,6 +27,7 @@ class SAC_v2:
         self.training_start = args.training_start
         self.training_step = args.training_step
         self.current_step = 0
+        self.critic_update = args.critic_update
 
         self.log_alpha = tf.Variable(np.log(args.alpha), dtype=tf.float32, trainable=True)
         self.target_entropy = -action_dim
@@ -50,7 +52,8 @@ class SAC_v2:
 
     def get_action(self, state):
         state = np.expand_dims(np.array(state), axis=0)
-        action = self.actor(state).numpy()[0]
+        action, _ = self.actor(state)
+        action = np.clip(action.numpy()[0], -1, 1)
 
         return action
 
@@ -58,13 +61,16 @@ class SAC_v2:
         total_a_loss = 0
         total_c1_loss, total_c2_loss = 0, 0
         total_alpha_loss = 0
+
         for i in range(training_num):
             self.current_step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
-            target_min_aq = tf.minimum(self.target_critic1(ns, self.actor(ns)), self.target_critic2(ns, self.actor(ns)))
+            ns_action, ns_logpi = self.actor(ns)
 
-            target_q = tf.stop_gradient(r + self.gamma * (1 - d) * (target_min_aq - self.alpha.numpy() * self.actor.log_pi(ns)))
+            target_min_aq = tf.minimum(self.target_critic1(ns, ns_action), self.target_critic2(ns, ns_action))
+
+            target_q = tf.stop_gradient(r + self.gamma * (1 - d) * (target_min_aq - self.alpha.numpy() * ns_logpi))
 
             with tf.GradientTape(persistent=True) as tape1:
 
@@ -79,12 +85,11 @@ class SAC_v2:
             del tape1
 
             with tf.GradientTape() as tape2:
-                mu, sigma = self.actor.mu_sigma(s)
-                output = mu + tf.random.normal(shape=mu.shape) * sigma
+                s_action, s_logpi = self.actor(s)
 
-                min_aq_rep = tf.minimum(self.critic1(s, output), self.critic2(s, output))
+                min_aq_rep = tf.minimum(self.critic1(s, s_action), self.critic2(s, s_action))
 
-                actor_loss = 0.5 * tf.reduce_mean(self.alpha.numpy() * self.actor.log_pi(s) - min_aq_rep)
+                actor_loss = 0.5 * tf.reduce_mean(self.alpha.numpy() * s_logpi - min_aq_rep)
 
             actor_gradients = tape2.gradient(actor_loss, self.actor.trainable_variables)
             self.actor_optimizer.apply_gradients(zip(actor_gradients, self.actor.trainable_variables))
@@ -93,7 +98,8 @@ class SAC_v2:
 
             if self.train_alpha == True:
                 with tf.GradientTape() as tape3:
-                    alpha_loss = -(tf.exp(self.log_alpha) * (tf.stop_gradient(self.actor.log_pi(s) + self.target_entropy)))
+                    _, s_logpi = self.actor(s)
+                    alpha_loss = -(tf.exp(self.log_alpha) * (tf.stop_gradient(s_logpi + self.target_entropy)))
                     alpha_loss = tf.nn.compute_average_loss(alpha_loss)#from softlearning package
 
                 alpha_grad = tape3.gradient(alpha_loss, [self.log_alpha])
@@ -101,8 +107,9 @@ class SAC_v2:
 
                 del tape3
 
-            soft_update(self.critic1, self.target_critic1, self.tau)
-            soft_update(self.critic2, self.target_critic2, self.tau)
+            if self.current_step % self.critic_update == 0:
+                soft_update(self.critic1, self.target_critic1, self.tau)
+                soft_update(self.critic2, self.target_critic2, self.tau)
 
             total_a_loss += actor_loss.numpy()
             total_c1_loss += critic1_loss.numpy()
@@ -110,8 +117,7 @@ class SAC_v2:
             if self.train_alpha == True:
                 total_alpha_loss += alpha_loss.numpy()
 
-        return [['Loss/Actor', total_a_loss], ['Loss/Critic1', total_c1_loss], ['Loss/Critic2', total_c2_loss], ['Loss/alpha', total_alpha_loss]]
-
+        return [['Loss/Actor', total_a_loss], ['Loss/Critic1', total_c1_loss], ['Loss/Critic2', total_c2_loss], ['Loss/alpha', total_alpha_loss], ['Alpha', tf.exp(self.log_alpha).numpy()]]
 
 
 
