@@ -73,6 +73,18 @@ class CURL_SACv1:
 
         return action
 
+    def eval_action(self, obs):
+
+        if obs.shape[-1] != self.image_size:
+            obs = center_crop_image(obs, self.image_size)
+
+        obs = np.expand_dims(np.array(obs), axis=0)
+        feature = self.encoder(obs)
+        action, _ = self.actor(feature, deterministic=True)
+        action = action.numpy()[0]
+
+        return action
+
     def train(self, training_step):
         total_a_loss = 0
         total_c1_loss, total_c2_loss = 0, 0
@@ -169,6 +181,7 @@ class CURL_SACv1:
         total_cpc_loss += cpc_loss.numpy()
         loss_list.append(['Loss/CPC', total_cpc_loss])
 
+
         return loss_list
 
 
@@ -242,12 +255,25 @@ class CURL_SACv2:
 
         return action
 
+    def eval_action(self, obs):
+
+        if obs.shape[-1] != self.image_size:
+            obs = center_crop_image(obs, self.image_size)
+
+        obs = np.expand_dims(np.array(obs), axis=0)
+        feature = self.encoder(obs)
+        action, _ = self.actor(feature, deterministic=True)
+        action = action.numpy()[0]
+
+        return action
+
     def train(self, local_step):
         self.current_step += 1
 
         total_a_loss = 0
         total_c1_loss, total_c2_loss = 0, 0
         total_cpc_loss = 0
+        total_alpha_loss = 0
         loss_list = []
 
         s, a, r, ns, d, cpc_kwargs = self.buffer.cpc_sample(self.batch_size, self.image_size)
@@ -303,6 +329,7 @@ class CURL_SACv2:
 
             del tape3
 
+
         if self.current_step % self.critic_update == 0:
             soft_update(self.critic1, self.target_critic1, self.tau)
             soft_update(self.critic2, self.target_critic2, self.tau)
@@ -338,6 +365,12 @@ class CURL_SACv2:
 
         total_cpc_loss += cpc_loss.numpy()
         loss_list.append(['Loss/CPC', total_cpc_loss])
+
+        if self.train_alpha == True:
+            total_alpha_loss += alpha_loss.numpy()
+            loss_list.append(['Loss/Alpha', total_alpha_loss])
+
+        loss_list.append(['Alpha', tf.exp(self.log_alpha).numpy()])
 
         return loss_list
 
@@ -404,8 +437,22 @@ class CURL_TD3:
             obs = center_crop_image(obs, self.image_size)
 
         obs = np.expand_dims(np.array(obs), axis=0)
+        noise = np.random.normal(loc=0, scale=self.actor_noise, size=self.action_dim)
+        feature = self.encoder(obs)
+        action = self.actor(feature).numpy()[0] + noise
+        action = np.clip(action, -1, 1)
+
+        return action
+
+    def eval_action(self, obs):
+
+        if obs.shape[-1] != self.image_size:
+            obs = center_crop_image(obs, self.image_size)
+
+        obs = np.expand_dims(np.array(obs), axis=0)
         feature = self.encoder(obs)
         action = self.actor(feature).numpy()[0]
+        action = np.clip(action, -1, 1)
 
         return action
 

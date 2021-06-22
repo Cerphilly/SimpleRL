@@ -14,12 +14,13 @@ def hyperparameters():
     #environment
     parser.add_argument('--algorithm', default='SACv2', help='SACv1, SACv2, TD3')
     parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='cartpole_swingup', help='DM Control Suite domain name + task name')
+    parser.add_argument('--env-name', default='cartpole/swingup', help='DM Control Suite domain name + task name')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
     parser.add_argument('--max-episode', default=1000000, type=int, help='Maximum training step')
-    parser.add_argument('--eval-step', default=200, type=int, help='Frequency in performance evaluation')
-    parser.add_argument('--eval-episode', default=1, type=int, help='Number of episodes to perform evaluation')
+    parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
+    parser.add_argument('--eval-step', default=5000, type=int, help='Frequency in performance evaluation')
+    parser.add_argument('--eval-episode', default=5, type=int, help='Number of episodes to perform evaluation')
     parser.add_argument('--random-seed', default=-1, type=int, help='Random seed setting')
 
     parser.add_argument('--frame-stack', default=3, type=int)
@@ -81,11 +82,15 @@ def main(args):
     np.random.seed(random_seed)
     random.seed(random_seed)
 
-    domain_name = args.env_name.split('_')[0]
-    task_name = args.env_name.split('_')[1]
+    domain_name = args.env_name.split('/')[0]
+    task_name = args.env_name.split('/')[1]
     env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
                        height=args.pre_image_size, width=args.pre_image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
     env = FrameStack(env, k=args.frame_stack)
+
+    test_env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
+                       height=args.pre_image_size, width=args.pre_image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
+    test_env = FrameStack(test_env, k=args.frame_stack)
 
     state_dim = (3 * args.frame_stack, args.image_size, args.image_size)
     action_dim = env.action_space.shape[0]
@@ -106,7 +111,7 @@ def main(args):
     print("Max action:", max_action)
     print("Min action:", min_action)
 
-    trainer = Image_trainer(env, algorithm, max_action, min_action, args)
+    trainer = Image_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

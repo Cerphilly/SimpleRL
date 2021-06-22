@@ -1,39 +1,13 @@
-'''
-import tensorflow as tf
-import gym
-from gym.spaces import Discrete, Box
-import pybullet_envs
-import dmc2gym
-import numpy as np
-
-import sys
-import datetime
-
-from Algorithms.REINFORCE import REINFORCE
-from Algorithms.VPG import VPG
-from Algorithms.TRPO import TRPO
-from Algorithms.PPO import PPO
-
-from Algorithms.DQN import DQN
-from Algorithms.DDQN import DDQN
-from Algorithms.Dueling_DQN import Dueling_DQN
-
-from Algorithms.DDPG import DDPG
-from Algorithms.TD3 import TD3
-from Algorithms.SAC_v1 import SAC_v1
-from Algorithms.SAC_v2 import SAC_v2
-
-from Algorithms.D2RL import D2RL_TD3, D2RL_SAC_v1, D2RL_SAC_v2
-'''
-
 import cv2
 
 from Common.Logger import Logger
 
 class State_trainer:
-    def __init__(self, env, algorithm, max_action, min_action, args):
+    def __init__(self, env, test_env, algorithm, max_action, min_action, args):
         self.domain_type = args.domain_type
         self.env = env
+        self.test_env = test_env
+
         self.algorithm = algorithm
 
         self.max_action = max_action
@@ -42,10 +16,15 @@ class State_trainer:
         self.render = args.render
         self.max_episode = args.max_episode
 
+        self.eval = args.eval
+        self.eval_episode = args.eval_episode
+        self.eval_step = args.eval_step
+
         self.episode = 0
         self.episode_reward = 0
         self.total_step = 0
         self.local_step = 0
+        self.eval_num = 0
 
         self.train_mode = None
 
@@ -75,9 +54,45 @@ class State_trainer:
             return True
         return False
 
+    def evaluate(self):
+        self.eval_num += 1
+        episode = 0
+        reward_list = []
+
+        while True:
+            if episode >= self.eval_episode:
+                break
+            episode += 1
+            eval_reward = 0
+            observation = self.test_env.reset()
+            done = False
+
+            while not done:
+                if self.render == True:
+                    if self.domain_type == 'gym':
+                        self.test_env.render()
+                    else:
+                        cv2.imshow("{}_{}".format(self.algorithm.name, self.test_env.unwrapped.spec.id), self.test_env.render(mode='rgb_array', height=240, width=320))
+                        cv2.waitKey(1)
+
+                action = self.algorithm.eval_action(observation)
+                next_observation, reward, done, _ = self.test_env.step(self.max_action * action)
+
+                eval_reward += reward
+                observation = next_observation
+
+            reward_list.append(eval_reward)
+
+        print("Eval  | Average Reward {:.2f}, Max reward: {:.2f}, Min reward: {:.2f}  ".format(sum(reward_list)/len(reward_list), max(reward_list), min(reward_list)))
+
+        if self.log == True:
+            self.writer.log('Reward/Test', sum(reward_list)/len(reward_list), self.eval_num)
+            self.writer.log('Max Reward/Test', max(reward_list), self.eval_num)
+            self.writer.log('Min Reward/Test', min(reward_list), self.eval_num)
+
     def run(self):
         while True:
-            if self.episode > self.max_episode:
+            if self.episode >= self.max_episode:
                 print("Training finished")
                 break
 
@@ -91,6 +106,9 @@ class State_trainer:
             while not done:
                 self.local_step += 1
                 self.total_step += 1
+
+                if self.eval == True and self.total_step % self.eval_step == 0:
+                    self.evaluate()
 
                 if self.render == True:
                     if self.domain_type == 'gym':
@@ -107,10 +125,14 @@ class State_trainer:
                     action = self.algorithm.get_action(observation)
                     next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
-                done = 0. if self.local_step + 1 == self.env._max_episode_steps else float(done)
+                if self.local_step + 1 == self.env._max_episode_steps:
+                    real_done = 0.
+                else:
+                    real_done = float(done)
+
                 self.episode_reward += reward
 
-                self.algorithm.buffer.add(observation, action, reward, next_observation, done)
+                self.algorithm.buffer.add(observation, action, reward, next_observation, real_done)
                 observation = next_observation
 
                 if self.total_step >= self.algorithm.training_start and self.train_mode(done, self.local_step):
@@ -120,7 +142,7 @@ class State_trainer:
                             self.writer.log(loss[0], loss[1], self.total_step, str(self.episode))
 
 
-            print("Episode: {}, Reward: {}, Local_step: {}, Total_step: {},".format(self.episode, self.episode_reward, self.local_step, self.total_step))
+            print("Train | Episode: {}, Reward: {:.2f}, Local_step: {}, Total_step: {},".format(self.episode, self.episode_reward, self.local_step, self.total_step))
 
             if self.log == True:
                 self.writer.log('Reward/Train', self.episode_reward, self.episode)

@@ -51,6 +51,18 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
 
         return action
 
+    def eval_action(self, state):
+        state = np.expand_dims(np.array(state), axis=0)
+
+        if self.discrete == True:
+            policy = self.actor(state, activation='softmax').numpy()[0]
+            action = np.argmax(policy, axis=1)
+        else:
+            action = self.actor(state, deterministic=True).numpy()[0]
+            action = np.clip(action, -1, 1)
+
+        return action
+
     def train(self, training_num):
         total_a_loss = 0
         total_c_loss = 0

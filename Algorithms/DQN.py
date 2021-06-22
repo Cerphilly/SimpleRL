@@ -42,6 +42,14 @@ class DQN:
             best_action = np.argmax(q_value, axis=1)[0]
             return best_action
 
+    def eval_action(self, state):
+        state = np.expand_dims(np.array(state), axis=0)
+        q_value = self.network(state, activation='linear').numpy()
+        best_action = np.argmax(q_value, axis=1)[0]
+
+        return best_action
+
+
     def train(self, training_num):
         total_loss = 0
         for i in range(training_num):

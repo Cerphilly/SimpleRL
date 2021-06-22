@@ -51,8 +51,21 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         if self.discrete == True:
             policy = self.actor(state, activation='softmax').numpy()[0]
             action = np.random.choice(self.action_dim, 1, p=policy)[0]
+
         else:
             action = self.actor(state).numpy()[0]
+            action = np.clip(action, -1, 1)
+
+        return action
+
+    def eval_action(self, state):
+        state = np.expand_dims(np.array(state), axis=0)
+
+        if self.discrete == True:
+            policy = self.actor(state, activation='softmax').numpy()[0]
+            action = np.argmax(policy, axis=1)
+        else:
+            action = self.actor(state, deterministic=True).numpy()[0]
             action = np.clip(action, -1, 1)
 
         return action

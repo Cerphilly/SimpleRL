@@ -48,6 +48,13 @@ class SAC_v1:
 
         return action
 
+    def eval_action(self, state):
+        state = np.expand_dims(np.array(state), axis=0)
+        action, _ = self.actor(state, deterministic=True)
+        action = np.clip(action.numpy()[0], -1, 1)
+
+        return action
+
 
     def train(self, training_num):
         total_a_loss = 0
@@ -64,27 +71,27 @@ class SAC_v1:
             with tf.GradientTape() as tape1:
                 v_loss = 0.5 * tf.reduce_mean(tf.square(self.v_network(s) - target_v))
 
+            v_gradients = tape1.gradient(v_loss, self.v_network.trainable_variables)
+            self.v_network_optimizer.apply_gradients(zip(v_gradients, self.v_network.trainable_variables))
+
+
             target_q = tf.stop_gradient(r + self.gamma * (1 - d) * self.target_v_network(ns))
 
             with tf.GradientTape(persistent=True) as tape2:
                 critic1_loss = 0.5 * tf.reduce_mean(tf.square(self.critic1(s, a) - target_q))
                 critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(s, a) - target_q))
 
+            critic1_gradients = tape2.gradient(critic1_loss, self.critic1.trainable_variables)
+            self.critic1_optimizer.apply_gradients(zip(critic1_gradients, self.critic1.trainable_variables))
+
+            critic2_gradients = tape2.gradient(critic2_loss, self.critic2.trainable_variables)
+            self.critic2_optimizer.apply_gradients(zip(critic2_gradients, self.critic2.trainable_variables))
 
             with tf.GradientTape() as tape3:
                 s_action, s_logpi = self.actor(s)
 
                 min_aq_rep = tf.minimum(self.critic1(s, s_action), self.critic2(s, s_action))
                 actor_loss = tf.reduce_mean(self.alpha * s_logpi - min_aq_rep)
-
-            v_gradients = tape1.gradient(v_loss, self.v_network.trainable_variables)
-            self.v_network_optimizer.apply_gradients(zip(v_gradients, self.v_network.trainable_variables))
-
-            critic1_gradients = tape2.gradient(critic1_loss, self.critic1.trainable_variables)
-            self.critic1_optimizer.apply_gradients(zip(critic1_gradients, self.critic1.trainable_variables))
-
-            critic2_gradients = tape2.gradient(critic2_loss, self.critic2.trainable_variables)
-            self.critic2_optimizer.apply_gradients(zip(critic2_gradients, self.critic2.trainable_variables))
 
             actor_grad = tape3.gradient(actor_loss, self.actor.trainable_variables)
             self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))

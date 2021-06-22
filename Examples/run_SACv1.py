@@ -16,6 +16,7 @@ def hyperparameters():
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
     parser.add_argument('--max-episode', default=1000000, type=int, help='Maximum training step')
+    parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
     parser.add_argument('--eval-step', default=200, type=int, help='Frequency in performance evaluation')
     parser.add_argument('--eval-episode', default=1, type=int, help='Number of episodes to perform evaluation')
     parser.add_argument('--random-seed', default=-1, type=int, help='Random seed setting')
@@ -59,14 +60,18 @@ def main(args):
     random.seed(random_seed)
 
     #env setting
-    if len(args.env_name.split('_')) == 1:
+    if len(args.env_name.split('/')) == 1:
         #openai gym
         env = gym.make(args.env_name)
         env.seed(random_seed)
         env.action_space.seed(random_seed)
+
+        test_env = gym.make(args.env_name)
+        test_env.seed(random_seed)
+        test_env.action_space.seed(random_seed)
     else:
         #deepmind control suite
-        env = dmc2gym.make(domain_name=args.env_name.split('_')[0], task_name=args.env_name.split('_')[1], seed=random_seed)
+        env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
         assert env.action_space.low.min() >= -1
         assert env.action_space.high.max() <= 1
 
@@ -84,7 +89,7 @@ def main(args):
     print("Max action:", max_action)
     print("Min action:", min_action)
 
-    trainer = State_trainer(env, algorithm, max_action, min_action, args)
+    trainer = State_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

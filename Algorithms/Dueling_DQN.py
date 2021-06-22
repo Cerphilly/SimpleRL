@@ -35,6 +35,13 @@ class Dueling_DQN:
             return np.random.randint(low=0, high=self.action_dim)
         else:
             return np.argmax(q_value, axis=1)[0]
+        
+    def eval_action(self, state):
+        state = np.expand_dims(np.array(state), axis=0)
+
+        q_value = self.network(state).numpy()
+
+        return np.argmax(q_value, axis=1)[0]
 
     def train(self, training_num):
         total_loss = 0

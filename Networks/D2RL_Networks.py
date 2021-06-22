@@ -70,7 +70,6 @@ class D2RL_Gaussian(Gaussian_Actor):
         for layer in self.hidden_layers:
             z = layer(z)
             if layer != self.hidden_layers[-1]:
-                print("yes")
                 z = tf.concat([z, tf.cast(input, tf.float32)], axis=1)
 
         output = self.output_layer(z)
@@ -126,8 +125,8 @@ class D2RL_Gaussian(Gaussian_Actor):
         return mean, std
 
 class D2RL_Squashed_Gaussian(Squashed_Gaussian_Actor):
-    def __init__(self, state_dim, action_dim, hidden_units=(256, 256, 256, 256), activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
-        super(D2RL_Squashed_Gaussian, self).__init__(state_dim, action_dim, hidden_units, activation=activation, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer)
+    def __init__(self, state_dim, action_dim, hidden_units=(256, 256, 256, 256), log_std_min = -10, log_std_max=2, activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
+        super(D2RL_Squashed_Gaussian, self).__init__(state_dim, action_dim, hidden_units, log_std_min, log_std_max, activation=activation, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer)
 
 
     @tf.function
@@ -141,22 +140,27 @@ class D2RL_Squashed_Gaussian(Squashed_Gaussian_Actor):
         z = self.output_layer(z)
 
         mu = z[:, :self.action_dim]
-        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], -10.0, 2.0))  + 1e-6
+        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], self.log_std_min, self.log_std_max))
+
+        dist = tfp.distributions.Normal(loc=mu, scale=sigma)
 
         if deterministic == True:
             tanh_mean = tf.nn.tanh(mu)
-            return tanh_mean
-        else:
-            dist = tfp.distributions.Normal(loc=mu, scale=sigma)
+            log_prob = dist.log_prob(mu)
+            log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_mean) + 1e-6), axis=1, keepdims=True)
 
-            #dist = tfp.distributions.MultivariateNormalDiag(loc=mu, scale_diag=sigma)
+            return tanh_mean, log_pi
+
+        else:
             sample_action = dist.sample()
             tanh_sample = tf.nn.tanh(sample_action)
 
-            return tanh_sample
+            log_prob = dist.log_prob(sample_action)
+            log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=1, keepdims=True)
 
-    #@tf.function
-    def log_pi(self, input):
+            return tanh_sample, log_pi
+
+    def dist(self, input):
         z = self.input_layer(input)
         for layer in self.hidden_layers:
             z = layer(z)
@@ -165,28 +169,11 @@ class D2RL_Squashed_Gaussian(Squashed_Gaussian_Actor):
 
         z = self.output_layer(z)
 
-        mu = z[:, : self.action_dim]
-        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], -10.0, 2.0))  + 1e-6
-        '''
-        distribution = tfp.distributions.MultivariateNormalDiag(loc=mu, scale_diag=sigma)
-        sample_action = distribution.sample()
-        tanh_sample = tf.nn.tanh(sample_action)
+        mu = z[:, :self.action_dim]
+        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], self.log_std_min, self.log_std_max))
 
-        log_prob = distribution.log_prob(sample_action + 1e-6)
-        log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=1, keepdims=True)
-        '''
-        distribution = tfp.distributions.Normal(loc=mu, scale=sigma)
-        # sample_action = mu + tf.random.normal(shape=sigma.shape) * sigma
-        sample_action = distribution.sample()
-        tanh_sample = tf.nn.tanh(sample_action)
+        dist = tfp.distributions.Normal(loc=mu, scale=sigma)
 
-        log_prob = distribution.log_prob(sample_action)
-        #print(log_prob.shape, tanh_sample.shape)
-        log_pi = log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-10), axis=1, keepdims=True)
-
-        return log_pi
-
-    #@tf.function
     def mu_sigma(self, input):
         z = self.input_layer(input)
         for layer in self.hidden_layers:
@@ -197,7 +184,7 @@ class D2RL_Squashed_Gaussian(Squashed_Gaussian_Actor):
         z = self.output_layer(z)
 
         mu = z[:, :self.action_dim]
-        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], -10.0, 2.0))  + 1e-6
+        sigma = tf.exp(tf.clip_by_value(z[:, self.action_dim:], self.log_std_min, self.log_std_max))
 
         return mu, sigma
 

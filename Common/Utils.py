@@ -36,7 +36,7 @@ def preprocess_obs(obs, bits=5):
     return obs
 
 
-def random_crop(imgs, output_size):
+def random_crop(imgs, output_size):#random crop for curl
     """
     Vectorized way to do random crop using sliding windows
     and picking out random ones
@@ -58,7 +58,7 @@ def random_crop(imgs, output_size):
     cropped_imgs = windows[np.arange(n), w1, h1]
     return cropped_imgs
 
-def center_crop_image(image, output_size):
+def center_crop_image(image, output_size):#center crop for curl
     h, w = image.shape[1:]
     new_h, new_w = output_size, output_size
 

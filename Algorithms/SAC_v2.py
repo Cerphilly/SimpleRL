@@ -57,6 +57,13 @@ class SAC_v2:
 
         return action
 
+    def eval_action(self, state):
+        state = np.expand_dims(np.array(state), axis=0)
+        action, _ = self.actor(state, deterministic=True)
+        action = np.clip(action.numpy()[0], -1, 1)
+
+        return action
+
     def train(self, training_num):
         total_a_loss = 0
         total_c1_loss, total_c2_loss = 0, 0

@@ -46,6 +46,19 @@ class REINFORCE:
 
         return action
 
+    def eval_action(self, state):
+        state = np.expand_dims(np.array(state), axis=0)
+
+        if self.discrete == True:
+            policy = self.network(state, activation='softmax').numpy()[0]
+            action = np.argmax(policy, axis=1)
+
+        else:
+            action = self.network(state, deterministic=True).numpy()[0]
+            action = np.clip(action, -1, 1)
+
+        return action
+
 
     def train(self, training_num):
         total_loss = 0
