@@ -333,8 +333,7 @@ class CURL_SACv2:
         if self.current_step % self.critic_update == 0:
             soft_update(self.critic1, self.target_critic1, self.tau)
             soft_update(self.critic2, self.target_critic2, self.tau)
-
-        soft_update(self.encoder, self.target_encoder, self.encoder_tau)
+            soft_update(self.encoder, self.target_encoder, self.encoder_tau)
 
 
         with tf.GradientTape(persistent=True) as tape4:

@@ -147,6 +147,10 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
 
         return mu, sigma
 
+    def entropy(self, states):
+        dist = self.dist(states)
+        return dist.entropy()
+
 
 
 

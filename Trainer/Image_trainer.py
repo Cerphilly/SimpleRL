@@ -155,6 +155,7 @@ class Image_trainer:
             if self.log == True:
                 self.writer.log('Reward/Train', self.episode_reward, self.episode)
                 self.writer.log('Step/Train', self.local_step, self.episode)
+                self.writer.log('Total Step/Train', self.total_step, self.episode)
 
 
 # def main(cpu_only = False, force_gpu = True):
