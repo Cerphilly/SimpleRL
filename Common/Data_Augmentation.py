@@ -487,6 +487,8 @@ class random_color_jitter:
         inputs = np.reshape(inputs, (b, c, h, w))
         return (inputs * 255.0).astype(np.uint8)
 
+def no_aug(x):
+    return x
 
 
 if __name__ == '__main__':

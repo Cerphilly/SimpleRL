@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 from Common.Logger import Logger
 
@@ -39,7 +40,7 @@ class State_trainer:
 
         self.log = args.log
         if self.log == True:
-            self.writer = Logger(env, algorithm, args, console=args.console, tensorboard=args.tensorboard)
+            self.writer = Logger(env, algorithm, args, file=args.file, tensorboard=args.tensorboard)
 
     def offline_train(self, d, local_step):
         if d:
@@ -83,12 +84,14 @@ class State_trainer:
 
             reward_list.append(eval_reward)
 
-        print("Eval  | Average Reward {:.2f}, Max reward: {:.2f}, Min reward: {:.2f}  ".format(sum(reward_list)/len(reward_list), max(reward_list), min(reward_list)))
+        print("Eval  | Average Reward {:.2f}, Max reward: {:.2f}, Min reward: {:.2f}, Stddev reward: {:.2f} ".format(sum(reward_list)/len(reward_list), max(reward_list), min(reward_list), np.std(reward_list)))
 
         if self.log == True:
             self.writer.log('Reward/Test', sum(reward_list)/len(reward_list), self.eval_num)
             self.writer.log('Max Reward/Test', max(reward_list), self.eval_num)
             self.writer.log('Min Reward/Test', min(reward_list), self.eval_num)
+            self.writer.log('Stddev Reward/Test', np.std(reward_list), self.eval_num)
+
 
     def run(self):
         while True:
@@ -147,6 +150,8 @@ class State_trainer:
             if self.log == True:
                 self.writer.log('Reward/Train', self.episode_reward, self.episode)
                 self.writer.log('Step/Train', self.local_step, self.episode)
+                self.writer.log('Total Step/Train', self.total_step, self.episode)
+
 
 
 

@@ -39,7 +39,7 @@ def hyperparameters():
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
     parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
-    parser.add_argument('--console', default=False, type=bool, help='when logged, write in console')
+    parser.add_argument('--file', default=False, type=bool, help='when logged, write in file')
 
     args = parser.parse_args()
 

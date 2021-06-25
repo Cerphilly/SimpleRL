@@ -31,7 +31,7 @@ def preprocess_obs(obs, bits=5):
     if bits < 8:
         obs = tf.floor(obs / 2**(8 - bits))
     obs = obs / bins
-    obs = obs + tf.random.normal(obs.shape) / bins
+    obs = obs + tf.random.uniform(shape=obs.shape) / bins
     obs = obs - 0.5
     return obs
 

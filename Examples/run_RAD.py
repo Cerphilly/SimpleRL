@@ -12,7 +12,7 @@ from Common.Utils import FrameStack
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Reinforcement learning with Augmented Data (RAD) example')
     #environment
-    parser.add_argument('--algorithm', default='SACv2', help='SACv1, SACv2')
+    parser.add_argument('--algorithm', default='SACv2', help='SACv2')
     parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='cartpole/swingup', help='DM Control Suite domain name + task name')
     parser.add_argument('--render', default=False, type=bool)
@@ -26,8 +26,9 @@ def hyperparameters():
     parser.add_argument('--frame-stack', default=3, type=int)
     parser.add_argument('--frame-skip', default=8, type=int)
     parser.add_argument('--image-size', default=84, type=int)
-    parser.add_argument('--pre-image-size', default=84, type=int)
-    parser.add_argument('--data-augs', default='grayscale', type=str, help='data augmentation: crop, grayscale, random cutout, etc')
+    parser.add_argument('--pre-image-size', default=100, type=int)
+    parser.add_argument('--data-augs', default='crop', type=str, help='data augmentation: crop, grayscale, random cutout, etc')
+    #parser.add_argument('--data-augs', default='no_aug', type=str, help='no aug if you want to do SAC:pixel')
 
     #sac
     parser.add_argument('--batch-size', default=512, type=int, help='Mini-batch size')
@@ -42,6 +43,7 @@ def hyperparameters():
     parser.add_argument('--v-lr', default=0.001, type=float)
     parser.add_argument('--alpha-lr', default=0.0001, type=float)
     parser.add_argument('--tau', default=0.01, type=float)
+    parser.add_argument('--actor-update', default=2, type=int)
     parser.add_argument('--critic-update', default=2, type=int)
     parser.add_argument('--hidden-dim', default=(1024, 1024), help='hidden dimension of network')
     parser.add_argument('--log_std_min', default=-10, type=int, help='For squashed gaussian actor')
@@ -52,13 +54,11 @@ def hyperparameters():
     parser.add_argument('--filter-num', default=32, type=int)
     parser.add_argument('--encoder-tau', default=0.05, type=float)
     parser.add_argument('--feature-dim', default=50, type=int)
-    parser.add_argument('--curl-latent-dim', default=128, type=int)
-    parser.add_argument('--encoder-lr', default=0.05, type=float)
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
     parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
-    parser.add_argument('--console', default=False, type=bool, help='when logged, write in console')
+    parser.add_argument('--file', default=False, type=bool, help='when logged, write in file')
 
 
     args = parser.parse_args()
