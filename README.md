@@ -1,5 +1,5 @@
 # SimpleRL
-Personal repo in Tensorflow 2 that I use to implement reinforcement learning algorithms I want
+Personal repo in Tensorflow 2 that I use to implement reinforcement learning algorithms I want. Feel free to use it.
 
 Tensorflow 2.5<br>
 Windows 10
@@ -22,10 +22,12 @@ Windows 10
 
 > **Image based RL**<br>
 > > **CURL(Contrastive Unsupervised Representation Learning)**<br>
+> > **RAD(Reinforcement learning with Augmented Data)**<br>
+> > **SAC-AE(Improving Sample Efficiency in Model-Free Reinforcement Learning from Images)**<br>
 
 
-
-## Going to add
+## How to run
+> run examples in Examples folder
 
 
 
