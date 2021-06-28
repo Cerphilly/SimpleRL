@@ -47,10 +47,15 @@ def hyperparameters():
 
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
-    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log')
+    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
-    parser.add_argument('--file', default=False, type=bool, help='when logged, write in file')
+    parser.add_argument('--file', default=False, type=bool, help='when logged, write log')
+    parser.add_argument('--numpy', default=False, type=bool, help='when logged, save log in numpy')
 
+    parser.add_argument('--model', default=False, type=bool, help='when logged, save model')
+    parser.add_argument('--model-freq', default=10000, type=int, help='model saving frequency')
+    parser.add_argument('--buffer', default=False, type=bool, help='when logged, save buffer')
+    parser.add_argument('--buffer-freq', default=10000, type=int, help='buffer saving frequency')
 
     args = parser.parse_args()
 

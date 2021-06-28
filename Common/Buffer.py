@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import os
 
 from Common.Utils import random_crop, center_crop_images
 from Common import Data_Augmentation as rad
@@ -60,6 +61,31 @@ class Buffer:
 
         return states, actions, rewards, states_next, dones
 
+    def export(self, log = False):
+        states = np.array(self.s)
+        actions = np.array(self.a)
+        rewards = np.array(self.r)
+        states_next = np.array(self.ns)
+        dones = np.array(self.d)
+
+        if log == True:
+            print("States: ", np.shape(states))
+            print("Actions: ", np.shape(actions))
+            print("Rewards: ", np.shape(rewards))
+            print("Next States: ", np.shape(states_next))
+            print("Dones: ", np.shape(dones))
+
+
+        return states, actions, rewards, states_next, dones
+
+    def load(self, buffer_dir, step):
+        self.s = np.load(os.path.join(buffer_dir, "s_{}.npy".format(step)))
+        self.a = np.load(os.path.join(buffer_dir, "a_{}.npy".format(step)))
+        self.r = np.load(os.path.join(buffer_dir, "r_{}.npy".format(step)))
+        self.ns = np.load(os.path.join(buffer_dir, "ns_{}.npy".format(step)))
+        self.d = np.load(os.path.join(buffer_dir, "d_{}.npy".format(step)))
+
+        print("Buffer of step {} loaded to the buffer".format(step))
 
     def sample(self, batch_size):
         #ids = np.random.randint(low=0, high=len(self.s), size=batch_size)

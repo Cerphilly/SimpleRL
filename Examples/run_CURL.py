@@ -28,7 +28,7 @@ def hyperparameters():
     parser.add_argument('--image-size', default=84, type=int)
     parser.add_argument('--pre-image-size', default=100, type=int)
     #sac
-    parser.add_argument('--batch-size', default=512, type=int, help='Mini-batch size')
+    parser.add_argument('--batch-size', default=128, type=int, help='Mini-batch size')
     parser.add_argument('--buffer-size', default=100000, type=int, help='Buffer maximum size')
     parser.add_argument('--train-mode', default='online', help='offline, online')
     parser.add_argument('--training-step', default=1, type=int)
@@ -41,7 +41,7 @@ def hyperparameters():
     parser.add_argument('--alpha-lr', default=0.0001, type=float)
     parser.add_argument('--tau', default=0.01, type=float)
     parser.add_argument('--critic-update', default=2, type=int)
-    parser.add_argument('--hidden-dim', default=(1024, 1024), help='hidden dimension of network')
+    parser.add_argument('--hidden-dim', default=(256, 256), help='hidden dimension of network')
     parser.add_argument('--log_std_min', default=-10, type=int, help='For squashed gaussian actor')
     parser.add_argument('--log_std_max', default=2, type=int, help='For squashed gaussian actor')
     #td3
@@ -59,10 +59,15 @@ def hyperparameters():
     parser.add_argument('--cpc-lr', default=0.001, type=float)
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
-    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log')
+    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
-    parser.add_argument('--file', default=False, type=bool, help='when logged, write in file')
+    parser.add_argument('--file', default=False, type=bool, help='when logged, write log')
+    parser.add_argument('--numpy', default=False, type=bool, help='when logged, save log in numpy')
 
+    parser.add_argument('--model', default=False, type=bool, help='when logged, save model')
+    parser.add_argument('--model-freq', default=10000, type=int, help='model saving frequency')
+    parser.add_argument('--buffer', default=False, type=bool, help='when logged, save buffer')
+    parser.add_argument('--buffer-freq', default=10000, type=int, help='buffer saving frequency')
 
     args = parser.parse_args()
 

@@ -8,13 +8,14 @@ import json
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
 class Logger:
-    def __init__(self, env, algorithm, args, dir_name=None, file=True, tensorboard=False, numpy=True, save_model=False, histogram=False):
+    def __init__(self, env, algorithm, args, dir_name=None, file=True, tensorboard=False, numpy=True, model=False, buffer=False, histogram=False):
         self.env = env
         self.algorithm = algorithm
         self.file = file
         self.tensorboard = tensorboard
         self.numpy = numpy
-        self.save_model = save_model
+        self.model = model
+        self.buffer = buffer
         self.histogram = histogram
 
         if dir_name == None:
@@ -48,9 +49,17 @@ class Logger:
             self.train_numpy = os.path.join(self.dir_name, 'train_reward.npy')
             self.test_numpy = os.path.join(self.dir_name, 'test_reward.npy')
 
-        if save_model:
+        if model:
             self.model_dir = os.path.join(self.dir_name, 'models')
             os.mkdir(self.model_dir)
+
+            for name, _ in algorithm.network_list.items():
+                os.mkdir(os.path.join(self.model_dir, name))
+
+
+        if buffer:
+            self.buffer_dir = os.path.join(self.dir_name, 'buffer')
+            os.mkdir(self.buffer_dir)
 
 
     def set_type(self, tag, values):
@@ -149,6 +158,22 @@ class Logger:
         with self.writer.as_default():
             values = self.set_type(tag, values)
             tf.summary.scalar(tag, values, step, description)
+
+    def save_model(self, algorithm, step):
+        for name, network in algorithm.network_list.items():
+            network.save_weights(os.path.join(os.path.join(self.model_dir, name), '{}_{}'.format(name, step)))
+            print("Save  | {} Network in step {} saved".format(name, step))
+
+    def save_buffer(self, buffer, step):
+        os.mkdir(os.path.join(self.buffer_dir, step))
+        s, a, r, ns, d = buffer.export(log = False)
+        np.save(os.path.join(os.path.join(self.buffer_dir, step), "s_{}.npy".format(step)), s)
+        np.save(os.path.join(os.path.join(self.buffer_dir, step), "a_{}.npy".format(step)), a)
+        np.save(os.path.join(os.path.join(self.buffer_dir, step), "r_{}.npy".format(step)), r)
+        np.save(os.path.join(os.path.join(self.buffer_dir, step), "ns_{}.npy".format(step)), ns)
+        np.save(os.path.join(os.path.join(self.buffer_dir, step), "d_{}.npy".format(step)), d)
+
+        print("Save  | Buffer in step {} saved".format(step))
 
 
 

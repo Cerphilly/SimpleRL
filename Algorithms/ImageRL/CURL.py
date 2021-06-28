@@ -59,6 +59,8 @@ class CURL_SACv1:
 
         self.current_step = 0
 
+        self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'V_network': self.v_network, 'Target_V_network': self.target_v_network, 'Curl':self.curl}
+
         self.name = 'CURL_SACv1'
 
     def get_action(self, obs):
@@ -236,6 +238,9 @@ class CURL_SACv2:
         self.encoder_optimizer = tf.keras.optimizers.Adam(args.encoder_lr)
         self.cpc_optimizer = tf.keras.optimizers.Adam(args.cpc_lr)
         self.log_alpha_optimizer = tf.keras.optimizers.Adam(args.alpha_lr, beta_1=0.5)
+
+        self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2,
+                             'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
 
         self.name = 'CURL_SACv2'
 
@@ -427,6 +432,8 @@ class CURL_TD3:
 
         self.encoder_optimizer = tf.keras.optimizers.Adam(args.encoder_lr)
         self.cpc_optimizer = tf.keras.optimizers.Adam(args.cpc_lr)
+
+        self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
 
         self.name = 'CURL_TD3'
 

@@ -62,6 +62,9 @@ class RAD_SACv2:
 
         self.log_alpha_optimizer = tf.keras.optimizers.Adam(args.alpha_lr, beta_1=0.5)
 
+        self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2,
+                             'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
+
 
 
         self.aug_funcs = {}

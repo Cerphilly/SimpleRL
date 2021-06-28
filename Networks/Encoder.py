@@ -45,6 +45,7 @@ class PixelEncoder(tf.keras.Model):
 if __name__ == '__main__':
     a = PixelEncoder((9, 84, 84), layer_num=4)
     b = PixelEncoder((3, 84, 84))
+    a.save_weights()
     input = tf.random.normal((1,9,84,84))
     print(a(input))
     a.summary()
