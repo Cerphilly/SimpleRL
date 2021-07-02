@@ -59,7 +59,8 @@ class CURL_SACv1:
 
         self.current_step = 0
 
-        self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'V_network': self.v_network, 'Target_V_network': self.target_v_network, 'Curl':self.curl}
+        self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'V_network': self.v_network,
+                             'Target_V_network': self.target_v_network, 'Curl':self.curl, 'Encoder': self.encoder, 'Target_Encoder': self.target_encoder}
 
         self.name = 'CURL_SACv1'
 
@@ -240,7 +241,7 @@ class CURL_SACv2:
         self.log_alpha_optimizer = tf.keras.optimizers.Adam(args.alpha_lr, beta_1=0.5)
 
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2,
-                             'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
+                             'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2, 'Curl':self.curl, 'Encoder': self.encoder, 'Target_Encoder': self.target_encoder}
 
         self.name = 'CURL_SACv2'
 
@@ -328,6 +329,7 @@ class CURL_SACv2:
                 _, s_logpi = self.actor(self.encoder(s))
                 alpha_loss = -(tf.exp(self.log_alpha) * tf.stop_gradient(s_logpi+ self.target_entropy))
                 alpha_loss = tf.nn.compute_average_loss(alpha_loss)
+                #alpha_loss = tf.reduce_mean(alpha_loss)
 
             log_alpha_gradients = tape3.gradient(alpha_loss, [self.log_alpha])
             self.log_alpha_optimizer.apply_gradients(zip(log_alpha_gradients, [self.log_alpha]))
@@ -433,7 +435,8 @@ class CURL_TD3:
         self.encoder_optimizer = tf.keras.optimizers.Adam(args.encoder_lr)
         self.cpc_optimizer = tf.keras.optimizers.Adam(args.cpc_lr)
 
-        self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
+        self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2,
+                             'Curl':self.curl, 'Encoder': self.encoder, 'Target_Encoder': self.target_encoder}
 
         self.name = 'CURL_TD3'
 

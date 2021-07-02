@@ -70,7 +70,7 @@ class SACv2_AE:
 
 
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2,
-                             'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
+                             'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2, 'Encoder': self.encoder, 'Target_Encoder': self.target_encoder, 'Decoder': self.decoder}
         self.name = 'SACv2_AE'
 
 
@@ -151,7 +151,7 @@ class SACv2_AE:
             if self.train_alpha == True:
                 with tf.GradientTape() as tape3:
                     _, s_logpi = self.actor(self.encoder(s))
-                    alpha_loss = -(tf.exp(self.log_alpha) * tf.stop_gradient(s_logpi+ self.target_entropy))
+                    alpha_loss = -(tf.exp(self.log_alpha) * tf.stop_gradient(s_logpi + self.target_entropy))
                     alpha_loss = tf.nn.compute_average_loss(alpha_loss)
 
                 log_alpha_gradients = tape3.gradient(alpha_loss, [self.log_alpha])

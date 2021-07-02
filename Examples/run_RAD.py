@@ -17,11 +17,11 @@ def hyperparameters():
     parser.add_argument('--env-name', default='cartpole/swingup', help='DM Control Suite domain name + task name')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
-    parser.add_argument('--max-episode', default=1000000, type=int, help='Maximum training step')
+    parser.add_argument('--max-step', default=100001, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
     parser.add_argument('--eval-step', default=10000, type=int, help='Frequency in performance evaluation')
-    parser.add_argument('--eval-episode', default=5, type=int, help='Number of episodes to perform evaluation')
-    parser.add_argument('--random-seed', default=-1, type=int, help='Random seed setting')
+    parser.add_argument('--eval-episode', default=10, type=int, help='Number of episodes to perform evaluation')
+    parser.add_argument('--random-seed', default=1234, type=int, help='Random seed setting')
 
     parser.add_argument('--frame-stack', default=3, type=int)
     parser.add_argument('--frame-skip', default=8, type=int)
@@ -33,7 +33,7 @@ def hyperparameters():
     #sac
     parser.add_argument('--batch-size', default=512, type=int, help='Mini-batch size')
     parser.add_argument('--buffer-size', default=100000, type=int, help='Buffer maximum size')
-    parser.add_argument('--train-mode', default='online', help='offline, online')
+    parser.add_argument('--train-mode', default='online', help='online')
     parser.add_argument('--training-step', default=1, type=int)
     parser.add_argument('--train-alpha', default=True, type=bool)
     parser.add_argument('--gamma', default=0.99, type=float)
@@ -43,7 +43,7 @@ def hyperparameters():
     parser.add_argument('--v-lr', default=0.001, type=float)
     parser.add_argument('--alpha-lr', default=0.0001, type=float)
     parser.add_argument('--tau', default=0.01, type=float)
-    parser.add_argument('--actor-update', default=2, type=int)
+    parser.add_argument('--actor-update', default=1, type=int)
     parser.add_argument('--critic-update', default=2, type=int)
     parser.add_argument('--hidden-dim', default=(1024, 1024), help='hidden dimension of network')
     parser.add_argument('--log_std_min', default=-10, type=int, help='For squashed gaussian actor')
@@ -58,12 +58,13 @@ def hyperparameters():
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
     parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
-    parser.add_argument('--file', default=False, type=bool, help='when logged, write log')
-    parser.add_argument('--numpy', default=False, type=bool, help='when logged, save log in numpy')
+    parser.add_argument('--file', default=True, type=bool, help='when logged, write log')
+    parser.add_argument('--numpy', default=True, type=bool, help='when logged, save log in numpy')
 
-    parser.add_argument('--model', default=False, type=bool, help='when logged, save model')
+    parser.add_argument('--model', default=True, type=bool, help='when logged, save model')
     parser.add_argument('--model-freq', default=10000, type=int, help='model saving frequency')
-
+    parser.add_argument('--buffer', default=False, type=bool, help='when logged, save buffer')
+    parser.add_argument('--buffer-freq', default=100000, type=int, help='buffer saving frequency')
 
 
     args = parser.parse_args()

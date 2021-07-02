@@ -16,7 +16,7 @@ def hyperparameters():
     parser.add_argument('--env-name', default='InvertedPendulumSwing-v2', help='env name')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
-    parser.add_argument('--max-episode', default=1000000, type=int, help='Maximum training step')
+    parser.add_argument('--max-step', default=1000000, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
 
     parser.add_argument('--eval-step', default=200, type=int, help='Frequency in performance evaluation')

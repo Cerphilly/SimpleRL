@@ -21,7 +21,7 @@ class Image_trainer:
         self.min_action = min_action
 
         self.render = args.render
-        self.max_episode = args.max_episode
+        self.max_step = args.max_step
 
         self.eval = args.eval
         self.eval_episode = args.eval_episode
@@ -99,15 +99,15 @@ class Image_trainer:
         print("Eval  | Average Reward {:.2f}, Max reward: {:.2f}, Min reward: {:.2f}, Stddev reward: {:.2f} ".format(sum(reward_list)/len(reward_list), max(reward_list), min(reward_list), np.std(reward_list)))
 
         if self.log == True:
-            self.logger.log('Reward/Test', sum(reward_list) / len(reward_list), self.eval_num)
-            self.logger.log('Max Reward/Test', max(reward_list), self.eval_num)
-            self.logger.log('Min Reward/Test', min(reward_list), self.eval_num)
-            self.logger.log('Stddev Reward/Test', np.std(reward_list), self.eval_num)
+            self.logger.log('Reward/Test', sum(reward_list) / len(reward_list), self.eval_num, False)
+            self.logger.log('Max Reward/Test', max(reward_list), self.eval_num, False)
+            self.logger.log('Min Reward/Test', min(reward_list), self.eval_num, False)
+            self.logger.log('Stddev Reward/Test', np.std(reward_list), self.eval_num, True)
 
     def run(self):
 
         while True:
-            if self.episode > self.max_episode:
+            if self.total_step > self.max_step:
                 print("Training finished")
                 break
 
@@ -119,18 +119,9 @@ class Image_trainer:
             done = False
 
             while not done:
+
                 self.local_step += 1
                 self.total_step += 1
-
-                if self.eval == True and self.total_step % self.eval_step == 0:
-                    self.evaluate()
-
-                if self.log == True:
-                    if self.model == True and self.total_step % self.model_freq == 0:
-                        self.logger.save_model(self.algorithm, step=self.total_step)
-
-                    if self.buffer == True and self.total_step % self.buffer_freq == 0:
-                        self.logger.save_buffer(buffer=self.algorithm.buffer, step=self.total_step)
 
                 if self.render == True:
                     if self.domain_type == 'gym':
@@ -164,13 +155,23 @@ class Image_trainer:
                         for loss in loss_list:
                             self.logger.log(loss[0], loss[1], self.total_step, str(self.episode))
 
+                if self.eval == True and self.total_step % self.eval_step == 0:
+                    self.evaluate()
+
+                if self.log == True:
+                    if self.model == True and self.total_step % self.model_freq == 0:
+                        self.logger.save_model(self.algorithm, step=self.total_step)
+
+                    if self.buffer == True and self.total_step % self.buffer_freq == 0:
+                        self.logger.save_buffer(buffer=self.algorithm.buffer, step=self.total_step)
+
 
             print("Train | Episode: {}, Reward: {:.2f}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward, self.local_step, self.total_step))
 
             if self.log == True:
-                self.logger.log('Reward/Train', self.episode_reward, self.episode)
-                self.logger.log('Step/Train', self.local_step, self.episode)
-                self.logger.log('Total Step/Train', self.total_step, self.episode)
+                self.logger.log('Reward/Train', self.episode_reward, self.episode, False)
+                self.logger.log('Step/Train', self.local_step, self.episode, False)
+                self.logger.log('Total Step/Train', self.total_step, self.episode, True)
 
 
 # def main(cpu_only = False, force_gpu = True):

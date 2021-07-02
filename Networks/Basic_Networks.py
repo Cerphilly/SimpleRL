@@ -52,7 +52,7 @@ class Q_network(tf.keras.Model):
         self.output_layer = tf.keras.layers.Dense(1, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Output')
 
-        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32)), np.zeros(shape=(1,) + (self.action_dim,), dtype=np.float32))
+        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32)), tf.constant(np.zeros(shape=(1,) + (self.action_dim,), dtype=np.float32)))
 
     @tf.function
     def call(self, input1, input2):

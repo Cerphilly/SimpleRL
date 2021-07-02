@@ -18,6 +18,7 @@ class Gaussian_Actor(tf.keras.Model):
         self.output_layer = tf.keras.layers.Dense(self.action_dim * 2, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Output')
 
+        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32)))
 
     @tf.function
     def call(self, input, activation='tanh', deterministic=False):

@@ -1,5 +1,5 @@
 import tensorflow as tf
-
+import numpy as np
 
 class Discriminator(tf.keras.Model):
     def __init__(self, state_dim, action_dim, hidden_units=(100, 100), activation='tanh', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
@@ -16,6 +16,8 @@ class Discriminator(tf.keras.Model):
                                       bias_initializer=bias_initializer, name='Layer{}'.format(i)))
 
         self.output_layer = tf.keras.layers.Dense(1, activation='sigmoid')
+
+        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32)), tf.constant(np.zeros(shape=(1,) + (self.action_dim,), dtype=np.float32)))
 
     @tf.function
     def call(self, input1, input2):

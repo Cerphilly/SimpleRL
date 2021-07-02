@@ -165,27 +165,24 @@ class Buffer:
         states_next = np.asarray([self.ns[i] for i in ids]) #(batch_size, states_dim)
         dones = np.asarray([self.d[i] for i in ids]) #(batch_size, 1)
 
-        #states = rad.crop(states, 84)
-        #states_next = rad.crop(states_next, 84)
 
-        if aug_funcs:
-            for aug, func in aug_funcs.items():
-                if 'crop' in aug or 'cutout' in aug:
-                    states = func(states)
-                    states_next = func(states_next)
-
-                elif 'translate' in aug:
-                    states = center_crop_images(states, pre_image_size)
-                    states_next = center_crop_images(states_next, pre_image_size)
-
-                    states, random_idxs = func(states, return_random_idxs=True)
-                    states_next = func(states_next, **random_idxs)
-
-            for aug, func in aug_funcs.items():
-                if 'crop' in aug or 'cutout' in aug or 'translate' in aug:
-                    continue
+        for aug, func in aug_funcs.items():
+            if 'crop' in aug or 'cutout' in aug:
                 states = func(states)
                 states_next = func(states_next)
+
+            elif 'translate' in aug:
+                states = center_crop_images(states, pre_image_size)
+                states_next = center_crop_images(states_next, pre_image_size)
+
+                states, random_idxs = func(states, return_random_idxs=True)
+                states_next = func(states_next, **random_idxs)
+
+        for aug, func in aug_funcs.items():
+            if 'crop' in aug or 'cutout' in aug or 'translate' in aug:
+                continue
+            states = func(states)
+            states_next = func(states_next)
 
         states = tf.convert_to_tensor(states, tf.float32)
         actions = tf.convert_to_tensor(actions, tf.float32)
@@ -197,13 +194,19 @@ class Buffer:
 
 
     def dbc_sample(self, batch_size):
-        ids = np.random.randint(low=0, high=len(self.s), size=batch_size)
+        ids = np.random.choice(len(self.s), batch_size, replace=False)
 
         states = np.asarray([self.s[i] for i in ids])
         actions = np.asarray([self.a[i] for i in ids])
         rewards = np.asarray([self.r[i] for i in ids])
         states_next = np.asarray([self.ns[i] for i in ids])
         dones = np.asarray([self.d[i] for i in ids])
+
+        states = tf.convert_to_tensor(states, tf.float32)
+        actions = tf.convert_to_tensor(actions, tf.float32)
+        rewards = tf.convert_to_tensor(rewards, tf.float32)
+        states_next = tf.convert_to_tensor(states_next, tf.float32)
+        dones = tf.convert_to_tensor(dones, tf.float32)
 
         np.random.shuffle(ids)
 
@@ -212,6 +215,13 @@ class Buffer:
         rewards2 = np.asarray([self.r[i] for i in ids])
         states_next2 = np.asarray([self.ns[i] for i in ids])
         dones2 = np.asarray([self.d[i] for i in ids])
+
+        states2 = tf.convert_to_tensor(states2, tf.float32)
+        actions2 = tf.convert_to_tensor(actions2, tf.float32)
+        rewards2 = tf.convert_to_tensor(rewards2, tf.float32)
+        states_next2 = tf.convert_to_tensor(states_next2, tf.float32)
+        dones2 = tf.convert_to_tensor(dones2, tf.float32)
+
 
         return (states, actions, rewards, states_next, dones), (states2, actions2, rewards2, states_next2, dones2)
 

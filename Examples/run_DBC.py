@@ -4,15 +4,15 @@ import tensorflow as tf
 import numpy as np
 import random
 
-from Algorithms.ImageRL.CURL import CURL_SACv1, CURL_TD3, CURL_SACv2
+from Algorithms.ImageRL.DBC import DBC_SACv2
 
 from Trainer.Image_trainer import Image_trainer
 from Common.Utils import FrameStack
 
 def hyperparameters():
-    parser = argparse.ArgumentParser(description='Contrastive Unsupervised Representations for Reinforcement Learning (CURL) example')
+    parser = argparse.ArgumentParser(description='Deep Bisimulation for Control (DBC) example')
     #environment
-    parser.add_argument('--algorithm', default='SACv2', help='SACv1, SACv2, TD3')
+    parser.add_argument('--algorithm', default='SACv2', help='SACv2')
     parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='cartpole/swingup', help='DM Control Suite domain name + task name')
     parser.add_argument('--render', default=False, type=bool)
@@ -27,36 +27,33 @@ def hyperparameters():
     parser.add_argument('--frame-skip', default=8, type=int)
     parser.add_argument('--image-size', default=84, type=int)
     parser.add_argument('--pre-image-size', default=100, type=int)
+    parser.add_argument('--data-augs', default='crop', type=str, help='data augmentation: crop, grayscale, random cutout, etc')
+    #parser.add_argument('--data-augs', default='no_aug', type=str, help='no aug if you want to do SAC:pixel')
+
     #sac
-    parser.add_argument('--batch-size', default=512, type=int, help='Mini-batch size')
-    parser.add_argument('--buffer-size', default=100000, type=int, help='Buffer maximum size')
+    parser.add_argument('--batch-size', default=128, type=int, help='Mini-batch size')
+    parser.add_argument('--buffer-size', default=1000000, type=int, help='Buffer maximum size')
     parser.add_argument('--train-mode', default='online', help='online')
     parser.add_argument('--training-step', default=1, type=int)
     parser.add_argument('--train-alpha', default=True, type=bool)
     parser.add_argument('--gamma', default=0.99, type=float)
     parser.add_argument('--alpha', default=0.1, type=float)
-    parser.add_argument('--actor-lr', default=0.001, type=float)
-    parser.add_argument('--critic-lr', default=0.001, type=float)
+    parser.add_argument('--actor-lr', default=0.00001, type=float)
+    parser.add_argument('--critic-lr', default=0.00001, type=float)
     parser.add_argument('--v-lr', default=0.001, type=float)
     parser.add_argument('--alpha-lr', default=0.0001, type=float)
-    parser.add_argument('--tau', default=0.01, type=float)
+    parser.add_argument('--tau', default=0.005, type=float)
+    parser.add_argument('--actor-update', default=2, type=int)
     parser.add_argument('--critic-update', default=2, type=int)
-    parser.add_argument('--hidden-dim', default=(1024, 1024), help='hidden dimension of network')
-    parser.add_argument('--log_std_min', default=-10, type=int, help='For squashed gaussian actor')
+    parser.add_argument('--hidden-dim', default=(256, 256), help='hidden dimension of network')
+    parser.add_argument('--log_std_min', default=-5, type=int, help='For squashed gaussian actor')
     parser.add_argument('--log_std_max', default=2, type=int, help='For squashed gaussian actor')
-    #td3
-    parser.add_argument('--policy-delay', default=2, type=int)
-    parser.add_argument('--actor-noise', default=0.1, type=float)
-    parser.add_argument('--target-noise', default=0.2, type=float)
-    parser.add_argument('--noise-clip', default=0.5, type=float)
-    #curl&encoder
+
+    #rad&encoder
     parser.add_argument('--layer-num', default=4, type=int)
     parser.add_argument('--filter-num', default=32, type=int)
-    parser.add_argument('--encoder-tau', default=0.05, type=float)
+    parser.add_argument('--encoder-tau', default=0.005, type=float)
     parser.add_argument('--feature-dim', default=50, type=int)
-    parser.add_argument('--curl-latent-dim', default=128, type=int)
-    parser.add_argument('--encoder-lr', default=0.001, type=float)
-    parser.add_argument('--cpc-lr', default=0.001, type=float)
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
     parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
@@ -66,8 +63,9 @@ def hyperparameters():
 
     parser.add_argument('--model', default=True, type=bool, help='when logged, save model')
     parser.add_argument('--model-freq', default=10000, type=int, help='model saving frequency')
-    parser.add_argument('--buffer', default=True, type=bool, help='when logged, save buffer')
+    parser.add_argument('--buffer', default=False, type=bool, help='when logged, save buffer')
     parser.add_argument('--buffer-freq', default=100000, type=int, help='buffer saving frequency')
+
 
     args = parser.parse_args()
 
@@ -77,6 +75,12 @@ def main(args):
     if args.cpu_only == True:
         cpu = tf.config.experimental.list_physical_devices(device_type='CPU')
         tf.config.experimental.set_visible_devices(devices=cpu, device_type='CPU')
+
+    if 'crop' not in args.data_augs.split('-'):
+        assert args.pre_image_size == args.image_size
+    else:
+        assert args.pre_image_size != args.image_size
+
     # random seed setting
     if args.random_seed <= 0:
         random_seed = np.random.randint(1, 9999)
@@ -103,11 +107,10 @@ def main(args):
     min_action = env.action_space.low[0]
 
     if args.algorithm == 'SACv1':
-        algorithm = CURL_SACv1(state_dim, action_dim, args)
+        algorithm = 0
     elif args.algorithm == 'SACv2':
-        algorithm = CURL_SACv2(state_dim, action_dim, args)
-    elif args.algorithm == 'TD3':
-        algorithm = CURL_TD3(state_dim, action_dim, args)
+        algorithm = DBC_SACv2(state_dim, action_dim, args)
+
 
     print("Training of", env.unwrapped.spec.id)
     print("Algorithm:", algorithm.name)

@@ -20,6 +20,8 @@ class Dueling_Network(tf.keras.Model):
         self.advantage = tf.keras.layers.Dense(self.action_dim, kernel_initializer=kernel_initializer,
                                                bias_initializer=bias_initializer, name='Advantage')
 
+        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32)))
+
     @tf.function
     def call(self, inputs, estimator='mean'):
         z = self.input_layer(inputs)

@@ -20,7 +20,7 @@ class Logger:
 
         if dir_name == None:
             self.current_time = self.log_time()
-            self.dir_name = 'C:/Users/cocel/PycharmProjects/SimpleRL/Logs/' + env.unwrapped.spec.id + '-' +  algorithm.name + '-' +  self.current_time
+            self.dir_name = 'D:/SimpleRL_Logs/Logs/' + env.unwrapped.spec.id + '-' +  algorithm.name + '-' +  self.current_time
             print("Log dir: ", self.dir_name)
             os.mkdir(self.dir_name)
             self.save_hyperparameter(args)
@@ -34,8 +34,8 @@ class Logger:
         if file:
             self.train_episode = 1
             self.test_episode = 1
-            self.train_dict = {}
-            self.test_dict = {}
+            self.train_dict = {'Episode': self.train_episode}
+            self.test_dict = {'Episode': self.test_episode}
             self.train_log = os.path.join(self.dir_name, 'train.log')
             self.test_log = os.path.join(self.dir_name, 'eval.log')
 
@@ -84,80 +84,84 @@ class Logger:
         with open((os.path.join(self.dir_name, 'hyperparameters.json')), 'w') as f:
             json.dump(vars(args), f, sort_keys=False, indent=5)
 
-    def log(self, tag, values, step, description=None):
+    def log(self, tag, values, step, description = False):
         if self.numpy:
-            self.write_numpy(tag, values, step)
+            self.write_numpy(tag, values, step, description)
         if self.file:
-            self.write_file(tag, values, step)
+            self.write_file(tag, values, step, description)
         if self.tensorboard:
-            self.write_tensorboard(tag, values, step, description)
+            self.write_tensorboard(tag, values, step)
 
-    def write_numpy(self, tag, values, global_step):
+    def write_numpy(self, tag, values, global_step, done):
         if len(tag.split('/')) != 2:
             return
 
         if tag.split('/')[1] == 'Train':
-            if self.train_episode2 == global_step:
+            if not done:
                 for i in range(len(self.train_reward[0])):
                     if tag.split('/')[0] == self.train_reward[0][i]:
                         self.current_train[i] = values
             else:
+                for i in range(len(self.train_reward[0])):
+                    if tag.split('/')[0] == self.train_reward[0][i]:
+                        self.current_train[i] = values
+
                 self.train_reward = np.concatenate((np.array(self.train_reward), np.array([self.current_train])), axis=0)
                 np.save(self.train_numpy, self.train_reward)
 
-                self.train_episode2 = global_step
+                self.train_episode2 += 1
                 self.current_train =  [self.train_episode2, 0, 0, 0]
-                for i in range(len(self.train_reward[0])):
-                    if tag.split('/')[0] == self.train_reward[0][i]:
-                        self.current_train[i] = values
 
         elif tag.split('/')[1] == 'Test':
-            if self.test_episode2 == global_step:
+            if not done:
                 for i in range(len(self.test_reward[0])):
                     if tag.split('/')[0] == self.test_reward[0][i]:
-                        print(i)
                         self.current_test[i] = values
             else:
+                for i in range(len(self.test_reward[0])):
+                    if tag.split('/')[0] == self.test_reward[0][i]:
+                        self.current_test[i] = values
+
                 self.test_reward = np.concatenate((np.array(self.test_reward), np.array([self.current_test])), axis=0)
                 np.save(self.test_numpy, self.test_reward)
 
-                self.test_episode2 = global_step
+                self.test_episode2 += 1
                 self.current_test = [self.test_episode2, 0, 0, 0, 0]
-                for i in range(len(self.test_reward[0])):
-                    if tag.split('/')[0] == self.test_reward[0][i]:
-                        self.current_test[i] = values
 
-    def write_file(self, tag, values, global_step):
+
+    def write_file(self, tag, values, global_step, done):
         #Train | Episode | Reward | Loss | Time
         if len(tag.split('/')) != 2:
             return
 
         if tag.split('/')[1] == 'Train':
-            if self.train_episode == global_step:
+            if not done:
                 self.train_dict[tag.split('/')[0]] = values
             else:
+                self.train_dict[tag.split('/')[0]] = values
+
                 with open(self.train_log, 'a') as f:
                     f.write(str(self.train_dict) + '\n')
-                self.train_episode = global_step
-                self.train_dict = {}
-                self.train_dict[tag.split('/')[0]] = values
+                self.train_episode += 1
+                self.train_dict = {'Episode': self.train_episode}
 
         elif tag.split('/')[1] == 'Test':
-            if self.test_episode == global_step:
+            if not done:
                 self.test_dict[tag.split('/')[0]] = values
             else:
-                with open(self.test_log, 'a') as f:
-                    f.write(str(self.test_dict) + '\n')
-                self.test_episode = global_step
-                self.test_dict = {}
                 self.test_dict[tag.split('/')[0]] = values
 
+                with open(self.test_log, 'a') as f:
+                    f.write(str(self.test_dict) + '\n')
+                self.test_episode += 1
+                self.test_dict = {'Episode': self.test_episode}
 
-    def write_tensorboard(self, tag, values, step, description):#global_step: episode
+
+    def write_tensorboard(self, tag, values, step):#global_step: episode
         #Reward/Train, Reward/Test, Loss/Train, Duration/Train
         with self.writer.as_default():
             values = self.set_type(tag, values)
-            tf.summary.scalar(tag, values, step, description)
+            tf.summary.scalar(tag, values, step)
 
     def save_model(self, algorithm, step):
         for name, network in algorithm.network_list.items():
@@ -165,13 +169,13 @@ class Logger:
             print("Save  | {} Network in step {} saved".format(name, step))
 
     def save_buffer(self, buffer, step):
-        os.mkdir(os.path.join(self.buffer_dir, step))
+        os.mkdir(os.path.join(self.buffer_dir, str(step)))
         s, a, r, ns, d = buffer.export(log = False)
-        np.save(os.path.join(os.path.join(self.buffer_dir, step), "s_{}.npy".format(step)), s)
-        np.save(os.path.join(os.path.join(self.buffer_dir, step), "a_{}.npy".format(step)), a)
-        np.save(os.path.join(os.path.join(self.buffer_dir, step), "r_{}.npy".format(step)), r)
-        np.save(os.path.join(os.path.join(self.buffer_dir, step), "ns_{}.npy".format(step)), ns)
-        np.save(os.path.join(os.path.join(self.buffer_dir, step), "d_{}.npy".format(step)), d)
+        np.save(os.path.join(os.path.join(self.buffer_dir, str(step)), "s_{}.npy".format(step)), s)
+        np.save(os.path.join(os.path.join(self.buffer_dir, str(step)), "a_{}.npy".format(step)), a)
+        np.save(os.path.join(os.path.join(self.buffer_dir, str(step)), "r_{}.npy".format(step)), r)
+        np.save(os.path.join(os.path.join(self.buffer_dir, str(step)), "ns_{}.npy".format(step)), ns)
+        np.save(os.path.join(os.path.join(self.buffer_dir, str(step)), "d_{}.npy".format(step)), d)
 
         print("Save  | Buffer in step {} saved".format(step))
 

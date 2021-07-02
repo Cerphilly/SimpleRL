@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 OUT_DIM = {2: 39, 4: 35, 6: 31}
 
@@ -24,6 +25,7 @@ class PixelDecoder(tf.keras.Model):
 
         self.deconv_layers.append(tf.keras.layers.Conv2DTranspose(filters=self.obs_dim[0], kernel_size=3, strides=2, output_padding=1, data_format=data_format, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer))
 
+        self(tf.constant(np.zeros(shape=(1,) + (self.feature_dim,), dtype=np.float32)))
 
     @tf.function
     def call(self, feature):

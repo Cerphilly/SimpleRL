@@ -36,7 +36,6 @@ class RAD_SACv2:
         self.filter_num = args.filter_num
         self.tau = args.tau
         self.encoder_tau = args.encoder_tau
-        self.actor_update = args.actor_update
         self.critic_update = args.critic_update
 
         self.training_start = args.training_start
@@ -63,13 +62,13 @@ class RAD_SACv2:
         self.log_alpha_optimizer = tf.keras.optimizers.Adam(args.alpha_lr, beta_1=0.5)
 
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2,
-                             'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
+                             'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2, 'Encoder': self.encoder, 'Target_Encoder': self.target_encoder}
 
 
 
         self.aug_funcs = {}
         self.aug_list = {
-            'crop': rad.random_crop(self.image_size),
+            'crop': rad.crop,
             'grayscale': rad.random_grayscale(),
             'cutout': rad.random_cutout(),
             'cutout_color': rad.random_cutout_color(),
@@ -120,7 +119,7 @@ class RAD_SACv2:
         total_alpha_loss = 0
         loss_list = []
 
-        s, a, r, ns, d = self.buffer.rad_sample(self.batch_size, self.aug_funcs)
+        s, a, r, ns, d = self.buffer.rad_sample(self.batch_size, self.aug_funcs, self.pre_image_size)
 
         ns_action, ns_logpi = self.actor(self.encoder(ns))
 
@@ -146,31 +145,30 @@ class RAD_SACv2:
 
         del tape1
 
-        if self.current_step % self.actor_update == 0:
-            with tf.GradientTape() as tape2:
+        with tf.GradientTape() as tape2:
 
-                s_action, s_logpi = self.actor(tf.stop_gradient(self.encoder(s)))
+            s_action, s_logpi = self.actor(tf.stop_gradient(self.encoder(s)))
 
-                min_aq_rep = tf.minimum(self.critic1(tf.stop_gradient(self.encoder(s)), s_action),
-                                        self.critic2(tf.stop_gradient(self.encoder(s)), s_action))
+            min_aq_rep = tf.minimum(self.critic1(tf.stop_gradient(self.encoder(s)), s_action),
+                                    self.critic2(tf.stop_gradient(self.encoder(s)), s_action))
 
-                actor_loss = tf.reduce_mean(self.alpha.numpy() * s_logpi - min_aq_rep)
+            actor_loss = tf.reduce_mean(self.alpha.numpy() * s_logpi - min_aq_rep)
 
-            actor_gradients = tape2.gradient(actor_loss, self.actor.trainable_variables)
-            self.actor_optimizer.apply_gradients(zip(actor_gradients, self.actor.trainable_variables))
+        actor_gradients = tape2.gradient(actor_loss, self.actor.trainable_variables)
+        self.actor_optimizer.apply_gradients(zip(actor_gradients, self.actor.trainable_variables))
+        del tape2
 
-            del tape2
+        if self.train_alpha == True:
+            with tf.GradientTape() as tape3:
+                _, s_logpi = self.actor(self.encoder(s))
+                alpha_loss = -tf.exp(self.log_alpha) * tf.stop_gradient(s_logpi + self.target_entropy)
+                alpha_loss = tf.nn.compute_average_loss(alpha_loss)
+                #alpha_loss = tf.reduce_mean(alpha_loss)
 
-            if self.train_alpha == True:
-                with tf.GradientTape() as tape3:
-                    _, s_logpi = self.actor(self.encoder(s))
-                    alpha_loss = -(tf.exp(self.log_alpha) * tf.stop_gradient(s_logpi+ self.target_entropy))
-                    alpha_loss = tf.nn.compute_average_loss(alpha_loss)
+            log_alpha_gradients = tape3.gradient(alpha_loss, [self.log_alpha])
+            self.log_alpha_optimizer.apply_gradients(zip(log_alpha_gradients, [self.log_alpha]))
 
-                log_alpha_gradients = tape3.gradient(alpha_loss, [self.log_alpha])
-                self.log_alpha_optimizer.apply_gradients(zip(log_alpha_gradients, [self.log_alpha]))
-
-                del tape3
+            del tape3
 
         if self.current_step % self.critic_update == 0:
             soft_update(self.critic1, self.target_critic1, self.tau)
@@ -184,13 +182,12 @@ class RAD_SACv2:
         loss_list.append(['Loss/Critic1', total_c1_loss])
         loss_list.append(['Loss/Critic2', total_c2_loss])
 
-        if self.current_step % self.actor_update == 0:
-            total_a_loss += actor_loss.numpy()
-            loss_list.append(['Loss/Actor', total_a_loss])
+        total_a_loss += actor_loss.numpy()
+        loss_list.append(['Loss/Actor', total_a_loss])
 
-            if self.train_alpha == True:
-                total_alpha_loss += alpha_loss.numpy()
-                loss_list.append(['Loss/Alpha', total_alpha_loss])
+        if self.train_alpha == True:
+            total_alpha_loss += alpha_loss.numpy()
+            loss_list.append(['Loss/Alpha', total_alpha_loss])
 
         loss_list.append(['Alpha', tf.exp(self.log_alpha).numpy()])
 

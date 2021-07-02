@@ -1,10 +1,6 @@
 import numpy as np
 import tensorflow as tf
-
-
 import numbers
-
-
 
 def crop(images, out=84):
     """

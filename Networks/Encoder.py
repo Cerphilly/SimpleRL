@@ -1,5 +1,5 @@
 import tensorflow as tf
-
+import numpy as np
 from Common.Utils import copy_weight
 
 class PixelEncoder(tf.keras.Model):
@@ -20,6 +20,9 @@ class PixelEncoder(tf.keras.Model):
         self.conv_layers.append(tf.keras.layers.Flatten())
         self.fc = tf.keras.layers.Dense(feature_dim, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer)
         self.ln = tf.keras.layers.LayerNormalization()
+
+        self(tf.constant(np.zeros(shape = (1, *self.obs_dim), dtype=np.float32)))
+
 
     @tf.function
     def call(self, input, activation=None):
