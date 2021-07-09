@@ -22,7 +22,6 @@ class DBC_SACv2:
         self.log_alpha = tf.Variable(initial_value=tf.math.log(args.alpha), trainable=True)
         self.target_entropy = -action_dim
         self.gamma = args.gamma
-        self.bisim_coef = args.bisim_coef
 
         self.batch_size = args.batch_size
         self.feature_dim = args.feature_dim
@@ -36,6 +35,7 @@ class DBC_SACv2:
         self.critic_update = args.critic_update
 
         self.training_start = args.training_start
+        self.training_step = args.training_step
         self.train_alpha = args.train_alpha
 
         self.actor = Squashed_Gaussian_Actor(self.feature_dim, self.action_dim, args.hidden_dim, args.log_std_min, args.log_std_max)
@@ -65,6 +65,9 @@ class DBC_SACv2:
         self.reward_optimizer = tf.keras.optimizers.Adam(args.decoder_lr)
 
         self.current_step = 0
+
+        self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2,
+                             'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2, 'Encoder': self.encoder, 'Target_Encoder': self.target_encoder, 'Dynamics': self.dynamics_model, 'Reward': self.reward_model}
 
         self.name = 'DBC_SACv2'
 
@@ -168,11 +171,11 @@ class DBC_SACv2:
             feature_action, _ = self.actor(tf.stop_gradient(feature), True)
             feature2_action, _ = self.actor(tf.stop_gradient(feature2), True)
 
-            mu, sigma = self.dynamics_model(tf.concat([tf.stop_gradient(feature), feature_action], axis=1))
-            mu2, sigma2 = self.dynamics_model(tf.concat([tf.stop_gradient(feature2), feature2_action], axis=1))
+            mu, sigma = self.dynamics_model(tf.stop_gradient(feature), feature_action)
+            mu2, sigma2 = self.dynamics_model(tf.stop_gradient(feature2), feature2_action)
 
-            z_dist = tf.reshape(tf.keras.losses.huber(feature, feature2), shape=tf.shape(feature))
-            r_dist = tf.reshape(tf.keras.losses.huber(reward, reward2), shape=tf.shape(reward))
+            z_dist = tf.reshape(tf.keras.losses.huber(feature, feature2), shape=[-1, 1])
+            r_dist = tf.reshape(tf.keras.losses.huber(reward, reward2), shape=[-1, 1])
             transition_dist = tf.sqrt(tf.square(mu - mu2) + tf.square(sigma - sigma2))
 
             bisimilarity = r_dist + self.gamma * transition_dist
@@ -184,7 +187,7 @@ class DBC_SACv2:
         #train dynamics
         with tf.GradientTape() as tape5:
             feature = self.encoder(s)
-            mu, sigma = self.dynamics_model(tf.concat([feature, a], axis=1))
+            mu, sigma = self.dynamics_model(feature, a)
 
             if (sigma[0][0].numpy() == 0):
                  if self.dynamics_model.deterministic == False:
@@ -202,7 +205,7 @@ class DBC_SACv2:
         #train reward
         with tf.GradientTape() as tape6:
             feature = self.encoder(s)
-            sample_dynamics = self.dynamics_model.sample(tf.concat([feature, a], axis=1))
+            sample_dynamics = self.dynamics_model.sample(feature, a)
             reward_prediction = self.reward_model(sample_dynamics)
 
             reward_loss = tf.reduce_mean(tf.square(reward_prediction - r))

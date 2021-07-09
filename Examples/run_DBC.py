@@ -15,9 +15,10 @@ def hyperparameters():
     parser.add_argument('--algorithm', default='SACv2', help='SACv2')
     parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='cartpole/swingup', help='DM Control Suite domain name + task name')
+    parser.add_argument('--discrete', default=False, type=bool, help='Always discrete')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
-    parser.add_argument('--max-step', default=100001, type=int, help='Maximum training step')
+    parser.add_argument('--max-step', default=1000001, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
     parser.add_argument('--eval-step', default=10000, type=int, help='Frequency in performance evaluation')
     parser.add_argument('--eval-episode', default=10, type=int, help='Number of episodes to perform evaluation')
@@ -26,9 +27,6 @@ def hyperparameters():
     parser.add_argument('--frame-stack', default=3, type=int)
     parser.add_argument('--frame-skip', default=8, type=int)
     parser.add_argument('--image-size', default=84, type=int)
-    parser.add_argument('--pre-image-size', default=100, type=int)
-    parser.add_argument('--data-augs', default='crop', type=str, help='data augmentation: crop, grayscale, random cutout, etc')
-    #parser.add_argument('--data-augs', default='no_aug', type=str, help='no aug if you want to do SAC:pixel')
 
     #sac
     parser.add_argument('--batch-size', default=128, type=int, help='Mini-batch size')
@@ -49,10 +47,13 @@ def hyperparameters():
     parser.add_argument('--log_std_min', default=-5, type=int, help='For squashed gaussian actor')
     parser.add_argument('--log_std_max', default=2, type=int, help='For squashed gaussian actor')
 
-    #rad&encoder
+    #dbc&encoder
     parser.add_argument('--layer-num', default=4, type=int)
     parser.add_argument('--filter-num', default=32, type=int)
     parser.add_argument('--encoder-tau', default=0.005, type=float)
+    parser.add_argument('--encoder-lr', default=0.00001, type=float)
+    parser.add_argument('--decoder-lr', default=0.00001, type=float)
+
     parser.add_argument('--feature-dim', default=50, type=int)
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
@@ -62,7 +63,7 @@ def hyperparameters():
     parser.add_argument('--numpy', default=True, type=bool, help='when logged, save log in numpy')
 
     parser.add_argument('--model', default=True, type=bool, help='when logged, save model')
-    parser.add_argument('--model-freq', default=10000, type=int, help='model saving frequency')
+    parser.add_argument('--model-freq', default=100000, type=int, help='model saving frequency')
     parser.add_argument('--buffer', default=False, type=bool, help='when logged, save buffer')
     parser.add_argument('--buffer-freq', default=100000, type=int, help='buffer saving frequency')
 
@@ -76,10 +77,6 @@ def main(args):
         cpu = tf.config.experimental.list_physical_devices(device_type='CPU')
         tf.config.experimental.set_visible_devices(devices=cpu, device_type='CPU')
 
-    if 'crop' not in args.data_augs.split('-'):
-        assert args.pre_image_size == args.image_size
-    else:
-        assert args.pre_image_size != args.image_size
 
     # random seed setting
     if args.random_seed <= 0:
@@ -94,11 +91,11 @@ def main(args):
     domain_name = args.env_name.split('/')[0]
     task_name = args.env_name.split('/')[1]
     env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
-                       height=args.pre_image_size, width=args.pre_image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
+                       height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
     env = FrameStack(env, k=args.frame_stack)
 
     test_env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
-                       height=args.pre_image_size, width=args.pre_image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
+                       height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
     test_env = FrameStack(test_env, k=args.frame_stack)
 
     state_dim = (3 * args.frame_stack, args.image_size, args.image_size)

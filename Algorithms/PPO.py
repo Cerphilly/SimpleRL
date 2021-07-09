@@ -8,8 +8,7 @@ import numpy as np
 
 from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network, V_network
-from Networks.Gaussian_Actor import Gaussian_Actor, Squashed_Gaussian_Actor
-
+from Networks.Gaussian_Actor import Gaussian_Actor
 
 class PPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
     def __init__(self, state_dim, action_dim, args):
@@ -19,6 +18,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         self.buffer = Buffer(args.buffer_size)
 
         self.ppo_mode = args.ppo_mode #mode: 'clip', 'Adaptive KL', 'Fixed KL'
+        assert self.ppo_mode is 'clip' or 'Adaptive KL' or 'Fixed KL'
 
         self.gamma = args.gamma
         self.lambda_gae = args.lambda_gae
@@ -54,7 +54,6 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
         else:
             action = self.actor(state).numpy()[0]
-            action = np.clip(action, -1, 1)
 
         return action
 
@@ -63,10 +62,10 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
         if self.discrete == True:
             policy = self.actor(state, activation='softmax').numpy()[0]
-            action = np.argmax(policy, axis=1)
+            action = np.argmax(policy)
+
         else:
             action = self.actor(state, deterministic=True).numpy()[0]
-            action = np.clip(action, -1, 1)
 
         return action
 
@@ -75,7 +74,6 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         total_c_loss = 0
 
         s, a, r, ns, d = self.buffer.all_sample()
-
         old_values = self.critic(s)
 
         returns = np.zeros_like(r.numpy())
@@ -84,7 +82,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         running_return = np.zeros(1)
         previous_value = np.zeros(1)
         running_advantage = np.zeros(1)
-
+        #GAE
         for t in reversed(range(len(r))):
             running_return = (r[t] + self.gamma * running_return * (1 - d[t])).numpy()
             running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - old_values[t]).numpy()
@@ -98,6 +96,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             old_policy = self.actor(s, activation = 'softmax')
             old_a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
             old_log_policy = tf.reduce_sum(tf.math.log(old_policy) * tf.stop_gradient(old_a_one_hot), axis=1, keepdims=True)
+
         else:
             old_mean, old_std = self.actor.mu_sigma(s)
             old_dist = self.actor.dist(s)
@@ -107,10 +106,13 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         arr = np.arange(n)
 
         for epoch in range(training_num):
-            np.random.shuffle(arr)
 
-            if n//self.batch_size > 0:
+            if n // self.batch_size > 0:#for offline training
+                np.random.shuffle(arr)
+
                 batch_index = arr[:self.batch_size]
+                batch_index.sort()
+
             else:
                 batch_index = arr
 
@@ -120,11 +122,11 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             batch_advantages = advantages[batch_index]
             batch_old_log_policy = old_log_policy.numpy()[batch_index]
 
+
             with tf.GradientTape(persistent=True) as tape:
                 if self.discrete == True:
 
                     batch_old_policy = old_policy.numpy()[batch_index]
-
                     policy = self.actor(batch_s, activation='softmax')
                     a_one_hot = tf.squeeze(tf.one_hot(tf.cast(batch_a, tf.int32), depth=self.action_dim), axis=1)
                     log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
@@ -133,8 +135,8 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                     surrogate = ratio * batch_advantages
 
                     if self.ppo_mode == 'clip':
-                        clipped_surrogate = tf.clip_by_value(surrogate, 1-self.clip, 1+self.clip)*batch_advantages
-                        actor_loss = -tf.reduce_mean(tf.minimum(surrogate, clipped_surrogate))
+                        clipped_surrogate = tf.clip_by_value(ratio, 1 - self.clip, 1 + self.clip) * batch_advantages
+                        actor_loss = tf.reduce_mean(-tf.minimum(surrogate, clipped_surrogate))
 
                     else:
                         kl_divergence = tfp.distributions.kl_divergence(tfp.distributions.Categorical(probs=policy), tfp.distributions.Categorical(probs=batch_old_policy)).numpy()
@@ -147,10 +149,8 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                                 self.beta = self.beta/2
                             elif d > self.dtarg*1.5:
                                 self.beta = self.beta * 2
-                            print(self.beta)
 
                 else:
-
                     dist = self.actor.dist(batch_s)
                     log_policy = dist.log_prob(batch_a)
 
@@ -158,8 +158,8 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                     surrogate = ratio * batch_advantages
 
                     if self.ppo_mode == 'clip':
-                        clipped_surrogate = tf.clip_by_value(surrogate, 1-self.clip, 1+self.clip)*batch_advantages
-                        actor_loss = -tf.reduce_mean(tf.minimum(surrogate, clipped_surrogate))
+                        clipped_surrogate = tf.clip_by_value(ratio, 1-self.clip, 1+self.clip) * batch_advantages
+                        actor_loss = tf.reduce_mean(-tf.minimum(surrogate, clipped_surrogate))
 
                     else:
                         batch_old_mean = old_mean.numpy()[batch_index]
@@ -176,7 +176,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                             elif d > self.dtarg * 1.5:
                                 self.beta = self.beta * 2
 
-                critic_loss = 0.5 * tf.reduce_mean(tf.square(tf.stop_gradient(batch_returns) - self.critic(batch_s)))
+                critic_loss = 0.5 * tf.reduce_mean(tf.square(batch_returns - self.critic(batch_s)))
 
             actor_variables = self.actor.trainable_variables
             critic_variables = self.critic.trainable_variables
@@ -186,6 +186,8 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
             self.actor_optimizer.apply_gradients(zip(actor_gradients, actor_variables))
             self.critic_optimizer.apply_gradients(zip(critic_gradients, critic_variables))
+
+            del tape
 
             total_a_loss += actor_loss.numpy()
             total_c_loss += critic_loss.numpy()

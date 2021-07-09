@@ -3,10 +3,13 @@ import tensorflow_probability as tfp
 import numpy as np
 
 class Gaussian_Actor(tf.keras.Model):
-    def __init__(self, state_dim, action_dim, hidden_units=(256, 256), activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
+    def __init__(self, state_dim, action_dim, hidden_units=(256, 256), log_std_min=-10, log_std_max=2, activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
         super(Gaussian_Actor, self).__init__()
         self.state_dim = state_dim
         self.action_dim = action_dim
+
+        self.log_std_min = log_std_min
+        self.log_std_max = log_std_max
 
         self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim, ), name='Input')
         self.hidden_layers = []
@@ -21,42 +24,41 @@ class Gaussian_Actor(tf.keras.Model):
         self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32)))
 
     @tf.function
-    def call(self, input, activation='tanh', deterministic=False):
+    def call(self, input, deterministic=False):
         z = self.input_layer(input)
         for layer in self.hidden_layers:
             z = layer(z)
 
         output = self.output_layer(z)
-
-        if activation == 'tanh':
-            output = tf.nn.tanh(output)
+        output = tf.nn.tanh(output)
 
         mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
-        std = tf.exp(log_std)
+        std =  tf.exp(tf.clip_by_value(log_std, self.log_std_min, self.log_std_max))
+        #std = 0.5 * tf.ones_like(mean)
+
+        dist = tfp.distributions.Normal(loc=mean, scale=std, validate_args=True, allow_nan_stats=False)
 
         if deterministic == True:
             return mean
 
         else:
-            dist = tfp.distributions.Normal(loc=mean, scale=std)
             action = dist.sample()
-
             return action
 
     def dist(self, input):
-
         z = self.input_layer(input)
         for layer in self.hidden_layers:
             z = layer(z)
 
         output = self.output_layer(z)
-
         output = tf.nn.tanh(output)
 
         mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
-        std = tf.exp(log_std)
 
-        dist = tfp.distributions.Normal(loc=mean, scale=std)
+        std = tf.exp(tf.clip_by_value(log_std, self.log_std_min, self.log_std_max))
+        #std = 0.5 * tf.ones_like(mean)
+
+        dist = tfp.distributions.Normal(loc=mean, scale=std, validate_args=True, allow_nan_stats=False)
 
         return dist
 
@@ -66,11 +68,13 @@ class Gaussian_Actor(tf.keras.Model):
             z = layer(z)
 
         output = self.output_layer(z)
-
         output = tf.nn.tanh(output)
 
         mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
-        std = tf.exp(log_std)
+
+        std = tf.exp(tf.clip_by_value(log_std, self.log_std_min, self.log_std_max))
+        #std = 0.5 * tf.ones_like(mean)
+
 
         return mean, std
 

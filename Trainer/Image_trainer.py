@@ -22,6 +22,7 @@ class Image_trainer:
 
         self.render = args.render
         self.max_step = args.max_step
+        self.discrete = args.discrete
 
         self.eval = args.eval
         self.eval_episode = args.eval_episode
@@ -89,6 +90,9 @@ class Image_trainer:
                         cv2.waitKey(1)
 
                 action = self.algorithm.eval_action(observation)
+                if self.discrete == False:
+                    action = np.clip(action, -1, 1)
+
                 next_observation, reward, done, _ = self.test_env.step(self.max_action * action)
 
                 eval_reward += reward
@@ -136,6 +140,10 @@ class Image_trainer:
 
                 else:
                     action = self.algorithm.get_action(observation)
+
+                    if self.discrete == False:
+                        action = np.clip(action, -1, 1)
+
                     next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
                 if self.local_step + 1 == self.env._max_episode_steps:

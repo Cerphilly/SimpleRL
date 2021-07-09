@@ -55,9 +55,8 @@ class Dueling_DQN:
 
             with tf.GradientTape() as tape:
 
-                q_value = tf.reduce_sum(
-                    self.network(s) * tf.squeeze(tf.one_hot(tf.dtypes.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
-                loss = 0.5*tf.math.reduce_mean(tf.square(target_q - q_value))
+                q_value = tf.reduce_sum(self.network(s) * tf.squeeze(tf.one_hot(tf.dtypes.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
+                loss = 0.5 * tf.math.reduce_mean(tf.square(target_q - q_value))
 
             variables = self.network.trainable_variables
             gradients = tape.gradient(loss, variables)

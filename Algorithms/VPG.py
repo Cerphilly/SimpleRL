@@ -47,7 +47,6 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
             action = np.random.choice(self.action_dim, 1, p=policy)[0]
         else:
             action = self.actor(state).numpy()[0]
-            action = np.clip(action, -1, 1)
 
         return action
 
@@ -56,10 +55,10 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
 
         if self.discrete == True:
             policy = self.actor(state, activation='softmax').numpy()[0]
-            action = np.argmax(policy, axis=1)
+            action = np.argmax(policy)
+
         else:
             action = self.actor(state, deterministic=True).numpy()[0]
-            action = np.clip(action, -1, 1)
 
         return action
 
@@ -94,6 +93,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
             else:
                 dist = self.actor.dist(s)
                 log_policy = dist.log_prob(a)
+                log_policy = tf.expand_dims(log_policy, axis=1)
 
             actor_loss = -tf.reduce_sum(log_policy * tf.stop_gradient(advantages))
             critic_loss = 0.5 * tf.reduce_mean(tf.square(tf.stop_gradient(returns) - self.critic(s)))

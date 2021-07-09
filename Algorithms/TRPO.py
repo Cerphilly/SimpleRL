@@ -54,7 +54,6 @@ class TRPO:
 
         else:
             action = self.actor(state).numpy()[0]
-            action = np.clip(action, -1, 1)
 
         return action
 
@@ -63,11 +62,10 @@ class TRPO:
 
         if self.discrete == True:
             policy = self.actor(state, activation='softmax').numpy()[0]
-            action = np.argmax(policy, axis=1)
+            action = np.argmax(policy)
 
         else:
             action = self.actor(state, deterministic=True).numpy()[0]
-            action = np.clip(action, -1, 1)
 
         return action
 
@@ -155,6 +153,8 @@ class TRPO:
         else:
             old_dist = self.actor.dist(s)
             old_log_policy = old_dist.log_prob(a)
+            old_log_policy = tf.expand_dims(old_log_policy, axis=1)
+
 
         flattened_actor = tf.concat([tf.reshape(variable, [-1]) for variable in self.actor.trainable_variables], axis=0)
         self.update_model(self.backup_actor, flattened_actor)
@@ -170,6 +170,7 @@ class TRPO:
             else:
                 dist = self.actor.dist(s)
                 log_policy = dist.log_prob(a)
+                log_policy = tf.expand_dims(log_policy, axis=1)
 
                 surrogate = tf.reduce_mean(tf.exp(log_policy - tf.stop_gradient(old_log_policy)) * advantages)
 
@@ -199,6 +200,7 @@ class TRPO:
             else:
                 new_dist = self.actor.dist(s)
                 new_log_policy = new_dist.log_prob(a)
+                new_log_policy = tf.expand_dims(new_log_policy, axis=1)
 
             new_surrogate = tf.reduce_mean(tf.exp(new_log_policy - old_log_policy) * advantages)
 
@@ -234,10 +236,11 @@ class TRPO:
         arr = np.arange(n)
 
         for epoch in range(self.training_step):
-            np.random.shuffle(arr)
 
             if n // self.batch_size > 0:
+                np.random.shuffle(arr)
                 batch_index = arr[:self.batch_size]
+                batch_index.sort()
             else:
                 batch_index = arr
 

@@ -11,9 +11,9 @@ from Trainer.State_trainer import State_trainer
 def hyperparameters():
     parser = argparse.ArgumentParser(description='REINFORCE example')
     #environment
-    parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='CartPole-v0', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
-    parser.add_argument('--discrete', default=True, type=bool, help='whether the environment is discrete or not')
+    parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc')
+    parser.add_argument('--env-name', default='InvertedPendulum-v2', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
+    parser.add_argument('--discrete', default=False, type=bool, help='whether the environment is discrete or not')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--max-step', default=1000000, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
@@ -28,13 +28,16 @@ def hyperparameters():
     parser.add_argument('--hidden-dim', default=(256, 256), help='hidden dimension of network')
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
-    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
+    parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
     parser.add_argument('--file', default=False, type=bool, help='when logged, write log')
     parser.add_argument('--numpy', default=False, type=bool, help='when logged, save log in numpy')
 
     parser.add_argument('--model', default=False, type=bool, help='when logged, save model')
     parser.add_argument('--model-freq', default=10000, type=int, help='model saving frequency')
+
+    parser.add_argument('--buffer', default=False, type=bool, help='when logged, save buffer')
+    parser.add_argument('--buffer-freq', default=100000, type=int, help='buffer saving frequency')
 
     args = parser.parse_args()
 

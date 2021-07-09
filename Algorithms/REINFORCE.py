@@ -42,7 +42,6 @@ class REINFORCE:
             
         else:
             action = self.network(state).numpy()[0]
-            action = np.clip(action, -1, 1)
 
         return action
 
@@ -51,14 +50,12 @@ class REINFORCE:
 
         if self.discrete == True:
             policy = self.network(state, activation='softmax').numpy()[0]
-            action = np.argmax(policy, axis=1)
+            action = np.argmax(policy)
 
         else:
             action = self.network(state, deterministic=True).numpy()[0]
-            action = np.clip(action, -1, 1)
 
         return action
-
 
     def train(self, training_num):
         total_loss = 0
@@ -79,6 +76,7 @@ class REINFORCE:
             else:
                 dist = self.network.dist(s)
                 log_policy = dist.log_prob(a)
+                log_policy = tf.expand_dims(log_policy, axis=1)
 
             loss = tf.reduce_sum(-log_policy*returns)
 

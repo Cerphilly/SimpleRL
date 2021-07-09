@@ -13,6 +13,7 @@ def hyperparameters():
     #environment
     parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='cartpole_swingup', help='Pendulum-v0, MountainCarContinuous-v0, cartpole_swingup')
+    parser.add_argument('--discrete', default=False, type=bool, help='Always Continuous')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
     parser.add_argument('--max-step', default=1000000, type=int, help='Maximum training step')

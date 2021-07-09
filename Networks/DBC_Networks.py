@@ -55,8 +55,8 @@ class Transition_Network(tf.keras.Model):
         self(tf.constant(np.zeros(shape=(1,) + (self.feature_dim,), dtype=np.float32)), tf.constant(np.zeros(shape=(1,) + (self.action_dim,), dtype=np.float32)))
 
     @tf.function
-    def call(self, input):
-        z = self.input_layer(input)
+    def call(self, input1, input2):
+        z = tf.concat([input1, input2], axis=1)
 
         for layer in self.hidden_layers:
             z = layer(z)
@@ -71,8 +71,8 @@ class Transition_Network(tf.keras.Model):
         return mean, std
 
     @tf.function
-    def sample(self, input):
-        z = self.input_layer(input)
+    def sample(self, input1, input2):
+        z = tf.concat([input1, input2], axis=1)
 
         for layer in self.hidden_layers:
             z = layer(z)

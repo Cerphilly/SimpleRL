@@ -14,12 +14,14 @@ class State_trainer:
         self.max_action = max_action
         self.min_action = min_action
 
+        self.discrete = args.discrete
         self.render = args.render
         self.max_step = args.max_step
 
         self.eval = args.eval
         self.eval_episode = args.eval_episode
         self.eval_step = args.eval_step
+
 
         self.episode = 0
         self.episode_reward = 0
@@ -84,6 +86,10 @@ class State_trainer:
                         cv2.waitKey(1)
 
                 action = self.algorithm.eval_action(observation)
+
+                if self.discrete == False:
+                    action = np.clip(action, -1, 1)
+
                 next_observation, reward, done, _ = self.test_env.step(self.max_action * action)
 
                 eval_reward += reward
@@ -140,6 +146,7 @@ class State_trainer:
 
                 else:
                     action = self.algorithm.get_action(observation)
+
                     next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
                 if self.local_step + 1 == self.env._max_episode_steps:
@@ -157,7 +164,6 @@ class State_trainer:
                     if self.log == True:
                         for loss in loss_list:
                             self.logger.log(loss[0], loss[1], self.total_step, str(self.episode))
-
 
             print("Train | Episode: {}, Reward: {:.2f}, Local_step: {}, Total_step: {},".format(self.episode, self.episode_reward, self.local_step, self.total_step))
 
