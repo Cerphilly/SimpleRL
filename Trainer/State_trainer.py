@@ -79,7 +79,7 @@ class State_trainer:
 
             while not done:
                 if self.render == True:
-                    if self.domain_type == 'gym':
+                    if self.domain_type in {'gym', "atari"} :
                         self.test_env.render()
                     else:
                         cv2.imshow("{}_{}".format(self.algorithm.name, self.test_env.unwrapped.spec.id), self.test_env.render(mode='rgb_array', height=240, width=320))
@@ -134,7 +134,7 @@ class State_trainer:
                         self.logger.save_buffer(buffer=self.algorithm.buffer, step=self.total_step)
 
                 if self.render == True:
-                    if self.domain_type == 'gym':
+                    if self.domain_type in {'gym', "atari"} :
                         self.env.render()
                     else:
                         cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array', height=240, width=320))

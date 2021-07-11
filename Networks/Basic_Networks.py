@@ -7,7 +7,6 @@ class Policy_network(tf.keras.Model):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-
         self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim, ), name='Input')
         self.hidden_layers = []
         for i in range(len(hidden_units)):
@@ -16,11 +15,11 @@ class Policy_network(tf.keras.Model):
 
         self.output_layer = tf.keras.layers.Dense(self.action_dim, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Output')
-
         self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32)))
 
     @tf.function
     def call(self, input, activation = 'tanh'):
+
         z = self.input_layer(input)
         for layer in self.hidden_layers:
             z = layer(z)
