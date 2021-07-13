@@ -6,7 +6,7 @@ import random
 
 from Algorithms.ImageRL.SAC_AE import SACv2_AE
 
-from Trainer.Image_trainer import Image_trainer
+from Trainer.Basic_trainer import Basic_trainer
 from Common.Utils import FrameStack
 
 def hyperparameters():
@@ -117,7 +117,7 @@ def main(args):
     print("Max action:", max_action)
     print("Min action:", min_action)
 
-    trainer = Image_trainer(env, test_env, algorithm, max_action, min_action, args)
+    trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

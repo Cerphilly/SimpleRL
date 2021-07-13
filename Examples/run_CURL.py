@@ -6,7 +6,7 @@ import random
 
 from Algorithms.ImageRL.CURL import CURL_SACv1, CURL_TD3, CURL_SACv2
 
-from Trainer.Image_trainer import Image_trainer
+from Trainer.Basic_trainer import Basic_trainer
 from Common.Utils import FrameStack
 
 def hyperparameters():
@@ -20,7 +20,7 @@ def hyperparameters():
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
     parser.add_argument('--max-step', default=100001, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
-    parser.add_argument('--eval-step', default=10000, type=int, help='Frequency in performance evaluation')
+    parser.add_argument('--eval-step', default=500, type=int, help='Frequency in performance evaluation')
     parser.add_argument('--eval-episode', default=10, type=int, help='Number of episodes to perform evaluation')
     parser.add_argument('--random-seed', default=1234, type=int, help='Random seed setting')
 
@@ -60,7 +60,7 @@ def hyperparameters():
     parser.add_argument('--cpc-lr', default=0.001, type=float)
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
-    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
+    parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
     parser.add_argument('--file', default=True, type=bool, help='when logged, write log')
     parser.add_argument('--numpy', default=True, type=bool, help='when logged, save log in numpy')
@@ -117,7 +117,7 @@ def main(args):
     print("Max action:", max_action)
     print("Min action:", min_action)
 
-    trainer = Image_trainer(env, test_env, algorithm, max_action, min_action, args)
+    trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

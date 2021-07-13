@@ -193,7 +193,7 @@ class Buffer:
         return states, actions, rewards, states_next, dones
 
 
-    def dbc_sample(self, batch_size):
+    def dbc_sample(self, batch_size):#not used anymore
         ids = np.random.choice(len(self.s), batch_size, replace=False)
 
         states = np.asarray([self.s[i] for i in ids])

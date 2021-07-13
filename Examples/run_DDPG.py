@@ -6,7 +6,7 @@ import random
 
 from Algorithms.DDPG import DDPG
 
-from Trainer.State_trainer import State_trainer
+from Trainer.Basic_trainer import Basic_trainer
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Deep Deterministic Policy Gradient(DDPG) example')
@@ -94,7 +94,7 @@ def main(args):
     print("Max action:", max_action)
     print("Min action:", min_action)
 
-    trainer = State_trainer(env, test_env, algorithm, max_action, min_action, args)
+    trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

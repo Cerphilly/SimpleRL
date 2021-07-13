@@ -6,7 +6,7 @@ import random
 
 from Algorithms.REINFORCE import REINFORCE
 
-from Trainer.State_trainer import State_trainer
+from Trainer.Basic_trainer import Basic_trainer
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='REINFORCE example')
@@ -94,7 +94,7 @@ def main(args):
     print("Min action:", min_action)
     print("Discrete: ", args.discrete)
 
-    trainer = State_trainer(env, test_env, algorithm, max_action, min_action, args)
+    trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

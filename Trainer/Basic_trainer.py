@@ -3,7 +3,7 @@ import numpy as np
 
 from Common.Logger import Logger
 
-class State_trainer:
+class Basic_trainer:
     def __init__(self, env, test_env, algorithm, max_action, min_action, args):
         self.domain_type = args.domain_type
         self.env = env
@@ -86,10 +86,6 @@ class State_trainer:
                         cv2.waitKey(1)
 
                 action = self.algorithm.eval_action(observation)
-
-                if self.discrete == False:
-                    action = np.clip(action, -1, 1)
-
                 next_observation, reward, done, _ = self.test_env.step(self.max_action * action)
 
                 eval_reward += reward
@@ -108,7 +104,7 @@ class State_trainer:
 
     def run(self):
         while True:
-            if self.total_step >= self.max_step:
+            if self.total_step > self.max_step:
                 print("Training finished")
                 break
 
@@ -123,16 +119,6 @@ class State_trainer:
                 self.local_step += 1
                 self.total_step += 1
 
-                if self.eval == True and self.total_step % self.eval_step == 0:
-                    self.evaluate()
-
-                if self.log == True:
-                    if self.model == True and self.total_step % self.model_freq == 0:
-                        self.logger.save_model(self.algorithm, step=self.total_step)
-
-                    if self.buffer == True and self.total_step % self.buffer_freq == 0:
-                        self.logger.save_buffer(buffer=self.algorithm.buffer, step=self.total_step)
-
                 if self.render == True:
                     if self.domain_type in {'gym', "atari"} :
                         self.env.render()
@@ -146,7 +132,6 @@ class State_trainer:
 
                 else:
                     action = self.algorithm.get_action(observation)
-
                     next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
                 if self.local_step + 1 == self.env._max_episode_steps:
@@ -160,10 +145,20 @@ class State_trainer:
                 observation = next_observation
 
                 if self.total_step >= self.algorithm.training_start and self.train_mode(done, self.local_step):
-                    loss_list = self.algorithm.train(training_num=self.algorithm.training_step)
+                    loss_list = self.algorithm.train(self.algorithm.training_step)
                     if self.log == True:
                         for loss in loss_list:
                             self.logger.log(loss[0], loss[1], self.total_step, str(self.episode))
+
+                if self.eval == True and self.total_step % self.eval_step == 0:
+                    self.evaluate()
+
+                if self.log == True:
+                    if self.model == True and self.total_step % self.model_freq == 0:
+                        self.logger.save_model(self.algorithm, step=self.total_step)
+
+                    if self.buffer == True and self.total_step % self.buffer_freq == 0:
+                        self.logger.save_buffer(buffer=self.algorithm.buffer, step=self.total_step)
 
             print("Train | Episode: {}, Reward: {:.2f}, Local_step: {}, Total_step: {},".format(self.episode, self.episode_reward, self.local_step, self.total_step))
 

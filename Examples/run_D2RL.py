@@ -6,7 +6,7 @@ import random
 
 from Algorithms.D2RL import D2RL_TD3, D2RL_SAC_v2, D2RL_SAC_v1
 
-from Trainer.State_trainer import State_trainer
+from Trainer.Basic_trainer import Basic_trainer
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='D2RL example')
@@ -113,7 +113,7 @@ def main(args):
     print("Max action:", max_action)
     print("Min action:", min_action)
 
-    trainer = State_trainer(env, test_env, algorithm, max_action, min_action, args)
+    trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ import numpy as np
 
 from Algorithms.Dueling_DQN import Dueling_DQN
 
-from Trainer.State_trainer import State_trainer
+from Trainer.Basic_trainer import Basic_trainer
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Dueling Deep Q Network(Dueling_DQN) example')
@@ -88,7 +88,7 @@ def main(args):
     print("State dim:", state_dim)
     print("Action dim:", action_dim)
 
-    trainer = State_trainer(env, test_env, algorithm, max_action, min_action, args)
+    trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

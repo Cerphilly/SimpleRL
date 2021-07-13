@@ -8,7 +8,7 @@ from gym.wrappers import AtariPreprocessing, FrameStack
 from Algorithms.DQN import DQN
 from Algorithms.ImageRL.DQN import ImageDQN
 
-from Trainer.State_trainer import State_trainer
+from Trainer.Basic_trainer import Basic_trainer
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Deep Q Network(DQN) example')
@@ -128,7 +128,7 @@ def main(args):
     print("State dim:", state_dim)
     print("Action dim:", action_dim)
 
-    trainer = State_trainer(env, test_env, algorithm, max_action, min_action, args)
+    trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

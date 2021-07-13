@@ -1,6 +1,5 @@
 #Playing Atari with Deep Reinforcement Learning, Mnih et al, 2013. Algorithm: DQN.
-#For Atari gaming
-
+#For OpenAI Gym Atari
 
 import tensorflow as tf
 import numpy as np
