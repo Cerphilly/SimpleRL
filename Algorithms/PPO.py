@@ -36,9 +36,9 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         self.training_step = args.training_step
 
         if self.discrete == True:
-            self.actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
+            self.actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim, kernel_initializer='RandomUniform')
         else:
-            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim)
+            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim, kernel_initializer='RandomUniform')
 
         self.critic = V_network(self.state_dim)
 
@@ -46,7 +46,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         self.name = 'PPO'
 
     def get_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
         if self.discrete == True:
             policy = self.actor(state, activation='softmax').numpy()[0]
@@ -58,7 +58,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         return action
 
     def eval_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
         if self.discrete == True:
             policy = self.actor(state, activation='softmax').numpy()[0]
@@ -111,7 +111,6 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                 np.random.shuffle(arr)
 
                 batch_index = arr[:self.batch_size]
-                batch_index.sort()
 
             else:
                 batch_index = arr
@@ -121,6 +120,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             batch_returns = returns[batch_index]
             batch_advantages = advantages[batch_index]
             batch_old_log_policy = old_log_policy.numpy()[batch_index]
+            batch_old_values = old_values.numpy()[batch_index]
 
 
             with tf.GradientTape(persistent=True) as tape:
@@ -159,7 +159,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
                     if self.ppo_mode == 'clip':
                         clipped_surrogate = tf.clip_by_value(ratio, 1-self.clip, 1+self.clip) * batch_advantages
-                        actor_loss = tf.reduce_mean(-tf.minimum(surrogate, clipped_surrogate))
+                        actor_loss = - tf.reduce_mean(tf.minimum(surrogate, clipped_surrogate))
 
                     else:
                         batch_old_mean = old_mean.numpy()[batch_index]
@@ -176,7 +176,13 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                             elif d > self.dtarg * 1.5:
                                 self.beta = self.beta * 2
 
-                critic_loss = 0.5 * tf.reduce_mean(tf.square(batch_returns - self.critic(batch_s)))
+
+                batch_values = self.critic(batch_s)
+                clipped_values = batch_old_values + tf.clip_by_value(batch_values - batch_old_values, -self.clip, self.clip)
+                critic_loss1 = tf.square(clipped_values - batch_returns)
+                critic_loss2 = tf.square(batch_values - batch_returns)
+                critic_loss = 0.5 * tf.reduce_mean(tf.maximum(critic_loss1, critic_loss2))
+                #critic_loss = 0.5 * tf.reduce_mean(tf.square(batch_returns - self.critic(batch_s)))
 
             actor_variables = self.actor.trainable_variables
             critic_variables = self.critic.trainable_variables

@@ -12,8 +12,8 @@ def hyperparameters():
     parser = argparse.ArgumentParser(description='Proximal Policy Gradient(PPO) example')
     #environment
     parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='InvertedPendulum-v2', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
-    parser.add_argument('--discrete', default=False, type=bool, help='whether the environment is discrete or not')
+    parser.add_argument('--env-name', default='Pong-ram-v0', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
+    parser.add_argument('--discrete', default=True, type=bool, help='whether the environment is discrete or not')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=0, type=int, help='First step to start training')
     parser.add_argument('--max-step', default=1000000, type=int, help='Maximum training step')
@@ -24,17 +24,17 @@ def hyperparameters():
     #ppo
     parser.add_argument('--batch-size', default=64, type=int)
     parser.add_argument('--buffer-size', default=1000000, type=int, help='Buffer maximum size')
-    parser.add_argument('--train-mode', default='batch', help='batch')
+    parser.add_argument('--train-mode', default='offline', help='batch')
     parser.add_argument('--ppo-mode', default='clip', help='Clip, Adaptive KL, Fixed KL')
     parser.add_argument('--clip', default=0.2, type=float)
     parser.add_argument('--beta', default=1, type=float)
     parser.add_argument('--dtarg', default=0.01, type=float)
-    parser.add_argument('--training-step', default=50, type=int)
+    parser.add_argument('--training-step', default=20, type=int)
     parser.add_argument('--gamma', default=0.99, type=float)
     parser.add_argument('--lambda-gae', default=0.96, type=float)
     parser.add_argument('--actor-lr', default=0.0003, type=float)
     parser.add_argument('--critic-lr', default=0.0003, type=float)
-    parser.add_argument('--hidden-dim', default=(256, 256), help='hidden dimension of network')
+    parser.add_argument('--hidden-dim', default=(64, 64), help='hidden dimension of network')
 
     parser.add_argument('--cpu-only', default=True, type=bool, help='force to use cpu only')
     parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
@@ -70,7 +70,7 @@ def main(args):
     random.seed(random_seed)
 
     #env setting
-    if len(args.env_name.split('/')) == 1:
+    if args.domain_type == 'gym':
         #openai gym
         env = gym.make(args.env_name)
         env.seed(random_seed)
@@ -79,7 +79,7 @@ def main(args):
         test_env = gym.make(args.env_name)
         test_env.seed(random_seed)
         test_env.action_space.seed(random_seed)
-    else:
+    elif args.domain_type == 'dmc':
         #deepmind control suite
         env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
         test_env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)

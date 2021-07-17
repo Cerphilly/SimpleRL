@@ -37,12 +37,14 @@ class DQN:
         if np.random.random() < self.epsilon:
             return np.random.randint(low=0, high=self.action_dim)
         else:
+
             state = np.expand_dims(np.array(state), axis=0)
             q_value = self.network(state, activation='linear').numpy()
             best_action = np.argmax(q_value, axis=1)[0]
             return best_action
 
     def eval_action(self, state):
+
         state = np.expand_dims(np.array(state), axis=0)
         q_value = self.network(state, activation='linear').numpy()
         best_action = np.argmax(q_value, axis=1)[0]

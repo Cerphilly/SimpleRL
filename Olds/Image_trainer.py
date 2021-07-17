@@ -1,28 +1,32 @@
-import cv2
-import numpy as np
+import dmc2gym
+import tensorflow as tf
+import matplotlib.pyplot as plt
 
+import numpy as np
+import cv2
+
+from Common.Utils import FrameStack
 from Common.Logger import Logger
 
-class Basic_trainer:
+
+class Image_trainer:
     def __init__(self, env, test_env, algorithm, max_action, min_action, args):
-        self.domain_type = args.domain_type
-        self.env_name = args.env_name
         self.env = env
         self.test_env = test_env
 
         self.algorithm = algorithm
+        self.domain_type = args.domain_type
 
         self.max_action = max_action
         self.min_action = min_action
 
-        self.discrete = args.discrete
         self.render = args.render
         self.max_step = args.max_step
+        self.discrete = args.discrete
 
         self.eval = args.eval
         self.eval_episode = args.eval_episode
         self.eval_step = args.eval_step
-
 
         self.episode = 0
         self.episode_reward = 0
@@ -38,7 +42,6 @@ class Basic_trainer:
             self.train_mode = self.online_train
         elif args.train_mode == 'batch':
             self.train_mode = self.batch_train
-
         assert self.train_mode is not None
 
         self.log = args.log
@@ -49,8 +52,7 @@ class Basic_trainer:
         self.buffer_freq = args.buffer_freq
 
         if self.log == True:
-            self.logger = Logger(env, algorithm, args, file=args.file, tensorboard=args.tensorboard, numpy=args.numpy,
-                                 model=args.model, buffer=args.buffer)
+            self.logger = Logger(env, algorithm, args, file=args.file, tensorboard=args.tensorboard, numpy=args.numpy, model=args.model, buffer=args.buffer)
 
     def offline_train(self, d, local_step):
         if d:
@@ -73,23 +75,24 @@ class Basic_trainer:
         while True:
             if episode >= self.eval_episode:
                 break
+
             episode += 1
             eval_reward = 0
             observation = self.test_env.reset()
-            if 'ram' in self.env_name:  # Atari Ram state
-                observation = observation / 255.
-
             done = False
 
             while not done:
                 if self.render == True:
-                    if self.domain_type in {'gym', "atari"} :
+                    if self.domain_type == 'gym':
                         self.test_env.render()
                     else:
                         cv2.imshow("{}_{}".format(self.algorithm.name, self.test_env.unwrapped.spec.id), self.test_env.render(mode='rgb_array', height=240, width=320))
                         cv2.waitKey(1)
 
                 action = self.algorithm.eval_action(observation)
+                if self.discrete == False:
+                    action = np.clip(action, -1, 1)
+
                 next_observation, reward, done, _ = self.test_env.step(self.max_action * action)
 
                 eval_reward += reward
@@ -100,13 +103,13 @@ class Basic_trainer:
         print("Eval  | Average Reward {:.2f}, Max reward: {:.2f}, Min reward: {:.2f}, Stddev reward: {:.2f} ".format(sum(reward_list)/len(reward_list), max(reward_list), min(reward_list), np.std(reward_list)))
 
         if self.log == True:
-            self.logger.log('Reward/Test', sum(reward_list)/len(reward_list), self.eval_num, False)
+            self.logger.log('Reward/Test', sum(reward_list) / len(reward_list), self.eval_num, False)
             self.logger.log('Max Reward/Test', max(reward_list), self.eval_num, False)
             self.logger.log('Min Reward/Test', min(reward_list), self.eval_num, False)
             self.logger.log('Stddev Reward/Test', np.std(reward_list), self.eval_num, True)
 
-
     def run(self):
+
         while True:
             if self.total_step > self.max_step:
                 print("Training finished")
@@ -120,26 +123,27 @@ class Basic_trainer:
             done = False
 
             while not done:
+
                 self.local_step += 1
                 self.total_step += 1
 
                 if self.render == True:
-                    if self.domain_type in {'gym', "atari"} :
+                    if self.domain_type == 'gym':
                         self.env.render()
                     else:
                         cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array', height=240, width=320))
                         cv2.waitKey(1)
 
-                if 'ram' in self.env_name:  # Atari Ram state
-                    observation = observation / 255.
-
-                #observation += np.random.normal(scale=0.05, size=5)
                 if self.total_step <= self.algorithm.training_start:
                    action = self.env.action_space.sample()
                    next_observation, reward, done, _ = self.env.step(action)
 
                 else:
                     action = self.algorithm.get_action(observation)
+
+                    if self.discrete == False:
+                        action = np.clip(action, -1, 1)
+
                     next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
                 if self.local_step + 1 == self.env._max_episode_steps:
@@ -154,6 +158,7 @@ class Basic_trainer:
 
                 if self.total_step >= self.algorithm.training_start and self.train_mode(done, self.local_step):
                     loss_list = self.algorithm.train(self.algorithm.training_step)
+
                     if self.log == True:
                         for loss in loss_list:
                             self.logger.log(loss[0], loss[1], self.total_step, str(self.episode))
@@ -168,7 +173,8 @@ class Basic_trainer:
                     if self.buffer == True and self.total_step % self.buffer_freq == 0:
                         self.logger.save_buffer(buffer=self.algorithm.buffer, step=self.total_step)
 
-            print("Train | Episode: {}, Reward: {:.2f}, Local_step: {}, Total_step: {},".format(self.episode, self.episode_reward, self.local_step, self.total_step))
+
+            print("Train | Episode: {}, Reward: {:.2f}, Local_step: {}, Total_step: {}".format(self.episode, self.episode_reward, self.local_step, self.total_step))
 
             if self.log == True:
                 self.logger.log('Reward/Train', self.episode_reward, self.episode, False)
@@ -176,6 +182,42 @@ class Basic_trainer:
                 self.logger.log('Total Step/Train', self.total_step, self.episode, True)
 
 
+# def main(cpu_only = False, force_gpu = True):
+#     #device setting
+#     #################################################################################
+#     if cpu_only == True:
+#         cpu = tf.config.experimental.list_physical_devices(device_type='CPU')
+#         tf.config.experimental.set_visible_devices(devices=cpu, device_type='CPU')
+#
+#     if force_gpu == True:
+#         gpu = tf.config.experimental.list_physical_devices('GPU')
+#         tf.config.experimental.set_memory_growth(gpu[0], True)
+#
+#     FRAME_STACK = 3
+#     IMAGE_SIZE = 84
+#     PRE_IMAGE_SIZE = 100
+#
+#     env = dmc2gym.make(domain_name="cartpole", task_name='swingup', seed=np.random.randint(1, 9999), visualize_reward=False, from_pixels=True,
+#                        height=PRE_IMAGE_SIZE, width=PRE_IMAGE_SIZE, frame_skip=8)#Pre image size for curl, image size for dbc
+#     env = FrameStack(env, k=FRAME_STACK)
+#
+#     obs_shape = (3 * FRAME_STACK, IMAGE_SIZE, IMAGE_SIZE)
+#     pre_aug_obs_shape = (3 * FRAME_STACK, PRE_IMAGE_SIZE, PRE_IMAGE_SIZE)
+#     action_shape = env.action_space.shape[0]
+#     max_action = env.action_space.high[0]
+#     min_action = env.action_space.low[0]
+#
+#     # #algorithm = CURL_SACv1(obs_shape, action_shape)#frame_skip: 8, image_size: 100
+#     # algorithm = CURL_SACv2(obs_shape, action_shape)#frame_skip: 8, image_size: 100
+#     # #algorithm = CURL_TD3(obs_shape, action_shape)#frame_skip: 8, image_size: 100
+#     #
+#     #
+#     # trainer = Image_trainer(env=env, algorithm=algorithm, max_action=max_action, min_action=min_action, train_mode='online', render=False)
+#     # trainer.run()
+#
+#
+# if __name__ == '__main__':
+#     main()
 
 
 

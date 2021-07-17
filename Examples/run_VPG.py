@@ -64,7 +64,7 @@ def main(args):
     random.seed(random_seed)
 
     #env setting
-    if len(args.env_name.split('/')) == 1:
+    if args.domain_type == 'gym':
         #openai gym
         env = gym.make(args.env_name)
         env.seed(random_seed)

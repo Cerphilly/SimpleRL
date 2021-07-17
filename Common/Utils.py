@@ -1,6 +1,7 @@
 import numpy as np
 import gym, dmc2gym
 import tensorflow as tf
+import random
 
 from collections import deque
 from skimage.util.shape import view_as_windows
@@ -23,6 +24,24 @@ def soft_update(network, target_network, tau):
     for v1, v2 in zip(variable1, variable2):
         update = (1-tau)*v2 + tau*v1
         v2.assign(update)
+
+
+def cpu_only():
+    cpu = tf.config.experimental.list_physical_devices(device_type='CPU')
+    tf.config.experimental.set_visible_devices(devices=cpu, device_type='CPU')
+    tf.config.set_visible_devices([], 'GPU')
+
+def set_seed(random_seed):
+    if random_seed <= 0:
+        random_seed = np.random.randint(1, 9999)
+    else:
+        random_seed = random_seed
+
+    tf.random.set_seed(random_seed)
+    np.random.seed(random_seed)
+
+    random.seed(random_seed)
+
 
 def preprocess_obs(obs, bits=5):
     """Preprocessing image, see https://arxiv.org/abs/1807.03039."""

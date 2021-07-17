@@ -13,8 +13,8 @@ from Trainer.Basic_trainer import Basic_trainer
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Deep Q Network(DQN) example')
     #environment
-    parser.add_argument('--domain_type', default='atari', type=str, help='gym or dmc or atari')
-    parser.add_argument('--env-name', default='PongNoFrameskip-v4', help='CartPole-v0, MountainCar-v0, Acrobot-v1, and atari games(not yet)')
+    parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc or atari')
+    parser.add_argument('--env-name', default='Pong-ram-v4', help='CartPole-v0, MountainCar-v0, Acrobot-v1, and atari games(not yet)')
     parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--discrete', default=True, type=bool, help='Always discrete')
 
@@ -44,7 +44,7 @@ def hyperparameters():
     parser.add_argument('--feature-dim', default=50, type=int)
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
-    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
+    parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
     parser.add_argument('--file', default=False, type=bool, help='when logged, write log')
     parser.add_argument('--numpy', default=False, type=bool, help='when logged, save log in numpy')
@@ -73,6 +73,7 @@ def main(args):
     tf.random.set_seed(random_seed)
     np.random.seed(random_seed)
     random.seed(random_seed)
+
     #env setting
     if args.domain_type == 'gym':
         #openai gym

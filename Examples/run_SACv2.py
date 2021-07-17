@@ -12,17 +12,17 @@ def hyperparameters():
     parser = argparse.ArgumentParser(description='Soft Actor Critic (SAC) v2 example')
     #environment
     parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='cartpole/balance', help='Pendulum-v0, MountainCarContinuous-v0')
+    parser.add_argument('--env-name', default='cartpole/swingup', help='Pendulum-v0, MountainCarContinuous-v0')
     parser.add_argument('--discrete', default=False, type=bool, help='Always Continuous')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
-    parser.add_argument('--max-step', default=1000000, type=int, help='Maximum training step')
+    parser.add_argument('--max-step', default=100001, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
     parser.add_argument('--eval-step', default=10000, type=int, help='Frequency in performance evaluation')
     parser.add_argument('--eval-episode', default=10, type=int, help='Number of episodes to perform evaluation')
     parser.add_argument('--random-seed', default=-1, type=int, help='Random seed setting')
     #sac
-    parser.add_argument('--batch-size', default=512, type=int, help='Mini-batch size')
+    parser.add_argument('--batch-size', default=256, type=int, help='Mini-batch size')
     parser.add_argument('--buffer-size', default=1000000, type=int, help='Buffer maximum size')
     parser.add_argument('--train-mode', default='online', help='offline, online')
     parser.add_argument('--training-step', default=1, type=int)
@@ -40,7 +40,7 @@ def hyperparameters():
 
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
-    parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
+    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
     parser.add_argument('--file', default=False, type=bool, help='when logged, write log')
     parser.add_argument('--numpy', default=False, type=bool, help='when logged, save log in numpy')
@@ -70,7 +70,7 @@ def main(args):
     random.seed(random_seed)
 
     #env setting
-    if len(args.env_name.split('/')) == 1:
+    if args.domain_type == 'gym':
         #openai gym
         env = gym.make(args.env_name)
         env.seed(random_seed)
