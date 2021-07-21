@@ -30,20 +30,22 @@ class Gaussian_Actor(tf.keras.Model):
             z = layer(z)
 
         output = self.output_layer(z)
-        output = tf.nn.tanh(output)
 
         mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
-        std =  tf.exp(tf.clip_by_value(log_std, self.log_std_min, self.log_std_max))
-        #std = 0.5 * tf.ones_like(mean)
+        mean = tf.nn.tanh(mean)
+        std = tf.nn.softplus(log_std) + 1e-3
+        #std = tf.exp(tf.clip_by_value(log_std, self.log_std_min, self.log_std_max))
 
         dist = tfp.distributions.Normal(loc=mean, scale=std, validate_args=True, allow_nan_stats=False)
 
         if deterministic == True:
-            return mean
+            log_prob = dist.log_prob(mean)
+            return mean, log_prob
 
         else:
             action = dist.sample()
-            return action
+            log_prob = dist.log_prob(action)
+            return action, log_prob
 
     def dist(self, input):
         z = self.input_layer(input)
@@ -51,12 +53,11 @@ class Gaussian_Actor(tf.keras.Model):
             z = layer(z)
 
         output = self.output_layer(z)
-        output = tf.nn.tanh(output)
 
         mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
-
-        std = tf.exp(tf.clip_by_value(log_std, self.log_std_min, self.log_std_max))
-        #std = 0.5 * tf.ones_like(mean)
+        mean = tf.nn.tanh(mean)
+        std = tf.nn.softplus(log_std) + 1e-3
+        #std = tf.exp(tf.clip_by_value(log_std, self.log_std_min, self.log_std_max))
 
         dist = tfp.distributions.Normal(loc=mean, scale=std, validate_args=True, allow_nan_stats=False)
 
@@ -68,12 +69,12 @@ class Gaussian_Actor(tf.keras.Model):
             z = layer(z)
 
         output = self.output_layer(z)
-        output = tf.nn.tanh(output)
 
         mean, log_std = output[:, :self.action_dim], output[:, self.action_dim:]
-
-        std = tf.exp(tf.clip_by_value(log_std, self.log_std_min, self.log_std_max))
+        mean = tf.nn.tanh(mean)
+        std = tf.nn.softplus(log_std) + 1e-3
         #std = 0.5 * tf.ones_like(mean)
+        #std = tf.exp(tf.clip_by_value(log_std, self.log_std_min, self.log_std_max))
 
 
         return mean, std

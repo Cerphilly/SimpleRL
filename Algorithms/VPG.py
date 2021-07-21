@@ -3,9 +3,10 @@
 #https://spinningup.openai.com/en/latest/algorithms/vpg.html
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 import numpy as np
 
-from Common.Buffer import Buffer
+from Common.Buffer import On_Policy_Buffer
 from Networks.Basic_Networks import Policy_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
@@ -14,7 +15,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
 
         self.discrete = args.discrete
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = On_Policy_Buffer(args.buffer_size)
 
         self.gamma = args.gamma
         self.lambda_gae = args.lambda_gae
@@ -26,7 +27,6 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         self.action_dim = action_dim
         self.training_start = 0
         self.training_step = 1
-
 
         if self.discrete == True:
             self.actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
@@ -43,22 +43,31 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         state = np.expand_dims(np.array(state), axis=0)
 
         if self.discrete == True:
-            policy = self.actor(state, activation='softmax').numpy()[0]
-            action = np.random.choice(self.action_dim, 1, p=policy)[0]
-        else:
-            action = self.actor(state).numpy()[0]
+            policy = self.actor(state, activation='softmax').numpy()
+            dist = tfp.distributions.Categorical(probs=policy)
+            action = dist.sample().numpy()
+            log_prob = dist.log_prob(action).numpy()
+            action = action[0]
 
-        return action
+        else:
+            action, log_prob = self.actor(state)
+            action = action.numpy()[0]
+            log_prob = log_prob.numpy()[0]
+
+        return action, log_prob
+
 
     def eval_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
         if self.discrete == True:
-            policy = self.actor(state, activation='softmax').numpy()[0]
-            action = np.argmax(policy)
+            policy = self.actor(state, activation='softmax')
+            dist = tfp.distributions.Categorical(probs=policy)
+            action = dist.sample().numpy()[0]
 
         else:
-            action = self.actor(state, deterministic=True).numpy()[0]
+            action, _ = self.actor(state, deterministic=True)
+            action = action.numpy()[0]
 
         return action
 
@@ -66,7 +75,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         total_a_loss = 0
         total_c_loss = 0
 
-        s, a, r, ns, d = self.buffer.all_sample()
+        s, a, r, ns, d, _ = self.buffer.all_sample()
         values = self.critic(s)
 
         returns = np.zeros_like(r.numpy())
@@ -88,12 +97,12 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         with tf.GradientTape(persistent=True) as tape:
             if self.discrete == True:
                 policy = self.actor(s, activation='softmax')
-                a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
-                log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
+                dist = tfp.distributions.Categorical(probs=policy)
+                log_policy = tf.reshape(dist.log_prob(tf.squeeze(a)), (-1, 1))
+
             else:
                 dist = self.actor.dist(s)
                 log_policy = dist.log_prob(a)
-                log_policy = tf.expand_dims(log_policy, axis=1)
 
             actor_loss = -tf.reduce_sum(log_policy * tf.stop_gradient(advantages))
             critic_loss = 0.5 * tf.reduce_mean(tf.square(tf.stop_gradient(returns) - self.critic(s)))

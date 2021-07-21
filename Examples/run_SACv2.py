@@ -11,10 +11,10 @@ from Trainer.Basic_trainer import Basic_trainer
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Soft Actor Critic (SAC) v2 example')
     #environment
-    parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='cartpole/swingup', help='Pendulum-v0, MountainCarContinuous-v0')
+    parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc')
+    parser.add_argument('--env-name', default='InvertedDoublePendulum-v2', help='Pendulum-v0, MountainCarContinuous-v0')
     parser.add_argument('--discrete', default=False, type=bool, help='Always Continuous')
-    parser.add_argument('--render', default=False, type=bool)
+    parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
     parser.add_argument('--max-step', default=100001, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
@@ -40,7 +40,7 @@ def hyperparameters():
 
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
-    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
+    parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
     parser.add_argument('--file', default=False, type=bool, help='when logged, write log')
     parser.add_argument('--numpy', default=False, type=bool, help='when logged, save log in numpy')

@@ -3,7 +3,6 @@ import tensorflow as tf
 import os
 
 from Common.Utils import random_crop, center_crop_images
-from Common import Data_Augmentation as rad
 
 class Buffer:
     def __init__(self, max_size=1e6):#1000000: save the last 1000 episode at most
@@ -226,11 +225,66 @@ class Buffer:
         return (states, actions, rewards, states_next, dones), (states2, actions2, rewards2, states_next2, dones2)
 
 
+class On_Policy_Buffer:
+    def __init__(self, max_size=1e6):#1000000: save the last 1000 episode at most
+        self.max_size = max_size
+        self.s = []
+        self.a = []
+        self.r = []
+        self.ns = []
+        self.d = []
+        self.log_prob = []
+
+    def check(self, element):
+
+        element = np.asarray(element)
+        if element.ndim == 0:
+            return np.expand_dims(element, axis=0)
+        else:
+            return element
+
+    def add(self, s, a, r, ns, d, log_prob):
+
+        self.s.append(self.check(s))
+        self.a.append(self.check(a))
+        self.r.append(self.check(r))
+        self.ns.append(self.check(ns))
+        self.d.append(self.check(d))
+        self.log_prob.append(self.check(log_prob))
+
+        if len(self.s)>=self.max_size:
+            del self.s[0]
+            del self.a[0]
+            del self.r[0]
+            del self.ns[0]
+            del self.d[0]
+            del self.log_prob[0]
+
+    def delete(self):
+        self.s = []
+        self.a = []
+        self.r = []
+        self.ns = []
+        self.d = []
+        self.log_prob = []
 
 
+    def all_sample(self):
+        states = np.array(self.s)
+        actions = np.array(self.a)
+        rewards = np.array(self.r)
+        states_next = np.array(self.ns)
+        dones = np.array(self.d)
+        log_probs = np.array(self.log_prob)
 
+        states = tf.convert_to_tensor(states, tf.float32)
+        actions = tf.convert_to_tensor(actions, tf.float32)
+        rewards = tf.convert_to_tensor(rewards, tf.float32)
+        states_next = tf.convert_to_tensor(states_next, tf.float32)
+        dones = tf.convert_to_tensor(dones, tf.float32)
+        log_probs = tf.convert_to_tensor(log_probs, tf.float32)
 
-
+        return states, actions, rewards, states_next, dones, log_probs
 
 
 

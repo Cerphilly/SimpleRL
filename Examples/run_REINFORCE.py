@@ -6,17 +6,17 @@ import random
 
 from Algorithms.REINFORCE import REINFORCE
 
-from Trainer.Basic_trainer import Basic_trainer
+from Trainer.On_policy_trainer import On_policy_trainer
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='REINFORCE example')
     #environment
     parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='InvertedPendulum-v2', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
+    parser.add_argument('--env-name', default='Pendulum-v0', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
     parser.add_argument('--discrete', default=False, type=bool, help='whether the environment is discrete or not')
-    parser.add_argument('--render', default=False, type=bool)
+    parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--max-step', default=1000000, type=int, help='Maximum training step')
-    parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
+    parser.add_argument('--eval', default=False, type=bool, help='whether to perform evaluation')
     parser.add_argument('--eval-step', default=200, type=int, help='Frequency in performance evaluation')
     parser.add_argument('--eval-episode', default=1, type=int, help='Number of episodes to perform evaluation')
     parser.add_argument('--random-seed', default=-1, type=int, help='Random seed setting')
@@ -94,7 +94,7 @@ def main(args):
     print("Min action:", min_action)
     print("Discrete: ", args.discrete)
 
-    trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
+    trainer = On_policy_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

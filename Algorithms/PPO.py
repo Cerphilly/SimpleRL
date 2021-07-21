@@ -6,7 +6,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
 
-from Common.Buffer import Buffer
+from Common.Buffer import On_Policy_Buffer
 from Networks.Basic_Networks import Policy_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
@@ -15,17 +15,16 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
         self.discrete = args.discrete
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = On_Policy_Buffer(args.buffer_size)
 
-        self.ppo_mode = args.ppo_mode #mode: 'clip', 'Adaptive KL', 'Fixed KL'
-        assert self.ppo_mode is 'clip' or 'Adaptive KL' or 'Fixed KL'
+        self.ppo_mode = args.ppo_mode #mode: 'clip'
+        assert self.ppo_mode is 'clip'
 
         self.gamma = args.gamma
         self.lambda_gae = args.lambda_gae
         self.batch_size = args.batch_size
         self.clip = args.clip
-        self.beta = args.beta
-        self.dtarg = args.dtarg
+
 
         self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
         self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
@@ -49,23 +48,31 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
         if self.discrete == True:
-            policy = self.actor(state, activation='softmax').numpy()[0]
-            action = np.random.choice(self.action_dim, 1, p=policy)[0]
+            policy = self.actor(state, activation='softmax')
+            dist = tfp.distributions.Categorical(probs=policy)
+            action = dist.sample().numpy()
+            log_prob = dist.log_prob(action).numpy()
+            action = action[0]
 
         else:
-            action = self.actor(state).numpy()[0]
+            action, log_prob = self.actor(state)
+            action = action.numpy()[0]
+            log_prob = log_prob.numpy()[0]
 
-        return action
+
+        return action, log_prob
 
     def eval_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
         if self.discrete == True:
-            policy = self.actor(state, activation='softmax').numpy()[0]
-            action = np.argmax(policy)
+            policy = self.actor(state, activation='softmax')
+            dist = tfp.distributions.Categorical(probs=policy)
+            action = dist.sample().numpy()[0]
 
         else:
-            action = self.actor(state, deterministic=True).numpy()[0]
+            action, _ = self.actor(state, deterministic=True)
+            action = action.numpy()[0]
 
         return action
 
@@ -73,7 +80,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         total_a_loss = 0
         total_c_loss = 0
 
-        s, a, r, ns, d = self.buffer.all_sample()
+        s, a, r, ns, d, log_prob = self.buffer.all_sample()
         old_values = self.critic(s)
 
         returns = np.zeros_like(r.numpy())
@@ -82,6 +89,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         running_return = np.zeros(1)
         previous_value = np.zeros(1)
         running_advantage = np.zeros(1)
+
         #GAE
         for t in reversed(range(len(r))):
             running_return = (r[t] + self.gamma * running_return * (1 - d[t])).numpy()
@@ -92,113 +100,74 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             previous_value = old_values[t]
             advantages[t] = running_advantage
 
-        if self.discrete == True:
-            old_policy = self.actor(s, activation = 'softmax')
-            old_a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
-            old_log_policy = tf.reduce_sum(tf.math.log(old_policy) * tf.stop_gradient(old_a_one_hot), axis=1, keepdims=True)
+        advantages = (advantages - advantages.mean()) / (advantages.std())
 
-        else:
-            old_mean, old_std = self.actor.mu_sigma(s)
-            old_dist = self.actor.dist(s)
-            old_log_policy = old_dist.log_prob(a)
 
         n = len(s)
         arr = np.arange(n)
-
-        for epoch in range(training_num):
-
-            if n // self.batch_size > 0:#for offline training
-                np.random.shuffle(arr)
-
-                batch_index = arr[:self.batch_size]
-
-            else:
-                batch_index = arr
-
-            batch_s = s.numpy()[batch_index]
-            batch_a = a.numpy()[batch_index]
-            batch_returns = returns[batch_index]
-            batch_advantages = advantages[batch_index]
-            batch_old_log_policy = old_log_policy.numpy()[batch_index]
-            batch_old_values = old_values.numpy()[batch_index]
-
-
-            with tf.GradientTape(persistent=True) as tape:
-                if self.discrete == True:
-
-                    batch_old_policy = old_policy.numpy()[batch_index]
-                    policy = self.actor(batch_s, activation='softmax')
-                    a_one_hot = tf.squeeze(tf.one_hot(tf.cast(batch_a, tf.int32), depth=self.action_dim), axis=1)
-                    log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
-
-                    ratio = tf.exp(log_policy - batch_old_log_policy)
-                    surrogate = ratio * batch_advantages
-
-                    if self.ppo_mode == 'clip':
-                        clipped_surrogate = tf.clip_by_value(ratio, 1 - self.clip, 1 + self.clip) * batch_advantages
-                        actor_loss = tf.reduce_mean(-tf.minimum(surrogate, clipped_surrogate))
-
-                    else:
-                        kl_divergence = tfp.distributions.kl_divergence(tfp.distributions.Categorical(probs=policy), tfp.distributions.Categorical(probs=batch_old_policy)).numpy()
-                        kl_divergence = np.reshape(kl_divergence, [-1, 1])
-                        actor_loss = -tf.reduce_mean(surrogate - self.beta*kl_divergence)
-
-                        if self.ppo_mode == 'Adaptive KL':
-                            d = np.mean(kl_divergence)
-                            if d < self.dtarg/1.5:
-                                self.beta = self.beta/2
-                            elif d > self.dtarg*1.5:
-                                self.beta = self.beta * 2
+        training_num2 = max(int(n / self.batch_size), 1)#200/32 = 6
+        for i in range(training_num):
+            for epoch in range(training_num2):#0, 1, 2, 3, 4, 5
+                if epoch < training_num2 - 1:#5
+                    batch_index = arr[self.batch_size * epoch : self.batch_size * (epoch + 1)]
 
                 else:
-                    dist = self.actor.dist(batch_s)
-                    log_policy = dist.log_prob(batch_a)
+                    batch_index = arr[self.batch_size * epoch: ]
 
-                    ratio = tf.exp(log_policy - batch_old_log_policy)
-                    surrogate = ratio * batch_advantages
+                batch_s = s.numpy()[batch_index]
+                batch_a = a.numpy()[batch_index]
+                batch_returns = returns[batch_index]
+                batch_advantages = advantages[batch_index]
+                batch_old_log_policy = log_prob.numpy()[batch_index]
 
-                    if self.ppo_mode == 'clip':
-                        clipped_surrogate = tf.clip_by_value(ratio, 1-self.clip, 1+self.clip) * batch_advantages
-                        actor_loss = - tf.reduce_mean(tf.minimum(surrogate, clipped_surrogate))
+                with tf.GradientTape(persistent=True) as tape:
+
+                    if self.discrete == True:
+                        policy = self.actor(batch_s, activation='softmax')
+                        dist = tfp.distributions.Categorical(probs=policy)
+                        log_policy = tf.reshape(dist.log_prob(tf.squeeze(batch_a)), (-1, 1))
+
+                        ratio = tf.exp(log_policy - batch_old_log_policy)
+                        surrogate = ratio * batch_advantages
+
+                        if self.ppo_mode == 'clip':
+                            clipped_surrogate = tf.clip_by_value(ratio, 1 - self.clip, 1 + self.clip) * batch_advantages
+                            actor_loss = tf.reduce_mean(-tf.minimum(surrogate, clipped_surrogate))
+
+                        else:
+                            raise NotImplementedError
 
                     else:
-                        batch_old_mean = old_mean.numpy()[batch_index]
-                        batch_old_std = old_std.numpy()[batch_index]
-                        batch_old_dist = tfp.distributions.Normal(loc=batch_old_mean, scale=batch_old_std)
-                        kl_divergence = tfp.distributions.kl_divergence(dist, batch_old_dist).numpy()
+                        dist = self.actor.dist(batch_s)
+                        log_policy = dist.log_prob(batch_a)
 
-                        actor_loss = -tf.reduce_mean(surrogate - self.beta*kl_divergence)
+                        ratio = tf.exp(log_policy - batch_old_log_policy)
+                        surrogate = ratio * batch_advantages
+                        if self.ppo_mode == 'clip':
+                            clipped_surrogate = tf.clip_by_value(ratio, 1-self.clip, 1+self.clip) * batch_advantages
 
-                        if self.ppo_mode == 'Adaptive KL':
-                            d = np.mean(kl_divergence)
-                            if d < self.dtarg / 1.5:
-                                self.beta = self.beta / 2
-                            elif d > self.dtarg * 1.5:
-                                self.beta = self.beta * 2
+                            actor_loss = - tf.reduce_mean(tf.minimum(surrogate, clipped_surrogate))
 
+                        else:
+                            raise NotImplementedError
 
-                batch_values = self.critic(batch_s)
-                clipped_values = batch_old_values + tf.clip_by_value(batch_values - batch_old_values, -self.clip, self.clip)
-                critic_loss1 = tf.square(clipped_values - batch_returns)
-                critic_loss2 = tf.square(batch_values - batch_returns)
-                critic_loss = 0.5 * tf.reduce_mean(tf.maximum(critic_loss1, critic_loss2))
-                #critic_loss = 0.5 * tf.reduce_mean(tf.square(batch_returns - self.critic(batch_s)))
+                    critic_loss = 0.5 * tf.reduce_mean(tf.square(batch_returns - self.critic(batch_s)))
 
-            actor_variables = self.actor.trainable_variables
-            critic_variables = self.critic.trainable_variables
+                actor_variables = self.actor.trainable_variables
+                critic_variables = self.critic.trainable_variables
 
-            actor_gradients = tape.gradient(actor_loss, actor_variables)
-            critic_gradients = tape.gradient(critic_loss, critic_variables)
+                actor_gradients = tape.gradient(actor_loss, actor_variables)
+                critic_gradients = tape.gradient(critic_loss, critic_variables)
 
-            self.actor_optimizer.apply_gradients(zip(actor_gradients, actor_variables))
-            self.critic_optimizer.apply_gradients(zip(critic_gradients, critic_variables))
+                self.actor_optimizer.apply_gradients(zip(actor_gradients, actor_variables))
+                self.critic_optimizer.apply_gradients(zip(critic_gradients, critic_variables))
 
-            del tape
+                del tape
 
-            total_a_loss += actor_loss.numpy()
-            total_c_loss += critic_loss.numpy()
+                total_a_loss += actor_loss.numpy()
+                total_c_loss += critic_loss.numpy()
 
         self.buffer.delete()
-        return [['Loss/Actor', total_a_loss], ['Loss/Critic', total_c_loss]]
+        return [['Loss/Actor', total_a_loss], ['Loss/Critic', total_c_loss], ['Entropy/Actor', tf.reduce_mean(dist.entropy()).numpy()]]
 
 

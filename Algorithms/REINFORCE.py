@@ -1,9 +1,10 @@
 #Simple statistical gradient-following algorithms for connectionist reinforcement learning, Ronald J. Williams, 1992
 
 import tensorflow as tf
+import tensorflow_probability as tfp
 import numpy as np
 
-from Common.Buffer import Buffer
+from Common.Buffer import On_Policy_Buffer
 from Networks.Basic_Networks import Policy_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
@@ -11,7 +12,7 @@ from Networks.Gaussian_Actor import Gaussian_Actor
 class REINFORCE:
     def __init__(self, state_dim, action_dim, args):
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = On_Policy_Buffer(args.buffer_size)
 
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -37,29 +38,36 @@ class REINFORCE:
         state = np.expand_dims(np.array(state), axis=0)
 
         if self.discrete == True:
-            policy = self.network(state, activation='softmax').numpy()[0]
-            action = np.random.choice(self.action_dim, 1, p=policy)[0]
+            policy = self.network(state, activation='softmax')
+            dist = tfp.distributions.Categorical(probs=policy)
+            action = dist.sample().numpy()
+            log_prob = dist.log_prob(action).numpy()
+            action = action[0]
             
         else:
-            action = self.network(state).numpy()[0]
+            action, log_prob = self.network(state)
+            action = action.numpy()[0]
+            log_prob = log_prob.numpy()[0]
 
-        return action
+        return action, log_prob
 
     def eval_action(self, state):
         state = np.expand_dims(np.array(state), axis=0)
 
         if self.discrete == True:
-            policy = self.network(state, activation='softmax').numpy()[0]
-            action = np.argmax(policy)
+            policy = self.network(state, activation='softmax')
+            dist = tfp.distributions.Categorical(probs=policy)
+            action = dist.sample().numpy()[0]
 
         else:
-            action = self.network(state, deterministic=True).numpy()[0]
+            action, _ = self.network(state, deterministic=True)
+            action = action.numpy()[0]
 
         return action
 
     def train(self, training_num):
         total_loss = 0
-        s, a, r, ns, d = self.buffer.all_sample()
+        s, a, r, ns, d, _ = self.buffer.all_sample()
         returns = np.zeros_like(r.numpy())
 
         running_return = 0
@@ -71,15 +79,14 @@ class REINFORCE:
         with tf.GradientTape() as tape:
             if self.discrete == True:
                 policy = self.network(s, activation='softmax')
-                a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
-                log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
+                dist = tfp.distributions.Categorical(probs=policy)
+                log_policy = tf.reshape(dist.log_prob(tf.squeeze(a)), (-1, 1))
+
             else:
                 dist = self.network.dist(s)
                 log_policy = dist.log_prob(a)
-                log_policy = tf.expand_dims(log_policy, axis=1)
 
             loss = tf.reduce_sum(-log_policy*returns)
-
 
         variables = self.network.trainable_variables
         gradients = tape.gradient(loss, variables)

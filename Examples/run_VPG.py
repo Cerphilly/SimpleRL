@@ -6,13 +6,13 @@ import random
 
 from Algorithms.VPG import VPG
 
-from Trainer.Basic_trainer import Basic_trainer
+from Trainer.On_policy_trainer import On_policy_trainer
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Vanilla Policy Gradient(VPG) example')
     #environment
     parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='InvertedDoublePendulum-v2', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
+    parser.add_argument('--env-name', default='InvertedPendulum-v2', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
     parser.add_argument('--discrete', default=False, type=bool, help='whether the environment is discrete or not')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=0, type=int, help='First step to start training')
@@ -99,7 +99,7 @@ def main(args):
     print("Min action:", min_action)
     print("Discrete: ", args.discrete)
 
-    trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
+    trainer = On_policy_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':
