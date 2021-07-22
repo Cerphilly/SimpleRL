@@ -7,7 +7,7 @@ import os
 
 from Algorithms.TRPO import TRPO
 
-from Trainer.Basic_trainer import Basic_trainer
+from Trainer.On_policy_trainer import On_policy_trainer
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Trusted Region Policy Optimization(TRPO) example')
@@ -25,11 +25,11 @@ def hyperparameters():
     #ppo
     parser.add_argument('--batch-size', default=64, type=int)
     parser.add_argument('--buffer-size', default=1000000, type=int, help='Buffer maximum size')
-    parser.add_argument('--train-mode', default='batch', help='batch')
+    parser.add_argument('--train-mode', default='offline', help='offline')
     parser.add_argument('--backtrack-iter', default=10, type=int)
     parser.add_argument('--backtrack-coeff', default=0.8, type=float)
     parser.add_argument('--delta', default=0.5, type=float)
-    parser.add_argument('--training-step', default=10, type=int, help='critic learning epoch')
+    parser.add_argument('--training-step', default=5, type=int, help='critic learning epoch')
     parser.add_argument('--gamma', default=0.99, type=float)
     parser.add_argument('--lambda-gae', default=0.95, type=float)
     parser.add_argument('--actor-lr', default=0.0003, type=float)
@@ -103,7 +103,7 @@ def main(args):
     print("Min action:", min_action)
     print("Discrete: ", args.discrete)
 
-    trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
+    trainer = On_policy_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

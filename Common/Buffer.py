@@ -29,7 +29,7 @@ class Buffer:
         self.ns.append(self.check(ns))
         self.d.append(self.check(d))
 
-        if len(self.s)>=self.max_size:
+        if len(self.s) > self.max_size:
             del self.s[0]
             del self.a[0]
             del self.r[0]
@@ -37,6 +37,7 @@ class Buffer:
             del self.d[0]
 
     def delete(self):
+        del self.s, self.a, self.r, self.ns, self.d
 
         self.s = []
         self.a = []
@@ -252,7 +253,7 @@ class On_Policy_Buffer:
         self.d.append(self.check(d))
         self.log_prob.append(self.check(log_prob))
 
-        if len(self.s)>=self.max_size:
+        if len(self.s) > self.max_size:
             del self.s[0]
             del self.a[0]
             del self.r[0]
@@ -261,6 +262,8 @@ class On_Policy_Buffer:
             del self.log_prob[0]
 
     def delete(self):
+        del self.s, self.a, self.r, self.ns, self.d, self.log_prob
+
         self.s = []
         self.a = []
         self.r = []

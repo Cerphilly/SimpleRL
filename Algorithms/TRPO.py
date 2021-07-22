@@ -7,7 +7,7 @@ import tensorflow_probability as tfp
 import numpy as np
 import copy
 
-from Common.Buffer import Buffer
+from Common.Buffer import On_Policy_Buffer
 from Networks.Basic_Networks import Policy_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
@@ -16,7 +16,7 @@ class TRPO:
 
         self.discrete = args.discrete
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = On_Policy_Buffer(args.buffer_size)
 
         self.gamma = args.gamma
         self.lambda_gae = args.lambda_gae
@@ -46,26 +46,32 @@ class TRPO:
         self.name = 'TRPO'
 
     def get_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
         if self.discrete == True:
-            policy = self.actor(state, activation='softmax').numpy()[0]
-            action = np.random.choice(self.action_dim, 1, p=policy)[0]
-
+            policy = self.actor(state, activation='softmax')
+            dist = tfp.distributions.Categorical(probs=policy)
+            action = dist.sample().numpy()
+            log_prob = dist.log_prob(action).numpy()
+            action = action[0]
         else:
-            action = self.actor(state).numpy()[0]
+            action, log_prob = self.actor(state)
+            action = action.numpy()[0]
+            log_prob = log_prob.numpy()[0]
 
-        return action
+        return action, log_prob
 
     def eval_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
         if self.discrete == True:
-            policy = self.actor(state, activation='softmax').numpy()[0]
-            action = np.argmax(policy)
+            policy = self.actor(state, activation='softmax')
+            dist = tfp.distributions.Categorical(probs=policy)
+            action = dist.sample().numpy()[0]
 
         else:
-            action = self.actor(state, deterministic=True).numpy()[0]
+            action, _ = self.actor(state, deterministic=True)
+            action = action.numpy()[0]
 
         return action
 
@@ -124,7 +130,7 @@ class TRPO:
 
     def train(self, training_num):
         total_c_loss = 0
-        s, a, r, ns, d = self.buffer.all_sample()
+        s, a, r, ns, d, old_log_policy = self.buffer.all_sample()
 
         old_values = self.critic(s)
 
@@ -138,22 +144,13 @@ class TRPO:
         for t in reversed(range(len(r))): #General Advantage Estimation
             running_return = (r[t] + self.gamma * running_return * (1 - d[t])).numpy()
             running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - old_values[t]).numpy()
-            running_advantage = (
-                        running_tderror + (self.gamma * self.lambda_gae) * running_advantage * (1 - d[t])).numpy()
+            running_advantage = (running_tderror + (self.gamma * self.lambda_gae) * running_advantage * (1 - d[t])).numpy()
 
             returns[t] = running_return
             previous_value = old_values[t]
             advantages[t] = running_advantage
 
-        if self.discrete == True:
-            old_policy = self.actor(s, activation = 'softmax')
-            old_a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
-            old_log_policy = tf.reduce_sum(tf.math.log(old_policy) * tf.stop_gradient(old_a_one_hot), axis=1, keepdims=True)
-
-        else:
-            old_dist = self.actor.dist(s)
-            old_log_policy = old_dist.log_prob(a)
-            old_log_policy = tf.expand_dims(old_log_policy, axis=1)
+        advantages = (advantages - advantages.mean()) / (advantages.std())
 
 
         flattened_actor = tf.concat([tf.reshape(variable, [-1]) for variable in self.actor.trainable_variables], axis=0)
@@ -162,15 +159,14 @@ class TRPO:
         with tf.GradientTape() as tape:
             if self.discrete == True:
                 policy = self.actor(s, activation='softmax')
-                a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
-                log_policy = tf.reduce_sum(tf.math.log(policy) * tf.stop_gradient(a_one_hot), axis=1, keepdims=True)
+                dist = tfp.distributions.Categorical(probs=policy)
+                log_policy = tf.reshape(dist.log_prob(tf.squeeze(a)), (-1, 1))
 
                 surrogate = tf.reduce_mean(tf.exp(log_policy - tf.stop_gradient(old_log_policy)) * advantages)
 
             else:
                 dist = self.actor.dist(s)
                 log_policy = dist.log_prob(a)
-                log_policy = tf.expand_dims(log_policy, axis=1)
 
                 surrogate = tf.reduce_mean(tf.exp(log_policy - tf.stop_gradient(old_log_policy)) * advantages)
 
@@ -200,7 +196,7 @@ class TRPO:
             else:
                 new_dist = self.actor.dist(s)
                 new_log_policy = new_dist.log_prob(a)
-                new_log_policy = tf.expand_dims(new_log_policy, axis=1)
+
 
             new_surrogate = tf.reduce_mean(tf.exp(new_log_policy - old_log_policy) * advantages)
 
@@ -234,15 +230,14 @@ class TRPO:
 
         n = len(s)
         arr = np.arange(n)
+        training_step2 = max(int(n / self.batch_size), 1)
 
-        for epoch in range(self.training_step):
+        for epoch2 in range(training_step2):
+            if epoch2 < training_step2 - 1:  # 5
+                batch_index = arr[self.batch_size * epoch2: self.batch_size * (epoch2 + 1)]
 
-            if n // self.batch_size > 0:
-                np.random.shuffle(arr)
-                batch_index = arr[:self.batch_size]
-                batch_index.sort()
             else:
-                batch_index = arr
+                batch_index = arr[self.batch_size * epoch2:]
 
             batch_s = s.numpy()[batch_index]
             batch_returns = returns[batch_index]
