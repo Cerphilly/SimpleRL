@@ -82,7 +82,7 @@ def main(args):
     else:
         assert args.pre_image_size != args.image_size
 
-    # random seed setting
+    # random seed settinga
     if args.random_seed <= 0:
         random_seed = np.random.randint(1, 9999)
     else:

@@ -3,13 +3,15 @@ import tensorflow_probability as tfp
 import numpy as np
 
 class Gaussian_Actor(tf.keras.Model):
-    def __init__(self, state_dim, action_dim, hidden_units=(256, 256), log_std_min=-10, log_std_max=2, activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
+    def __init__(self, state_dim, action_dim, hidden_units=(256, 256), log_std_min=-10, log_std_max=2, independent_std=False, activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
         super(Gaussian_Actor, self).__init__()
         self.state_dim = state_dim
         self.action_dim = action_dim
 
         self.log_std_min = log_std_min
         self.log_std_max = log_std_max
+
+        self.independent_std = independent_std
 
         self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim, ), name='Input')
         self.hidden_layers = []

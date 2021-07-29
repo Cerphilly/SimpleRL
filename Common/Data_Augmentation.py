@@ -300,11 +300,23 @@ def translate(images, size, return_random_idxs=False, w1s=None, h1s=None):
         return outs, dict(h1s=h1s, w1s=w1s)
     return outs
 
+def center_translate(images, size, return_random_idxs=False, w1s=None, h1s=None):
+    n, h, w, c = images.shape
+    assert size >= h and size >= w
+    outs = np.zeros((n, size, size, c), dtype=images.dtype)
+    h1s = np.random.randint(size - h, size - h + 1, n) if h1s is None else h1s
+    w1s = np.random.randint(size - w, size - w + 1, n) if w1s is None else w1s
+    for out, img, h1, w1 in zip(outs, images, h1s, w1s):
+        out[h1:h1 + h, w1:w1 + w, :] = img
+
+    if return_random_idxs:  # So can do the same to another set of imgs.
+        return outs, dict(h1s=h1s, w1s=w1s)
+
+    return outs
+
 class random_translate:
     def __init__(self, size):
         self.size = size
-
-
     def __call__(self, images, return_random_idxs=False, w1s=None, h1s=None):
         n, c, h, w = images.shape
         assert self.size >= h and self.size >= w
@@ -313,6 +325,21 @@ class random_translate:
         w1s = np.random.randint(0, self.size - w + 1, n) if w1s is None else w1s
         for out, img, h1, w1 in zip(outs, images, h1s, w1s):
             out[:, h1:h1 + h, w1:w1 + w] = img
+        if return_random_idxs:  # So can do the same to another set of imgs.
+            return outs, dict(h1s=h1s, w1s=w1s)
+        return outs
+
+class random_translate2:
+    def __init__(self, size):
+        self.size = size
+    def __call__(self, images, return_random_idxs=False, w1s=None, h1s=None):
+        n, h, w, c = images.shape
+        assert self.size >= h and self.size >= w
+        outs = np.zeros((n, self.size, self.size, c), dtype=images.dtype)
+        h1s = np.random.randint(0, self.size - h + 1, n) if h1s is None else h1s
+        w1s = np.random.randint(0, self.size - w + 1, n) if w1s is None else w1s
+        for out, img, h1, w1 in zip(outs, images, h1s, w1s):
+            out[h1:h1 + h, w1:w1 + w, :] = img
         if return_random_idxs:  # So can do the same to another set of imgs.
             return outs, dict(h1s=h1s, w1s=w1s)
         return outs
@@ -510,6 +537,7 @@ if __name__ == '__main__':
     print(img.shape)
     cv2.imshow("img", np.transpose(img[0][0:3, :, :], (1, 2, 0)))
     cv2.waitKey(0)
+
     #random crop
     t = now()
     img1 = crop(img, 64)
@@ -560,7 +588,11 @@ if __name__ == '__main__':
     s8,tot8 = secs(t)
     cv2.imshow("img8", np.transpose(img8[0][0:3, :, :], (1, 2, 0)))
     cv2.waitKey(0)
-
+    t = now()
+    img9 = translate(img, 100)
+    s9, tot9 = secs(t)
+    cv2.imshow("img9", np.transpose(img9[0][0:3, :, :], (1, 2, 0)))
+    cv2.waitKey(0)
 
     print(tabulate([['Crop', s1, tot1],
                     ['Grayscale', s2, tot2],
@@ -569,5 +601,6 @@ if __name__ == '__main__':
                     ['Flip', s5, tot5],
                     ['Rotate', s6, tot6],
                     ['Rand Conv', s7, tot7],
-                   ['Color jitter', s8, tot8]],
+                   ['Color jitter', s8, tot8],
+                   ['Translate'], s9, tot9],
                    headers=['Data Aug', 'Time / batch (secs)', 'Time / 100k steps (mins)']))

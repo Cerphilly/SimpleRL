@@ -3,16 +3,19 @@ import argparse
 import tensorflow as tf
 import numpy as np
 import random
+import procgen
 
 from Algorithms.SAC_v2 import SAC_v2
+from Algorithms.ImageRL.SAC import ImageSAC_v2
 
 from Trainer.Basic_trainer import Basic_trainer
+from Common.Utils import FrameStack
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Soft Actor Critic (SAC) v2 example')
     #environment
-    parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='InvertedDoublePendulum-v2', help='Pendulum-v0, MountainCarContinuous-v0')
+    parser.add_argument('--domain_type', default='dmc/image', type=str, help='gym or dmc, dmc/image')
+    parser.add_argument('--env-name', default='cartpole/swingup', help='Pendulum-v0, MountainCarContinuous-v0')
     parser.add_argument('--discrete', default=False, type=bool, help='Always Continuous')
     parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
@@ -37,7 +40,14 @@ def hyperparameters():
     parser.add_argument('--hidden-dim', default=(1024, 1024), help='hidden dimension of network')
     parser.add_argument('--log_std_min', default=-10, type=int, help='For squashed gaussian actor')
     parser.add_argument('--log_std_max', default=2, type=int, help='For squashed gaussian actor')
-
+    #image
+    parser.add_argument('--frame-stack', default=3, type=int)
+    parser.add_argument('--frame-skip', default=8, type=int)
+    parser.add_argument('--image-size', default=84, type=int)
+    parser.add_argument('--layer-num', default=4, type=int)
+    parser.add_argument('--filter-num', default=32, type=int)
+    parser.add_argument('--encoder-tau', default=0.05, type=float)
+    parser.add_argument('--feature-dim', default=50, type=int)
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
     parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
@@ -80,18 +90,36 @@ def main(args):
         test_env.seed(random_seed)
         test_env.action_space.seed(random_seed)
 
-    else:
+    elif args.domain_type == 'dmc':
         #deepmind control suite
         env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
         test_env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
 
+    elif args.domain_type == 'dmc/image':
+        domain_name = args.env_name.split('/')[0]
+        task_name = args.env_name.split('/')[1]
+        env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
+                           height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
+        env = FrameStack(env, k=args.frame_stack)
+
+        test_env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
+                           height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
+        test_env = FrameStack(test_env, k=args.frame_stack)
+
 
     state_dim = env.observation_space.shape[0]
+
+    if args.domain_type == 'dmc/image':
+        state_dim = (3 * args.frame_stack, args.image_size, args.image_size)
+
     action_dim = env.action_space.shape[0]
     max_action = env.action_space.high[0]
     min_action = env.action_space.low[0]
 
-    algorithm = SAC_v2(state_dim, action_dim, args)
+    if args.domain_type in {'gym', 'dmc'}:
+        algorithm = SAC_v2(state_dim, action_dim, args)
+    elif args.domain_type == 'dmc/image':
+        algorithm = ImageSAC_v2(state_dim, action_dim, args)
 
     print("Training of", env.unwrapped.spec.id)
     print("Algorithm:", algorithm.name)

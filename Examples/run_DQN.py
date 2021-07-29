@@ -13,8 +13,8 @@ from Trainer.Basic_trainer import Basic_trainer
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Deep Q Network(DQN) example')
     #environment
-    parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc or atari')
-    parser.add_argument('--env-name', default='Pong-ram-v4', help='CartPole-v0, MountainCar-v0, Acrobot-v1, and atari games(not yet)')
+    parser.add_argument('--domain_type', default='atari', type=str, help='gym or dmc or atari')
+    parser.add_argument('--env-name', default='PongNoFrameskip-v4', help='CartPole-v0, MountainCar-v0, Acrobot-v1, and atari games, PongNoframeskip-v4')
     parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--discrete', default=True, type=bool, help='Always discrete')
 
@@ -25,7 +25,7 @@ def hyperparameters():
     parser.add_argument('--eval-episode', default=1, type=int, help='Number of episodes to perform evaluation')
     parser.add_argument('--random-seed', default=-1, type=int, help='Random seed setting')
     #dqn
-    parser.add_argument('--batch-size', default=32, type=int, help='Mini-batch size')
+    parser.add_argument('--batch-size', default=256, type=int, help='Mini-batch size')
     parser.add_argument('--buffer-size', default=100000, type=int, help='Buffer maximum size')
     parser.add_argument('--train-mode', default='online', help='Offline, Online')
     parser.add_argument('--training-step', default=1, type=int)
@@ -95,6 +95,7 @@ def main(args):
         env = gym.make(args.env_name)
         env = AtariPreprocessing(env, frame_skip=args.frame_skip, screen_size=args.image_size, grayscale_newaxis=True)
         env = FrameStack(env, args.frame_stack)
+
         env._max_episode_steps = 10000
         env.seed(random_seed)
         env.action_space.seed(random_seed)
@@ -106,22 +107,26 @@ def main(args):
         test_env.seed(random_seed)
         test_env.action_space.seed(random_seed)
 
+    elif args.domain_type == 'procgen':
+        env_name = "procgen:procgen-{}-v0".format(args.env_name)
+        env = gym.make(env_name, render_mode='rgb_array')
+        env = FrameStack(env, args.frame_stack)
+        test_env = gym.make(env_name, render_mode='rgb_array')
+        test_env = FrameStack(test_env, args.frame_stack)
 
     state_dim = env.observation_space.shape[0]
 
-    if args.domain_type == 'atari':
+    if args.domain_type in {'atari', 'procgen'}:
         state_dim = env.observation_space.shape
 
     action_dim = env.action_space.n
     max_action = 1
     min_action = 1
 
+    if args.domain_type in {'gym', 'dmc'}:
+        algorithm = DQN(state_dim, action_dim, args)
 
-    if args.domain_type is 'gym':
-        algorithm = DQN(state_dim, action_dim, args)
-    elif args.domain_type is 'dmc':
-        algorithm = DQN(state_dim, action_dim, args)
-    elif args.domain_type == 'atari':
+    elif args.domain_type in {'atari', 'procgen'}:
         algorithm = ImageDQN(state_dim, action_dim, args)
 
     print("Training of", env.unwrapped.spec.id)

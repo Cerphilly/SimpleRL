@@ -10,6 +10,8 @@ from Networks.Basic_Networks import *
 from Networks.Gaussian_Actor import *
 from Networks.D2RL_Networks import *
 
+
+
 def copy_weight(network, target_network):
     variable1 = network.trainable_variables
     variable2 = target_network.trainable_variables
@@ -99,17 +101,29 @@ def center_crop_images(image, output_size):
 
 
 class FrameStack(gym.Wrapper):
-    def __init__(self, env, k):
+    def __init__(self, env, k, data_format='channels_first'):
         gym.Wrapper.__init__(self, env)
         self._k = k
         self._frames = deque([], maxlen=k)
         shp = env.observation_space.shape
-        self.observation_space = gym.spaces.Box(
-            low=0,
-            high=1,
-            shape=((shp[0] * k,) + shp[1:]),
-            dtype=env.observation_space.dtype
-        )
+
+        if data_format == 'channels_first':
+            self.observation_space = gym.spaces.Box(
+                low=0,
+                high=1,
+                shape=((shp[0] * k,) + shp[1:]),
+                dtype=env.observation_space.dtype
+            )
+            self.channel_first = True
+        else:
+            self.observation_space = gym.spaces.Box(
+                low=0,
+                high=1,
+                shape=(shp[0:-1] + (shp[-1] * k,)),
+                dtype=env.observation_space.dtype
+            )
+            self.channel_first = False
+
         self._max_episode_steps = env._max_episode_steps
 
     def reset(self):
@@ -125,5 +139,8 @@ class FrameStack(gym.Wrapper):
 
     def _get_obs(self):
         assert len(self._frames) == self._k
-        return np.concatenate(list(self._frames), axis=0)
+        if self.channel_first == True:
+            return np.concatenate(list(self._frames), axis=0)
+        elif self.channel_first == False:
+            return np.concatenate(list(self._frames), axis=-1)
 

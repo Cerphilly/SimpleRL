@@ -2,8 +2,9 @@ import numpy as np
 import tensorflow as tf
 import os
 
+from copy import deepcopy
 from Common.Utils import random_crop, center_crop_images
-
+from Common.Data_Augmentation import center_translate
 class Buffer:
     def __init__(self, max_size=1e6):#1000000: save the last 1000 episode at most
         self.max_size = max_size
@@ -193,37 +194,54 @@ class Buffer:
         return states, actions, rewards, states_next, dones
 
 
-    def dbc_sample(self, batch_size):#not used anymore
+    def soda_sample(self, batch_size, aug_funcs, pre_image_size=100):
         ids = np.random.choice(len(self.s), batch_size, replace=False)
 
-        states = np.asarray([self.s[i] for i in ids])
-        actions = np.asarray([self.a[i] for i in ids])
-        rewards = np.asarray([self.r[i] for i in ids])
-        states_next = np.asarray([self.ns[i] for i in ids])
-        dones = np.asarray([self.d[i] for i in ids])
+        og_states = np.asarray([self.s[i] for i in ids]) # (batch_size, states_dim)
+        #og_actions = np.asarray([self.a[i] for i in ids]) # (batch_size, 1)
+        #og_rewards = np.asarray([self.r[i] for i in ids]) # (batch_Size, 1)
+        #og_states_next = np.asarray([self.ns[i] for i in ids]) #(batch_size, states_dim)
+        #og_dones = np.asarray([self.d[i] for i in ids]) #(batch_size, 1)
+
+        states = deepcopy(og_states)
+        #actions = deepcopy(og_actions)
+        #rewards = deepcopy(og_rewards)
+        #states_next = deepcopy(og_states_next)
+        #dones = deepcopy(og_dones)
+
+        for aug, func in aug_funcs.items():
+            if 'crop' in aug or 'cutout' in aug:
+                states = func(states)
+                #states_next = func(states_next)
+
+            elif 'translate' in aug:
+                states = center_crop_images(states, pre_image_size)
+                #states_next = center_crop_images(states_next, pre_image_size)
+
+                states, random_idxs = func(states, return_random_idxs=True)
+                #states_next = func(states_next, **random_idxs)
+
+        for aug, func in aug_funcs.items():
+            if 'crop' in aug or 'cutout' in aug or 'translate' in aug:
+                continue
+            states = func(states)
+            #states_next = func(states_next)
+
+        og_states = center_translate(og_states, pre_image_size)
+        og_states = tf.convert_to_tensor(og_states, tf.float32)
+        #og_actions = tf.convert_to_tensor(og_actions, tf.float32)
+        #og_rewards = tf.convert_to_tensor(og_rewards, tf.float32)
+        #og_states_next = tf.convert_to_tensor(og_states_next, tf.float32)
+        #og_dones = tf.convert_to_tensor(og_dones, tf.float32)
 
         states = tf.convert_to_tensor(states, tf.float32)
-        actions = tf.convert_to_tensor(actions, tf.float32)
-        rewards = tf.convert_to_tensor(rewards, tf.float32)
-        states_next = tf.convert_to_tensor(states_next, tf.float32)
-        dones = tf.convert_to_tensor(dones, tf.float32)
+        #actions = tf.convert_to_tensor(actions, tf.float32)
+        #rewards = tf.convert_to_tensor(rewards, tf.float32)
+        #states_next = tf.convert_to_tensor(states_next, tf.float32)
+        #dones = tf.convert_to_tensor(dones, tf.float32)
 
-        np.random.shuffle(ids)
+        return og_states, states
 
-        states2 = np.asarray([self.s[i] for i in ids])
-        actions2 = np.asarray([self.a[i] for i in ids])
-        rewards2 = np.asarray([self.r[i] for i in ids])
-        states_next2 = np.asarray([self.ns[i] for i in ids])
-        dones2 = np.asarray([self.d[i] for i in ids])
-
-        states2 = tf.convert_to_tensor(states2, tf.float32)
-        actions2 = tf.convert_to_tensor(actions2, tf.float32)
-        rewards2 = tf.convert_to_tensor(rewards2, tf.float32)
-        states_next2 = tf.convert_to_tensor(states_next2, tf.float32)
-        dones2 = tf.convert_to_tensor(dones2, tf.float32)
-
-
-        return (states, actions, rewards, states_next, dones), (states2, actions2, rewards2, states_next2, dones2)
 
 
 class On_Policy_Buffer:
@@ -288,6 +306,30 @@ class On_Policy_Buffer:
         log_probs = tf.convert_to_tensor(log_probs, tf.float32)
 
         return states, actions, rewards, states_next, dones, log_probs
+
+    def soda_all_sample(self, aug_funcs, pre_image_size=100):
+        og_states = np.array(self.s)
+        states = deepcopy(og_states)
+
+        for aug, func in aug_funcs.items():
+            if 'crop' in aug or 'cutout' in aug:
+                states = func(states)
+
+            elif 'translate' in aug:
+                states = center_crop_images(states, pre_image_size)
+
+                states, random_idxs = func(states, return_random_idxs=True)
+
+        for aug, func in aug_funcs.items():
+            if 'crop' in aug or 'cutout' in aug or 'translate' in aug:
+                continue
+            states = func(states)
+        og_states = center_translate(og_states, pre_image_size)
+        og_states = tf.convert_to_tensor(og_states, tf.float32)
+        states = tf.convert_to_tensor(states, tf.float32)
+
+        return og_states, states
+
 
 
 

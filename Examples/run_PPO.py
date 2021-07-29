@@ -5,14 +5,15 @@ import numpy as np
 import random
 
 from Algorithms.PPO import PPO
-
+from Algorithms.ImageRL.PPO import ImagePPO
+from Common.Utils import FrameStack
 from Trainer.On_policy_trainer import On_policy_trainer
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Proximal Policy Gradient(PPO) example')
     #environment
-    parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='Pong-ram-v4', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
+    parser.add_argument('--domain_type', default='procgen', type=str, help='gym or dmc')
+    parser.add_argument('--env-name', default='starpilot', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
     parser.add_argument('--discrete', default=True, type=bool, help='whether the environment is discrete or not')
     parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--training-start', default=0, type=int, help='First step to start training')
@@ -33,6 +34,13 @@ def hyperparameters():
     parser.add_argument('--actor-lr', default=0.0003, type=float)
     parser.add_argument('--critic-lr', default=0.0003, type=float)
     parser.add_argument('--hidden-dim', default=(256, 256), help='hidden dimension of network')
+
+    parser.add_argument('--frame-stack', default=3, type=int)
+    parser.add_argument('--frame-skip', default=4, type=int)
+    parser.add_argument('--image-size', default=84, type=int)
+    parser.add_argument('--layer-num', default=4, type=int)
+    parser.add_argument('--filter-num', default=32, type=int)
+    parser.add_argument('--feature-dim', default=50, type=int)
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
     parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
@@ -82,8 +90,24 @@ def main(args):
         env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
         test_env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
 
+    elif args.domain_type == 'procgen':
+        env_name = "procgen:procgen-{}-v0".format(args.env_name)
+        env = gym.make(env_name, render_mode='rgb_array')
+        env._max_episode_steps = 1000
+        env = FrameStack(env, args.frame_stack, data_format='channels_last')
+
+        test_env = gym.make(env_name, render_mode='rgb_array')
+        test_env._max_episode_steps = 1000
+        test_env = FrameStack(test_env, args.frame_stack, data_format='channels_last')
+
     if args.discrete == True:
         state_dim = env.observation_space.shape[0]
+        if args.domain_type in {'atari'}:
+            state_dim = env.observation_space.shape
+        elif args.domain_type == 'procgen':
+            state_dim = env.observation_space.shape
+
+
         action_dim = env.action_space.n
         max_action = 1
         min_action = 1
@@ -93,7 +117,11 @@ def main(args):
         max_action = env.action_space.high[0]
         min_action = env.action_space.low[0]
 
-    algorithm = PPO(state_dim, action_dim, args)
+    if args.domain_type in {'gym', 'dmc'}:
+        algorithm = PPO(state_dim, action_dim, args)
+
+    elif args.domain_type in {'atari', 'procgen'}:
+        algorithm = ImagePPO(state_dim, action_dim, args)
 
     print("Training of", env.unwrapped.spec.id)
     print("Algorithm:", algorithm.name)

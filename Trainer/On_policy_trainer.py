@@ -82,7 +82,7 @@ class On_policy_trainer:
 
             while not done:
                 if self.render == True:
-                    if self.domain_type in {'gym', "atari"} :
+                    if self.domain_type in {'gym', "atari", 'procgen'} :
                         self.test_env.render()
                     else:
                         cv2.imshow("{}_{}".format(self.algorithm.name, self.test_env.unwrapped.spec.id), self.test_env.render(mode='rgb_array', height=240, width=320))
@@ -121,18 +121,21 @@ class On_policy_trainer:
 
             observation = self.env.reset()
             done = False
+            import procgen
 
             while not done:
                 self.local_step += 1
                 self.total_step += 1
 
                 if self.render == True:
-                    if self.domain_type in {'gym', "atari"} :
+                    if self.domain_type in {'gym', "atari"}:
                         self.env.render()
-                    else:
+                    elif self.domain_type == 'procgen':
+                        cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array'))
+                        cv2.waitKey(1)
+                    elif self.domain_type == 'dmc':
                         cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array', height=240, width=320))
                         cv2.waitKey(1)
-
                 if 'ram' in self.env_name:  # Atari Ram state
                     observation = observation / 255.
 
@@ -150,7 +153,7 @@ class On_policy_trainer:
 
                     next_observation, reward, done, _ = self.env.step(self.max_action * env_action)
 
-                if self.local_step + 1 == self.env._max_episode_steps:
+                if self.local_step + 1 == 1000:
                     real_done = 0.
                 else:
                     real_done = float(done)

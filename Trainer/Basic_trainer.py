@@ -76,17 +76,20 @@ class Basic_trainer:
             episode += 1
             eval_reward = 0
             observation = self.test_env.reset()
-            if 'ram' in self.env_name:  # Atari Ram state
+            if '-ram-' in self.env_name:  # Atari Ram state
                 observation = observation / 255.
 
             done = False
 
             while not done:
                 if self.render == True:
-                    if self.domain_type in {'gym', "atari"} :
-                        self.test_env.render()
-                    else:
-                        cv2.imshow("{}_{}".format(self.algorithm.name, self.test_env.unwrapped.spec.id), self.test_env.render(mode='rgb_array', height=240, width=320))
+                    if self.domain_type in {'gym', "atari"}:
+                        self.env.render()
+                    elif self.domain_type == 'procgen':
+                        cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array'))
+                        cv2.waitKey(1)
+                    elif self.domain_type == 'dmc':
+                        cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array', height=240, width=320))
                         cv2.waitKey(1)
 
                 action = self.algorithm.eval_action(observation)
@@ -126,11 +129,14 @@ class Basic_trainer:
                 if self.render == True:
                     if self.domain_type in {'gym', "atari"} :
                         self.env.render()
-                    else:
+                    elif self.domain_type == 'procgen':
+                        cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array'))
+                        cv2.waitKey(1)
+                    elif self.domain_type == 'dmc':
                         cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array', height=240, width=320))
                         cv2.waitKey(1)
 
-                if 'ram' in self.env_name:  # Atari Ram state
+                if '-ram-' in self.env_name:  # Atari Ram state
                     observation = observation / 255.
 
                 #observation += np.random.normal(scale=0.05, size=5)
@@ -140,9 +146,10 @@ class Basic_trainer:
 
                 else:
                     action = self.algorithm.get_action(observation)
+                    print
                     next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
-                if self.local_step + 1 == self.env._max_episode_steps:
+                if self.local_step + 1 == 1000:
                     real_done = 0.
                 else:
                     real_done = float(done)

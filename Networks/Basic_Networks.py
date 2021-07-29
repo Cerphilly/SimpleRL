@@ -26,7 +26,6 @@ class Policy_network(tf.keras.Model):
 
         output = self.output_layer(z)
 
-
         if activation == 'tanh':
             output = tf.nn.tanh(output)
 
