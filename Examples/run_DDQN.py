@@ -11,7 +11,7 @@ from Trainer.Basic_trainer import Basic_trainer
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Double Deep Q Network(DDQN) example')
     #environment
-    parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
+    parser.add_argument('--domain_type', default='gym', type=str, help='gym')
     parser.add_argument('--env-name', default='CartPole-v0', help='CartPole-v0, MountainCar-v0, Acrobot-v1, and atari games(not yet)')
     parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--discrete', default=True, type=bool, help='Always discrete')
@@ -63,6 +63,7 @@ def main(args):
 
     #env setting
     if args.domain_type == 'gym':
+        import gym
         #openai gym
         env = gym.make(args.env_name)
         env.seed(random_seed)
@@ -72,12 +73,6 @@ def main(args):
         test_env.seed(random_seed)
         test_env.action_space.seed(random_seed)
 
-    elif args.domain_type == 'dmc':
-        #deepmind control suite
-        env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
-        test_env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
-
-
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
     max_action = 1
@@ -85,7 +80,7 @@ def main(args):
 
     algorithm = DDQN(state_dim, action_dim, args)
 
-    print("Training of", env.unwrapped.spec.id)
+    print("Training of", args.domain_name + '_' + args.task_name)
     print("Algorithm:", algorithm.name)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)

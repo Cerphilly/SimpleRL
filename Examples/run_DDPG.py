@@ -1,4 +1,3 @@
-import gym, dmc2gym
 import argparse
 import tensorflow as tf
 import numpy as np
@@ -11,13 +10,13 @@ from Trainer.Basic_trainer import Basic_trainer
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Deep Deterministic Policy Gradient(DDPG) example')
     #environment
-    parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
+    parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='Pendulum-v0', help='Pendulum-v0, MountainCarContinuous-v0')
     parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--discrete', default=False, type=bool, help='Always Continuous')
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
     parser.add_argument('--max-step', default=1000000, type=int, help='Maximum training step')
-    parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
+    parser.add_argument('--eval', default=False, type=bool, help='whether to perform evaluation')
     parser.add_argument('--eval-step', default=200, type=int, help='Frequency in performance evaluation')
     parser.add_argument('--eval-episode', default=1, type=int, help='Number of episodes to perform evaluation')
     parser.add_argument('--random-seed', default=-1, type=int, help='Random seed setting')
@@ -34,7 +33,7 @@ def hyperparameters():
     parser.add_argument('--hidden-dim', default=(256, 256), help='hidden dimension of network')
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
-    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
+    parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
     parser.add_argument('--file', default=False, type=bool, help='when logged, write log')
     parser.add_argument('--numpy', default=False, type=bool, help='when logged, save log in numpy')
@@ -66,6 +65,7 @@ def main(args):
 
     #env setting
     if args.domain_type == 'gym':
+        import gym
         #openai gym
         env = gym.make(args.env_name)
         env.seed(random_seed)
@@ -75,6 +75,7 @@ def main(args):
         test_env.seed(random_seed)
         test_env.action_space.seed(random_seed)
     elif args.domain_type == 'dmc':
+        import dmc2gym
         #deepmind control suite
         env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
         test_env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
@@ -87,7 +88,7 @@ def main(args):
 
     algorithm = DDPG(state_dim, action_dim, args)
 
-    print("Training of", env.unwrapped.spec.id)
+    print("Training of", args.domain_name + '_' + args.task_name)
     print("Algorithm:", algorithm.name)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)

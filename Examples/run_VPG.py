@@ -1,4 +1,3 @@
-import gym, dmc2gym
 import argparse
 import tensorflow as tf
 import numpy as np
@@ -65,6 +64,7 @@ def main(args):
 
     #env setting
     if args.domain_type == 'gym':
+        import gym
         #openai gym
         env = gym.make(args.env_name)
         env.seed(random_seed)
@@ -73,7 +73,8 @@ def main(args):
         test_env = gym.make(args.env_name)
         test_env.seed(random_seed)
         test_env.action_space.seed(random_seed)
-    else:
+    elif args.domain_type == 'dmc':
+        import dmc2gym
         #deepmind control suite
         env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
         test_env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)

@@ -1,4 +1,3 @@
-import gym, dmc2gym
 import argparse
 import tensorflow as tf
 import numpy as np
@@ -76,6 +75,7 @@ def main(args):
 
     #env setting
     if args.domain_type == 'gym':
+        import gym
         #openai gym
         env = gym.make(args.env_name)
         env.seed(random_seed)
@@ -86,11 +86,32 @@ def main(args):
         test_env.action_space.seed(random_seed)
 
     elif args.domain_type == 'dmc':
+        import dmc2gym
         #deepmind control suite
         env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
         test_env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
 
+    elif args.domain_type == 'dmc/image':
+        import dmc2gym
+        domain_name = args.env_name.split('/')[0]
+        task_name = args.env_name.split('/')[1]
+        env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True, height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
+        env = FrameStack(env, k=args.frame_stack)
+
+        test_env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True, height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
+        test_env = FrameStack(test_env, k=args.frame_stack)
+
+    elif args.domain_type == 'dmcr':
+        import dmc_remastered as dmcr
+        domain_name = args.env_name.split('/')[0]
+        task_name = args.env_name.split('/')[1]
+
+        env, test_env = dmcr.benchmarks.classic(domain_name, task_name, visual_seed=0, width=args.image_size, height=args.image_size, frame_skip=args.frame_skip)
+        # env, test_env = dmcr.benchmarks.visual_generalization(domain_name, task_name, num_levels=100, width=args.pre_image_size, height=args.pre_image_size, frame_skip=args.frame_skip)
+        # env, test_env = dmcr.benchmarks.visual_sim2real(domain_name, task_name, num_levels=100, width=args.pre_image_size, height=args.pre_image_size, frame_skip=args.frame_skip)
+
     elif args.domain_type == 'procgen':
+        import gym
         env_name = "procgen:procgen-{}-v0".format(args.env_name)
         env = gym.make(env_name, render_mode='rgb_array')
         env._max_episode_steps = 1000
@@ -102,17 +123,17 @@ def main(args):
 
     if args.discrete == True:
         state_dim = env.observation_space.shape[0]
-        if args.domain_type in {'atari'}:
+        if args.domain_type in {'atari', 'procgen'}:
             state_dim = env.observation_space.shape
-        elif args.domain_type == 'procgen':
-            state_dim = env.observation_space.shape
-
 
         action_dim = env.action_space.n
         max_action = 1
         min_action = 1
     else:
         state_dim = env.observation_space.shape[0]
+        if args.domain_type in {'dmc/image', 'dmcr'}:
+            state_dim = env.observation_space.shape
+
         action_dim = env.action_space.shape[0]
         max_action = env.action_space.high[0]
         min_action = env.action_space.low[0]
@@ -120,10 +141,10 @@ def main(args):
     if args.domain_type in {'gym', 'dmc'}:
         algorithm = PPO(state_dim, action_dim, args)
 
-    elif args.domain_type in {'atari', 'procgen'}:
+    elif args.domain_type in {'atari', 'procgen', 'dmc/image', 'dmcr'}:
         algorithm = ImagePPO(state_dim, action_dim, args)
 
-    print("Training of", env.unwrapped.spec.id)
+    print("Training of", args.domain_name + '_' + args.task_name)
     print("Algorithm:", algorithm.name)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)

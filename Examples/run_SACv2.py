@@ -1,9 +1,7 @@
-import gym, dmc2gym
 import argparse
 import tensorflow as tf
 import numpy as np
 import random
-import procgen
 
 from Algorithms.SAC_v2 import SAC_v2
 from Algorithms.ImageRL.SAC import ImageSAC_v2
@@ -14,8 +12,8 @@ from Common.Utils import FrameStack
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Soft Actor Critic (SAC) v2 example')
     #environment
-    parser.add_argument('--domain_type', default='dmc/image', type=str, help='gym or dmc, dmc/image')
-    parser.add_argument('--env-name', default='cartpole/swingup', help='Pendulum-v0, MountainCarContinuous-v0')
+    parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc, dmc/image')
+    parser.add_argument('--env-name', default='InvertedDoublePendulum-v2', help='Pendulum-v0, MountainCarContinuous-v0')
     parser.add_argument('--discrete', default=False, type=bool, help='Always Continuous')
     parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
@@ -81,6 +79,7 @@ def main(args):
 
     #env setting
     if args.domain_type == 'gym':
+        import gym
         #openai gym
         env = gym.make(args.env_name)
         env.seed(random_seed)
@@ -91,11 +90,13 @@ def main(args):
         test_env.action_space.seed(random_seed)
 
     elif args.domain_type == 'dmc':
+        import dmc2gym
         #deepmind control suite
         env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
         test_env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
 
     elif args.domain_type == 'dmc/image':
+        import dmc2gym
         domain_name = args.env_name.split('/')[0]
         task_name = args.env_name.split('/')[1]
         env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
@@ -106,11 +107,19 @@ def main(args):
                            height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
         test_env = FrameStack(test_env, k=args.frame_stack)
 
+    elif args.domain_type == 'dmcr':
+        import dmc_remastered as dmcr
+        domain_name = args.env_name.split('/')[0]
+        task_name = args.env_name.split('/')[1]
+
+        env, test_env = dmcr.benchmarks.classic(domain_name, task_name, visual_seed=0, width=args.image_size, height=args.image_size, frame_skip=args.frame_skip)
+        # env, test_env = dmcr.benchmarks.visual_generalization(domain_name, task_name, num_levels=100, width=args.pre_image_size, height=args.pre_image_size, frame_skip=args.frame_skip)
+        # env, test_env = dmcr.benchmarks.visual_sim2real(domain_name, task_name, num_levels=100, width=args.pre_image_size, height=args.pre_image_size, frame_skip=a
 
     state_dim = env.observation_space.shape[0]
 
-    if args.domain_type == 'dmc/image':
-        state_dim = (3 * args.frame_stack, args.image_size, args.image_size)
+    if args.domain_type in {'dmc/image', 'dmcr'}:
+        state_dim = env.observation_space.shape
 
     action_dim = env.action_space.shape[0]
     max_action = env.action_space.high[0]
@@ -118,7 +127,7 @@ def main(args):
 
     if args.domain_type in {'gym', 'dmc'}:
         algorithm = SAC_v2(state_dim, action_dim, args)
-    elif args.domain_type == 'dmc/image':
+    elif args.domain_type in {'dmc/image', 'dmcr'}:
         algorithm = ImageSAC_v2(state_dim, action_dim, args)
 
     print("Training of", env.unwrapped.spec.id)

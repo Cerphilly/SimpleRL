@@ -1,4 +1,3 @@
-import gym, dmc2gym
 import argparse
 import tensorflow as tf
 import numpy as np
@@ -76,6 +75,7 @@ def main(args):
 
     #env setting
     if args.domain_type == 'gym':
+        import gym
         #openai gym
         env = gym.make(args.env_name)
         env.seed(random_seed)
@@ -85,12 +85,8 @@ def main(args):
         test_env.seed(random_seed)
         test_env.action_space.seed(random_seed)
 
-    elif args.domain_type == 'dmc':
-        #deepmind control suite
-        env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
-        test_env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
-
     elif args.domain_type == 'atari':
+        import gym
         #openai gym
         env = gym.make(args.env_name)
         env = AtariPreprocessing(env, frame_skip=args.frame_skip, screen_size=args.image_size, grayscale_newaxis=True)
@@ -108,6 +104,7 @@ def main(args):
         test_env.action_space.seed(random_seed)
 
     elif args.domain_type == 'procgen':
+        import gym
         env_name = "procgen:procgen-{}-v0".format(args.env_name)
         env = gym.make(env_name, render_mode='rgb_array')
         env = FrameStack(env, args.frame_stack)
@@ -123,13 +120,13 @@ def main(args):
     max_action = 1
     min_action = 1
 
-    if args.domain_type in {'gym', 'dmc'}:
+    if args.domain_type in {'gym'}:
         algorithm = DQN(state_dim, action_dim, args)
 
     elif args.domain_type in {'atari', 'procgen'}:
         algorithm = ImageDQN(state_dim, action_dim, args)
 
-    print("Training of", env.unwrapped.spec.id)
+    print("Training of", args.domain_name + '_' + args.task_name)
     print("Algorithm:", algorithm.name)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)

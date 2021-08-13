@@ -1,4 +1,3 @@
-import dmc2gym, gym
 import argparse
 import tensorflow as tf
 import numpy as np
@@ -88,15 +87,25 @@ def main(args):
     np.random.seed(random_seed)
     random.seed(random_seed)
 
-    domain_name = args.env_name.split('/')[0]
-    task_name = args.env_name.split('/')[1]
-    env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
-                       height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
-    env = FrameStack(env, k=args.frame_stack)
+    if args.domain_type == 'dmc':
+        import dmc2gym
+        domain_name = args.env_name.split('/')[0]
+        task_name = args.env_name.split('/')[1]
+        env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
+                           height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
+        env = FrameStack(env, k=args.frame_stack)
 
-    test_env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
-                       height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
-    test_env = FrameStack(test_env, k=args.frame_stack)
+        test_env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
+                           height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
+        test_env = FrameStack(test_env, k=args.frame_stack)
+    elif args.domain_type == 'dmcr':
+        import dmc_remastered as dmcr
+        domain_name = args.env_name.split('/')[0]
+        task_name = args.env_name.split('/')[1]
+
+        env, test_env = dmcr.benchmarks.classic(domain_name, task_name, visual_seed=0, width=args.image_size, height=args.image_size, frame_skip=args.frame_skip)
+        # env, test_env = dmcr.benchmarks.visual_generalization(domain_name, task_name, num_levels=100, width=args.pre_image_size, height=args.pre_image_size, frame_skip=args.frame_skip)
+        # env, test_env = dmcr.benchmarks.visual_sim2real(domain_name, task_name, num_levels=100, width=args.pre_image_size, height=args.pre_image_size, frame_skip=args.frame_skip)
 
     state_dim = (3 * args.frame_stack, args.image_size, args.image_size)
     action_dim = env.action_space.shape[0]
@@ -104,12 +113,11 @@ def main(args):
     min_action = env.action_space.low[0]
 
     if args.algorithm == 'SACv1':
-        algorithm = 0
+        raise NotImplementedError
     elif args.algorithm == 'SACv2':
         algorithm = DBC_SACv2(state_dim, action_dim, args)
 
-
-    print("Training of", env.unwrapped.spec.id)
+    print("Training of", args.domain_name + '_' + args.task_name)
     print("Algorithm:", algorithm.name)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)

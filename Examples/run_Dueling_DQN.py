@@ -63,6 +63,7 @@ def main(args):
 
     #env setting
     if args.domain_type == 'gym':
+        import dmc2gym
         #openai gym
         env = gym.make(args.env_name)
         env.seed(random_seed)
@@ -72,10 +73,6 @@ def main(args):
         test_env.seed(random_seed)
         test_env.action_space.seed(random_seed)
 
-    elif args.domain_type == 'dmc':
-        #deepmind control suite
-        env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
-        test_env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
 
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
@@ -84,7 +81,7 @@ def main(args):
 
     algorithm = Dueling_DQN(state_dim, action_dim, args)
 
-    print("Training of", env.unwrapped.spec.id)
+    print("Training of", args.domain_name + '_' + args.task_name)
     print("Algorithm:", algorithm.name)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)
