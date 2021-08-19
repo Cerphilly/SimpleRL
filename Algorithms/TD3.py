@@ -11,7 +11,7 @@ from Networks.D2RL_Networks import D2RL_Policy, D2RL_Q
 class TD3:
     def __init__(self, state_dim, action_dim, args):
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim, action_dim, args.buffer_size)
 
         self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
         self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)

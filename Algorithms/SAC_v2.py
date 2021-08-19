@@ -12,7 +12,7 @@ from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
 class SAC_v2:
     def __init__(self, state_dim, action_dim, args):
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim, action_dim, args.buffer_size)
 
         self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
         self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)

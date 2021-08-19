@@ -17,7 +17,7 @@ from Common.Buffer import Buffer
 class SACv2_AE:
     def __init__(self, obs_dim, action_dim, args):
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = Buffer(obs_dim, action_dim, args.buffer_size)
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
@@ -73,14 +73,11 @@ class SACv2_AE:
                              'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2, 'Encoder': self.encoder, 'Target_Encoder': self.target_encoder, 'Decoder': self.decoder}
         self.name = 'SACv2_AE'
 
-
     @property
     def alpha(self):
         return tf.exp(self.log_alpha)
 
-
     def get_action(self, obs):
-
         obs = np.expand_dims(np.array(obs), axis=0)
         feature = self.encoder(obs)
         action, _ = self.actor(feature)

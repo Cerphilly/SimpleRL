@@ -1,12 +1,9 @@
 import argparse
-import tensorflow as tf
-import numpy as np
-import random
 
 from Algorithms.ImageRL.RAD import RAD_SACv2
 
 from Trainer.Basic_trainer import Basic_trainer
-from Common.Utils import FrameStack
+from Common.Utils import cpu_only, set_seed, dmc_image_env, dmcr_env
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Reinforcement learning with Augmented Data (RAD) example')
@@ -73,8 +70,7 @@ def hyperparameters():
 
 def main(args):
     if args.cpu_only == True:
-        cpu = tf.config.experimental.list_physical_devices(device_type='CPU')
-        tf.config.experimental.set_visible_devices(devices=cpu, device_type='CPU')
+        cpu_only()
 
     if 'crop' not in args.data_augs.split('-'):
         assert args.pre_image_size == args.image_size
@@ -82,34 +78,13 @@ def main(args):
         assert args.pre_image_size != args.image_size
 
     # random seed settinga
-    if args.random_seed <= 0:
-        random_seed = np.random.randint(1, 9999)
-    else:
-        random_seed = args.random_seed
-
-    tf.random.set_seed(random_seed)
-    np.random.seed(random_seed)
-    random.seed(random_seed)
+    random_seed = set_seed(args.random_seed)
 
     if args.domain_type == 'dmc/image':
-        import dmc2gym
-        domain_name = args.env_name.split('/')[0]
-        task_name = args.env_name.split('/')[1]
-        env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
-                           height=args.pre_image_size, width=args.pre_image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
-        env = FrameStack(env, k=args.frame_stack)
+        env, test_env = dmc_image_env(args.env_name, args.pre_image_size, args.frame_stack, args.frame_skip, random_seed)
 
-        test_env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True,
-                           height=args.pre_image_size, width=args.pre_image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
-        test_env = FrameStack(test_env, k=args.frame_stack)
     elif args.domain_type == 'dmcr':
-        import dmc_remastered as dmcr
-        domain_name = args.env_name.split('/')[0]
-        task_name = args.env_name.split('/')[1]
-
-        env, test_env = dmcr.benchmarks.classic(domain_name, task_name, visual_seed=0, width=args.pre_image_size, height=args.pre_image_size, frame_skip=args.frame_skip)
-        # env, test_env = dmcr.benchmarks.visual_generalization(domain_name, task_name, num_levels=100, width=args.pre_image_size, height=args.pre_image_size, frame_skip=args.frame_skip)
-        # env, test_env = dmcr.benchmarks.visual_sim2real(domain_name, task_name, num_levels=100, width=args.pre_image_size, height=args.pre_image_size, frame_skip=a
+        env, test_env = dmcr_env(args.env_name, args.pre_image_size, args.frame_skip, random_seed, mode='classic')
 
     state_dim = (3 * args.frame_stack, args.image_size, args.image_size)
     action_dim = env.action_space.shape[0]
@@ -121,8 +96,7 @@ def main(args):
     elif args.algorithm == 'SACv2':
         algorithm = RAD_SACv2(state_dim, action_dim, args)
 
-
-    print("Training of", env.unwrapped.spec.id)
+    print("Training of", args.domain_type + '_' + args.env_name)
     print("Algorithm:", algorithm.name)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)

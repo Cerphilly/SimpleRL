@@ -107,7 +107,7 @@ def main(args):
     elif args.algorithm == 'TD3':
         algorithm = D2RL_TD3(state_dim, action_dim, args)
 
-    print("Training of", args.domain_name + '_' + args.task_name)
+    print("Training of", args.domain_type + '_' + args.env_name)
     print("Algorithm:", algorithm.name)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)

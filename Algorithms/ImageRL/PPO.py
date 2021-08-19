@@ -6,7 +6,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
 
-from Common.Buffer import On_Policy_Buffer
+from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 from Networks.Encoder import PixelEncoder
@@ -15,7 +15,7 @@ class ImagePPO:#make it useful for both discrete(cartegorical actor) and continu
     def __init__(self, obs_dim, action_dim, args):
 
         self.discrete = args.discrete
-        self.buffer = On_Policy_Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim=obs_dim, action_dim=action_dim, max_size=args.buffer_size, on_policy=True)
 
         self.ppo_mode = args.ppo_mode #mode: 'clip'
         assert self.ppo_mode is 'clip'

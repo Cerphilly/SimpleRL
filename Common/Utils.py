@@ -33,6 +33,7 @@ def cpu_only():
     tf.config.experimental.set_visible_devices(devices=cpu, device_type='CPU')
     tf.config.set_visible_devices([], 'GPU')
 
+
 def set_seed(random_seed):
     if random_seed <= 0:
         random_seed = np.random.randint(1, 9999)
@@ -44,6 +45,100 @@ def set_seed(random_seed):
 
     random.seed(random_seed)
 
+    return random_seed
+
+
+def gym_env(env_name, random_seed):
+    import gym
+    # openai gym
+    env = gym.make(env_name)
+    env.seed(random_seed)
+    env.action_space.seed(random_seed)
+
+    test_env = gym.make(env_name)
+    test_env.seed(random_seed)
+    test_env.action_space.seed(random_seed)
+
+    return env, test_env
+
+def atari_env(env_name, image_size, frame_stack, frame_skip, random_seed):
+    import gym
+    from gym.wrappers import AtariPreprocessing, FrameStack
+    env = gym.make(env_name)
+    env = AtariPreprocessing(env, frame_skip=frame_skip, screen_size=image_size, grayscale_newaxis=True)
+    env = FrameStack(env, frame_stack)
+
+    env._max_episode_steps = 10000
+    env.seed(random_seed)
+    env.action_space.seed(random_seed)
+
+    test_env = gym.make(env_name)
+    test_env = AtariPreprocessing(test_env, frame_skip=frame_skip, screen_size=image_size,
+                                  grayscale_newaxis=True)
+    test_env._max_episode_steps = 10000
+    test_env = FrameStack(test_env, frame_stack)
+    test_env.seed(random_seed)
+    test_env.action_space.seed(random_seed)
+
+    return env, test_env
+
+def dmc_env(env_name, random_seed):
+    import dmc2gym
+    # deepmind control suite
+    domain_name = env_name.split('/')[0]
+    task_name = env_name.split('/')[1]
+    env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed)
+    test_env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed)
+
+    return env, test_env
+
+def dmc_image_env(env_name, image_size, frame_stack, frame_skip, random_seed):
+    import dmc2gym
+    domain_name = env_name.split('/')[0]
+    task_name = env_name.split('/')[1]
+    env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False,
+                       from_pixels=True, height=image_size, width=image_size,
+                       frame_skip=frame_skip)  # Pre image size for curl, image size for dbc
+    env = FrameStack(env, k=frame_stack)
+
+    test_env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True, height=image_size, width=image_size,
+                            frame_skip=frame_skip)  # Pre image size for curl, image size for dbc
+    test_env = FrameStack(test_env, k=frame_stack)
+
+    return env, test_env
+
+def dmcr_env(env_name, image_size, frame_skip, random_seed, mode='classic'):
+    assert mode in {'classic', 'generalization', 'sim2real'}
+
+    import dmc_remastered as dmcr
+
+    domain_name = env_name.split('/')[0]
+    task_name = env_name.split('/')[1]
+    if mode == 'classic':
+        env, test_env = dmcr.benchmarks.classic(domain_name, task_name, visual_seed=random_seed, width=image_size, height=image_size, frame_skip=frame_skip)
+    elif mode == 'generalization':
+        env, test_env = dmcr.benchmarks.visual_generalization(domain_name, task_name, num_levels=random_seed, width=image_size, height=image_size, frame_skip=frame_skip)
+    elif mode == 'sim2real':
+        env, test_env = dmcr.benchmarks.visual_sim2real(domain_name, task_name, num_levels=random_seed, width=image_size, height=image_size, frame_skip=frame_skip)
+
+    return env, test_env
+
+def procgen_env(env_name, frame_stack, random_seed):
+    import gym
+    env_name = "procgen:procgen-{}-v0".format(env_name)
+    env = gym.make(env_name, render_mode='rgb_array')
+    env._max_episode_steps = 1000
+    env = FrameStack(env, frame_stack, data_format='channels_last')
+    env.seed(random_seed)
+    env.action_space.seed(random_seed)
+
+    test_env = gym.make(env_name, render_mode='rgb_array')
+    test_env._max_episode_steps = 1000
+    test_env = FrameStack(test_env, frame_stack, data_format='channels_last')
+    test_env.seed(random_seed)
+    test_env.action_space.seed(random_seed)
+
+    return env, test_env
 
 def preprocess_obs(obs, bits=5):
     """Preprocessing image, see https://arxiv.org/abs/1807.03039."""
@@ -78,6 +173,9 @@ def random_crop(imgs, output_size):#random crop for curl
     # selects a random window for each batch element
     cropped_imgs = windows[np.arange(n), w1, h1]
     return cropped_imgs
+
+
+
 
 def center_crop_image(image, output_size):#center crop for curl
     h, w = image.shape[1:]

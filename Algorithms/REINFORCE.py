@@ -4,7 +4,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
 
-from Common.Buffer import On_Policy_Buffer
+from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
@@ -12,12 +12,11 @@ from Networks.Gaussian_Actor import Gaussian_Actor
 class REINFORCE:
     def __init__(self, state_dim, action_dim, args):
 
-        self.buffer = On_Policy_Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim=state_dim, action_dim=action_dim if args.discrete == False else 1, max_size=args.buffer_size, on_policy=True)
 
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        
         self.discrete = args.discrete
 
         self.gamma = args.gamma
@@ -68,7 +67,7 @@ class REINFORCE:
     def train(self, training_num):
         total_loss = 0
         s, a, r, ns, d, _ = self.buffer.all_sample()
-        returns = np.zeros_like(r.numpy())
+        returns = np.zeros_like(r)
 
         running_return = 0
         for t in reversed(range(len(r))):

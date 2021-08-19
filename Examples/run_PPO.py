@@ -1,20 +1,18 @@
 import argparse
-import tensorflow as tf
-import numpy as np
-import random
+
 
 from Algorithms.PPO import PPO
 from Algorithms.ImageRL.PPO import ImagePPO
-from Common.Utils import FrameStack
+from Common.Utils import cpu_only, set_seed, gym_env, dmc_env, dmc_image_env, dmcr_env, procgen_env
 from Trainer.On_policy_trainer import On_policy_trainer
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Proximal Policy Gradient(PPO) example')
     #environment
-    parser.add_argument('--domain_type', default='procgen', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='starpilot', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
+    parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc')
+    parser.add_argument('--env-name', default='CartPole-v0', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
     parser.add_argument('--discrete', default=True, type=bool, help='whether the environment is discrete or not')
-    parser.add_argument('--render', default=True, type=bool)
+    parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=0, type=int, help='First step to start training')
     parser.add_argument('--max-step', default=1000000, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=False, type=bool, help='whether to perform evaluation')
@@ -41,7 +39,7 @@ def hyperparameters():
     parser.add_argument('--filter-num', default=32, type=int)
     parser.add_argument('--feature-dim', default=50, type=int)
 
-    parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
+    parser.add_argument('--cpu-only', default=True, type=bool, help='force to use cpu only')
     parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
     parser.add_argument('--file', default=True, type=bool, help='when logged, write log')
@@ -59,67 +57,26 @@ def hyperparameters():
 
 def main(args):
     if args.cpu_only == True:
-        cpu = tf.config.experimental.list_physical_devices(device_type='CPU')
-        tf.config.experimental.set_visible_devices(devices=cpu, device_type='CPU')
-        tf.config.set_visible_devices([], 'GPU')
+        cpu_only()
 
-    # random seed setting
-    if args.random_seed <= 0:
-        random_seed = np.random.randint(1, 9999)
-    else:
-        random_seed = args.random_seed
-
-    tf.random.set_seed(random_seed)
-    np.random.seed(random_seed)
-    random.seed(random_seed)
+    random_seed = set_seed(args.random_seed)
 
     #env setting
     if args.domain_type == 'gym':
-        import gym
-        #openai gym
-        env = gym.make(args.env_name)
-        env.seed(random_seed)
-        env.action_space.seed(random_seed)
-
-        test_env = gym.make(args.env_name)
-        test_env.seed(random_seed)
-        test_env.action_space.seed(random_seed)
+        env, test_env = gym_env(args.env_name, random_seed)
 
     elif args.domain_type == 'dmc':
-        import dmc2gym
-        #deepmind control suite
-        env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
-        test_env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
+        env, test_env = dmc_env(args.env_name, random_seed)
 
     elif args.domain_type == 'dmc/image':
-        import dmc2gym
-        domain_name = args.env_name.split('/')[0]
-        task_name = args.env_name.split('/')[1]
-        env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True, height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
-        env = FrameStack(env, k=args.frame_stack)
-
-        test_env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False, from_pixels=True, height=args.image_size, width=args.image_size, frame_skip=args.frame_skip)#Pre image size for curl, image size for dbc
-        test_env = FrameStack(test_env, k=args.frame_stack)
+        env, test_env = dmc_image_env(args.env_name, args.image_size, args.frame_stack, args.frame_skip, random_seed)
 
     elif args.domain_type == 'dmcr':
-        import dmc_remastered as dmcr
-        domain_name = args.env_name.split('/')[0]
-        task_name = args.env_name.split('/')[1]
-
-        env, test_env = dmcr.benchmarks.classic(domain_name, task_name, visual_seed=0, width=args.image_size, height=args.image_size, frame_skip=args.frame_skip)
-        # env, test_env = dmcr.benchmarks.visual_generalization(domain_name, task_name, num_levels=100, width=args.pre_image_size, height=args.pre_image_size, frame_skip=args.frame_skip)
-        # env, test_env = dmcr.benchmarks.visual_sim2real(domain_name, task_name, num_levels=100, width=args.pre_image_size, height=args.pre_image_size, frame_skip=args.frame_skip)
+        env, test_env = dmcr_env(args.env_name, args.image_size, args.frame_skip, random_seed, mode='classic')
 
     elif args.domain_type == 'procgen':
-        import gym
-        env_name = "procgen:procgen-{}-v0".format(args.env_name)
-        env = gym.make(env_name, render_mode='rgb_array')
-        env._max_episode_steps = 1000
-        env = FrameStack(env, args.frame_stack, data_format='channels_last')
+        env, test_env = procgen_env(args.env_name, args.frame_stack, random_seed)
 
-        test_env = gym.make(env_name, render_mode='rgb_array')
-        test_env._max_episode_steps = 1000
-        test_env = FrameStack(test_env, args.frame_stack, data_format='channels_last')
 
     if args.discrete == True:
         state_dim = env.observation_space.shape[0]
@@ -138,13 +95,14 @@ def main(args):
         max_action = env.action_space.high[0]
         min_action = env.action_space.low[0]
 
+
     if args.domain_type in {'gym', 'dmc'}:
         algorithm = PPO(state_dim, action_dim, args)
 
     elif args.domain_type in {'atari', 'procgen', 'dmc/image', 'dmcr'}:
         algorithm = ImagePPO(state_dim, action_dim, args)
 
-    print("Training of", args.domain_name + '_' + args.task_name)
+    print("Training of", args.domain_type + '_' + args.env_name)
     print("Algorithm:", algorithm.name)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)

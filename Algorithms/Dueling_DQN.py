@@ -8,7 +8,8 @@ from Networks.Dueling_Network import Dueling_Network
 
 class Dueling_DQN:
     def __init__(self, state_dim, action_dim, args):
-        self.buffer = Buffer(args.buffer_size)
+
+        self.buffer = Buffer(state_dim, 1, args.buffer_size)
         self.optimizer = tf.optimizers.Adam(args.learning_rate)
 
         self.state_dim = state_dim

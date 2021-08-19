@@ -7,7 +7,7 @@ import tensorflow_probability as tfp
 import numpy as np
 import copy
 
-from Common.Buffer import On_Policy_Buffer
+from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
@@ -16,7 +16,7 @@ class TRPO:
 
         self.discrete = args.discrete
 
-        self.buffer = On_Policy_Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim, action_dim if args.discrete == False else 1, args.buffer_size, on_policy=True)
 
         self.gamma = args.gamma
         self.lambda_gae = args.lambda_gae

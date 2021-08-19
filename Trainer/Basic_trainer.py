@@ -146,7 +146,6 @@ class Basic_trainer:
 
                 else:
                     action = self.algorithm.get_action(observation)
-                    print
                     next_observation, reward, done, _ = self.env.step(self.max_action * action)
 
                 if self.local_step + 1 == 1000:

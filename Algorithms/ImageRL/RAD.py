@@ -12,12 +12,10 @@ from Common.Utils import copy_weight, soft_update, center_crop_image
 from Common.Buffer import Buffer
 from Common import Data_Augmentation as rad
 
-
-
 class RAD_SACv2:
     def __init__(self, obs_dim, action_dim, args):
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim=(obs_dim[0], args.pre_image_size, args.pre_image_size), action_dim=action_dim, max_size=args.buffer_size)
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
@@ -63,8 +61,6 @@ class RAD_SACv2:
 
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2,
                              'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2, 'Encoder': self.encoder, 'Target_Encoder': self.target_encoder}
-
-
 
         self.aug_funcs = {}
         self.aug_list = {

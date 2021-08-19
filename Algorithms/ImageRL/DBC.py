@@ -14,7 +14,7 @@ from Common.Buffer import Buffer
 class DBC_SACv2:
     def __init__(self, obs_dim, action_dim, args):
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim=obs_dim, action_dim=action_dim, max_size=args.buffer_size)
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
@@ -249,7 +249,7 @@ class DBC_TD3:
     def __init__(self, obs_dim, action_dim, hidden_dim=512, gamma=0.99, learning_rate=0.001, batch_size=512, policy_delay=2, actor_noise=0.1, target_noise=0.2, noise_clip=0.5, buffer_size=1e6,
                  feature_dim=50, layer_num=4, filter_num=32, tau=0.005, encoder_tau=0.005, bisim_coef = 0.5, training_start=1000):
 
-        self.buffer = Buffer(buffer_size)
+        self.buffer = Buffer(state_dim=obs_dim, action_dim=action_dim, max_size=args.buffer_size)
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim

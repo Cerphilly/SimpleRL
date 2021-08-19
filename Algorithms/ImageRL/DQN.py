@@ -13,7 +13,7 @@ from Networks.Encoder import PixelEncoder
 class ImageDQN:
     def __init__(self, obs_dim, action_dim, args):
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim=obs_dim, action_dim=action_dim, max_size=args.buffer_size)
         self.optimizer = tf.keras.optimizers.Adam(args.learning_rate)
 
         self.obs_dim = obs_dim

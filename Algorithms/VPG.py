@@ -6,16 +6,16 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
 
-from Common.Buffer import On_Policy_Buffer
+from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
 class VPG:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
     def __init__(self, state_dim, action_dim, args):
 
-        self.discrete = args.discrete
 
-        self.buffer = On_Policy_Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim, action_dim if args.discrete == False else 1, args.buffer_size, on_policy=True)
+        self.discrete = args.discrete
 
         self.gamma = args.gamma
         self.lambda_gae = args.lambda_gae
@@ -78,7 +78,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         s, a, r, ns, d, _ = self.buffer.all_sample()
         values = self.critic(s)
 
-        returns = np.zeros_like(r.numpy())
+        returns = np.zeros_like(r)
         advantages = np.zeros_like(returns)
 
         running_return = np.zeros(1)

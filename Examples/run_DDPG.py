@@ -1,9 +1,8 @@
 import argparse
-import tensorflow as tf
-import numpy as np
-import random
+
 
 from Algorithms.DDPG import DDPG
+from Common.Utils import cpu_only, set_seed, gym_env, dmc_env
 
 from Trainer.Basic_trainer import Basic_trainer
 
@@ -50,36 +49,17 @@ def hyperparameters():
 
 def main(args):
     if args.cpu_only == True:
-        cpu = tf.config.experimental.list_physical_devices(device_type='CPU')
-        tf.config.experimental.set_visible_devices(devices=cpu, device_type='CPU')
+        cpu_only()
 
     # random seed setting
-    if args.random_seed <= 0:
-        random_seed = np.random.randint(1, 9999)
-    else:
-        random_seed = args.random_seed
-
-    tf.random.set_seed(random_seed)
-    np.random.seed(random_seed)
-    random.seed(random_seed)
+    random_seed = set_seed(args.random_seed)
 
     #env setting
     if args.domain_type == 'gym':
-        import gym
-        #openai gym
-        env = gym.make(args.env_name)
-        env.seed(random_seed)
-        env.action_space.seed(random_seed)
+        env, test_env = gym_env(args.env_name, random_seed)
 
-        test_env = gym.make(args.env_name)
-        test_env.seed(random_seed)
-        test_env.action_space.seed(random_seed)
     elif args.domain_type == 'dmc':
-        import dmc2gym
-        #deepmind control suite
-        env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
-        test_env = dmc2gym.make(domain_name=args.env_name.split('/')[0], task_name=args.env_name.split('/')[1], seed=random_seed)
-
+         env, test_env = dmc_env(args.env_name, random_seed)
 
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
@@ -88,7 +68,7 @@ def main(args):
 
     algorithm = DDPG(state_dim, action_dim, args)
 
-    print("Training of", args.domain_name + '_' + args.task_name)
+    print("Training of", args.domain_type + '_' + args.env_name)
     print("Algorithm:", algorithm.name)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)

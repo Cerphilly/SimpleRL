@@ -6,7 +6,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
 
-from Common.Buffer import On_Policy_Buffer
+from Common.Buffer import Buffer
 from Networks.Basic_Networks import Policy_network, V_network
 from Networks.Gaussian_Actor import Gaussian_Actor
 
@@ -15,7 +15,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
         self.discrete = args.discrete
 
-        self.buffer = On_Policy_Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim=state_dim, action_dim=action_dim if args.discrete == False else 1, max_size=args.buffer_size, on_policy=True)
 
         self.ppo_mode = args.ppo_mode #mode: 'clip'
         assert self.ppo_mode is 'clip'
@@ -83,7 +83,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         s, a, r, ns, d, log_prob = self.buffer.all_sample()
         old_values = self.critic(s)
 
-        returns = np.zeros_like(r.numpy())
+        returns = np.zeros_like(r)
         advantages = np.zeros_like(returns)
 
         running_return = np.zeros(1)
@@ -92,16 +92,15 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
         #GAE
         for t in reversed(range(len(r))):
-            running_return = (r[t] + self.gamma * running_return * (1 - d[t])).numpy()
-            running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - old_values[t]).numpy()
-            running_advantage = (running_tderror + (self.gamma * self.lambda_gae) * running_advantage * (1 - d[t])).numpy()
+            running_return = (r[t] + self.gamma * running_return * (1 - d[t]))
+            running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - old_values[t])
+            running_advantage = (running_tderror + (self.gamma * self.lambda_gae) * running_advantage * (1 - d[t]))
 
             returns[t] = running_return
             previous_value = old_values[t]
             advantages[t] = running_advantage
 
         advantages = (advantages - advantages.mean()) / (advantages.std())
-
 
         n = len(s)
         arr = np.arange(n)
@@ -114,19 +113,18 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                 else:
                     batch_index = arr[self.batch_size * epoch: ]
 
-                batch_s = s.numpy()[batch_index]
-                batch_a = a.numpy()[batch_index]
+                batch_s = s[batch_index]
+                batch_a = a[batch_index]
                 batch_returns = returns[batch_index]
                 batch_advantages = advantages[batch_index]
-                batch_old_log_policy = log_prob.numpy()[batch_index]
+                batch_old_log_policy = log_prob[batch_index]
 
                 with tf.GradientTape(persistent=True) as tape:
 
                     if self.discrete == True:
                         policy = self.actor(batch_s, activation='softmax')
                         dist = tfp.distributions.Categorical(probs=policy)
-                        log_policy = tf.reshape(dist.log_prob(tf.squeeze(batch_a)), (-1, 1))
-
+                        log_policy = tf.reshape(dist.log_prob(tf.squeeze(batch_a)), (len(batch_index), -1))
                         ratio = tf.exp(log_policy - batch_old_log_policy)
                         surrogate = ratio * batch_advantages
 

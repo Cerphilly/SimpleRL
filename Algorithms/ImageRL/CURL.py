@@ -14,7 +14,7 @@ from Common.Buffer import Buffer
 class CURL_SACv1:
     def __init__(self, obs_dim, action_dim, args):
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim=(obs_dim[0], args.pre_image_size, args.pre_image_size), action_dim=action_dim, max_size=args.buffer_size)
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
@@ -192,7 +192,7 @@ class CURL_SACv1:
 class CURL_SACv2:
     def __init__(self, obs_dim, action_dim, args):
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim=(obs_dim[0], args.pre_image_size, args.pre_image_size), action_dim=action_dim, max_size=args.buffer_size)
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
@@ -384,7 +384,7 @@ class CURL_SACv2:
 class CURL_TD3:
     def __init__(self, obs_dim, action_dim, args):
 
-        self.buffer = Buffer(args.buffer_size)
+        self.buffer = Buffer(state_dim=(obs_dim[0], args.pre_image_size, args.pre_image_size), action_dim=action_dim, max_size=args.buffer_size)
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
