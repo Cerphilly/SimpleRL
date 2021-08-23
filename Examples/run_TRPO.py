@@ -1,7 +1,4 @@
 import argparse
-import tensorflow as tf
-import numpy as np
-import random
 
 from Algorithms.TRPO import TRPO
 
@@ -12,8 +9,8 @@ def hyperparameters():
     parser = argparse.ArgumentParser(description='Trusted Region Policy Optimization(TRPO) example')
     #environment
     parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='InvertedPendulum-v2', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
-    parser.add_argument('--discrete', default=False, type=bool, help='whether the environment is discrete or not')
+    parser.add_argument('--env-name', default='CartPole-v0', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
+    parser.add_argument('--discrete', default=True, type=bool, help='whether the environment is discrete or not')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=0, type=int, help='First step to start training')
     parser.add_argument('--max-step', default=1000000, type=int, help='Maximum training step')
@@ -35,7 +32,7 @@ def hyperparameters():
     parser.add_argument('--critic-lr', default=0.0003, type=float)
     parser.add_argument('--hidden-dim', default=(256, 256), help='hidden dimension of network')
 
-    parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
+    parser.add_argument('--cpu-only', default=True, type=bool, help='force to use cpu only')
     parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
     parser.add_argument('--file', default=False, type=bool, help='when logged, write log')

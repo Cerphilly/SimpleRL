@@ -4,7 +4,7 @@ import argparse
 from Algorithms.PPO import PPO
 from Algorithms.ImageRL.PPO import ImagePPO
 from Common.Utils import cpu_only, set_seed, gym_env, dmc_env, dmc_image_env, dmcr_env, procgen_env
-from Trainer.On_policy_trainer import On_policy_trainer
+from Trainer.Basic_trainer import Basic_trainer
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Proximal Policy Gradient(PPO) example')
@@ -14,18 +14,18 @@ def hyperparameters():
     parser.add_argument('--discrete', default=True, type=bool, help='whether the environment is discrete or not')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=0, type=int, help='First step to start training')
-    parser.add_argument('--max-step', default=1000000, type=int, help='Maximum training step')
+    parser.add_argument('--max-step', default=100000, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=False, type=bool, help='whether to perform evaluation')
     parser.add_argument('--eval-step', default=10000, type=int, help='Frequency in performance evaluation')
     parser.add_argument('--eval-episode', default=10, type=int, help='Number of episodes to perform evaluation')
     parser.add_argument('--random-seed', default=-1, type=int, help='Random seed setting')
     #ppo
     parser.add_argument('--batch-size', default=64, type=int)
-    parser.add_argument('--buffer-size', default=1000000, type=int, help='Buffer maximum size')
+    parser.add_argument('--buffer-size', default=1000, type=int, help='Buffer maximum size')
     parser.add_argument('--train-mode', default='offline', help='offline')
     parser.add_argument('--ppo-mode', default='clip', help='Clip, Adaptive KL, Fixed KL')
     parser.add_argument('--clip', default=0.2, type=float)
-    parser.add_argument('--training-step', default=1, type=int, help='inverteddobulependulum-v2: 1')
+    parser.add_argument('--training-step', default=10, type=int, help='inverteddobulependulum-v2: 1')
     parser.add_argument('--gamma', default=0.99, type=float)
     parser.add_argument('--lambda-gae', default=0.95, type=float)
     parser.add_argument('--actor-lr', default=0.0003, type=float)
@@ -39,14 +39,14 @@ def hyperparameters():
     parser.add_argument('--filter-num', default=32, type=int)
     parser.add_argument('--feature-dim', default=50, type=int)
 
-    parser.add_argument('--cpu-only', default=True, type=bool, help='force to use cpu only')
+    parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
     parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
     parser.add_argument('--file', default=True, type=bool, help='when logged, write log')
     parser.add_argument('--numpy', default=True, type=bool, help='when logged, save log in numpy')
 
-    parser.add_argument('--model', default=False, type=bool, help='when logged, save model')
-    parser.add_argument('--model-freq', default=10000, type=int, help='model saving frequency')
+    parser.add_argument('--model', default=True, type=bool, help='when logged, save model')
+    parser.add_argument('--model-freq', default=100000, type=int, help='model saving frequency')
 
     parser.add_argument('--buffer', default=False, type=bool, help='when logged, save buffer')
     parser.add_argument('--buffer-freq', default=100000, type=int, help='buffer saving frequency')
@@ -80,6 +80,7 @@ def main(args):
 
     if args.discrete == True:
         state_dim = env.observation_space.shape[0]
+
         if args.domain_type in {'atari', 'procgen'}:
             state_dim = env.observation_space.shape
 
@@ -88,6 +89,7 @@ def main(args):
         min_action = 1
     else:
         state_dim = env.observation_space.shape[0]
+
         if args.domain_type in {'dmc/image', 'dmcr'}:
             state_dim = env.observation_space.shape
 
@@ -110,7 +112,7 @@ def main(args):
     print("Min action:", min_action)
     print("Discrete: ", args.discrete)
 
-    trainer = On_policy_trainer(env, test_env, algorithm, max_action, min_action, args)
+    trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

@@ -129,14 +129,10 @@ def procgen_env(env_name, frame_stack, random_seed):
     env = gym.make(env_name, render_mode='rgb_array')
     env._max_episode_steps = 1000
     env = FrameStack(env, frame_stack, data_format='channels_last')
-    env.seed(random_seed)
-    env.action_space.seed(random_seed)
 
     test_env = gym.make(env_name, render_mode='rgb_array')
     test_env._max_episode_steps = 1000
     test_env = FrameStack(test_env, frame_stack, data_format='channels_last')
-    test_env.seed(random_seed)
-    test_env.action_space.seed(random_seed)
 
     return env, test_env
 
@@ -152,7 +148,7 @@ def preprocess_obs(obs, bits=5):
     return obs
 
 
-def random_crop(imgs, output_size):#random crop for curl
+def random_crop(imgs, output_size, data_format='channels_first'):#random crop for curl
     """
     Vectorized way to do random crop using sliding windows
     and picking out random ones
@@ -164,7 +160,7 @@ def random_crop(imgs, output_size):#random crop for curl
     n = imgs.shape[0]
     img_size = imgs.shape[-1]
     crop_max = img_size - output_size
-    imgs = np.transpose(imgs, (0, 2, 3, 1))
+
     w1 = np.random.randint(0, crop_max, n)
     h1 = np.random.randint(0, crop_max, n)
     # creates all sliding windows combinations of size (output_size)
@@ -173,9 +169,6 @@ def random_crop(imgs, output_size):#random crop for curl
     # selects a random window for each batch element
     cropped_imgs = windows[np.arange(n), w1, h1]
     return cropped_imgs
-
-
-
 
 def center_crop_image(image, output_size):#center crop for curl
     h, w = image.shape[1:]

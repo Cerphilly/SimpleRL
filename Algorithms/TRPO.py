@@ -134,7 +134,7 @@ class TRPO:
 
         old_values = self.critic(s)
 
-        returns = np.zeros_like(r.numpy())
+        returns = np.zeros_like(r)
         advantages = np.zeros_like(returns)
 
         running_return = np.zeros(1)
@@ -142,9 +142,9 @@ class TRPO:
         running_advantage = np.zeros(1)
 
         for t in reversed(range(len(r))): #General Advantage Estimation
-            running_return = (r[t] + self.gamma * running_return * (1 - d[t])).numpy()
-            running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - old_values[t]).numpy()
-            running_advantage = (running_tderror + (self.gamma * self.lambda_gae) * running_advantage * (1 - d[t])).numpy()
+            running_return = (r[t] + self.gamma * running_return * (1 - d[t]))
+            running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - old_values[t])
+            running_advantage = (running_tderror + (self.gamma * self.lambda_gae) * running_advantage * (1 - d[t]))
 
             returns[t] = running_return
             previous_value = old_values[t]
@@ -197,7 +197,6 @@ class TRPO:
                 new_dist = self.actor.dist(s)
                 new_log_policy = new_dist.log_prob(a)
 
-
             new_surrogate = tf.reduce_mean(tf.exp(new_log_policy - old_log_policy) * advantages)
 
             loss_improve = new_surrogate - surrogate
@@ -239,7 +238,7 @@ class TRPO:
             else:
                 batch_index = arr[self.batch_size * epoch2:]
 
-            batch_s = s.numpy()[batch_index]
+            batch_s = s[batch_index]
             batch_returns = returns[batch_index]
 
             with tf.GradientTape() as tape:

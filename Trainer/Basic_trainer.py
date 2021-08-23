@@ -76,6 +76,7 @@ class Basic_trainer:
             episode += 1
             eval_reward = 0
             observation = self.test_env.reset()
+
             if '-ram-' in self.env_name:  # Atari Ram state
                 observation = observation / 255.
 
@@ -85,15 +86,21 @@ class Basic_trainer:
                 if self.render == True:
                     if self.domain_type in {'gym', "atari"}:
                         self.env.render()
-                    elif self.domain_type == 'procgen':
-                        cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array'))
+                    elif self.domain_type in {'procgen'}:
+                        cv2.imshow("{}_{}_{}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array'))
                         cv2.waitKey(1)
-                    elif self.domain_type == 'dmc':
-                        cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array', height=240, width=320))
+                    elif self.domain_type in {'dmc', 'dmcr'}:
+                        cv2.imshow("{}_{}_{}}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array', height=240, width=320))
                         cv2.waitKey(1)
 
                 action = self.algorithm.eval_action(observation)
-                next_observation, reward, done, _ = self.test_env.step(self.max_action * action)
+
+                if self.discrete == False:
+                    env_action = self.max_action * np.clip(action, -1, 1)
+                else:
+                    env_action = action
+
+                next_observation, reward, done, _ = self.test_env.step(env_action)
 
                 eval_reward += reward
                 observation = next_observation
@@ -127,26 +134,34 @@ class Basic_trainer:
                 self.total_step += 1
 
                 if self.render == True:
-                    if self.domain_type in {'gym', "atari"} :
+                    if self.domain_type in {'gym', "atari"}:
                         self.env.render()
-                    elif self.domain_type == 'procgen':
-                        cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array'))
+                    elif self.domain_type in {'procgen'}:
+                        cv2.imshow("{}_{}_{}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array'))
                         cv2.waitKey(1)
-                    elif self.domain_type == 'dmc':
-                        cv2.imshow("{}_{}".format(self.algorithm.name, self.env.unwrapped.spec.id), self.env.render(mode='rgb_array', height=240, width=320))
+                    elif self.domain_type in {'dmc', 'dmcr'}:
+                        cv2.imshow("{}_{}_{}}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array', height=240, width=320))
                         cv2.waitKey(1)
 
                 if '-ram-' in self.env_name:  # Atari Ram state
                     observation = observation / 255.
 
-                #observation += np.random.normal(scale=0.05, size=5)
                 if self.total_step <= self.algorithm.training_start:
                    action = self.env.action_space.sample()
                    next_observation, reward, done, _ = self.env.step(action)
 
                 else:
-                    action = self.algorithm.get_action(observation)
-                    next_observation, reward, done, _ = self.env.step(self.max_action * action)
+                    if self.algorithm.buffer.on_policy == False:
+                        action = self.algorithm.get_action(observation)
+                    else:
+                        action, log_prob = self.algorithm.get_action(observation)
+
+                    if self.discrete == False:
+                        env_action = self.max_action * np.clip(action, -1, 1)
+                    else:
+                        env_action = action
+
+                    next_observation, reward, done, _ = self.env.step(env_action)
 
                 if self.local_step + 1 == 1000:
                     real_done = 0.
@@ -155,7 +170,14 @@ class Basic_trainer:
 
                 self.episode_reward += reward
 
-                self.algorithm.buffer.add(observation, action, reward, next_observation, real_done)
+                if self.env_name == 'Pendulum-v0':
+                    reward = (reward + 8.1) / 8.1
+
+                if self.algorithm.buffer.on_policy == False:
+                    self.algorithm.buffer.add(observation, action, reward, next_observation, real_done)
+                else:
+                    self.algorithm.buffer.add(observation, action, reward, next_observation, real_done, log_prob)
+
                 observation = next_observation
 
                 if self.total_step >= self.algorithm.training_start and self.train_mode(done, self.local_step):

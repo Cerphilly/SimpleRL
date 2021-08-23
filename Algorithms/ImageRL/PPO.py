@@ -15,7 +15,7 @@ class ImagePPO:#make it useful for both discrete(cartegorical actor) and continu
     def __init__(self, obs_dim, action_dim, args):
 
         self.discrete = args.discrete
-        self.buffer = Buffer(state_dim=obs_dim, action_dim=action_dim, max_size=args.buffer_size, on_policy=True)
+        self.buffer = Buffer(state_dim=obs_dim, action_dim=action_dim if args.discrete == False else 1, max_size=args.buffer_size, on_policy=True)
 
         self.ppo_mode = args.ppo_mode #mode: 'clip'
         assert self.ppo_mode is 'clip'
@@ -88,8 +88,9 @@ class ImagePPO:#make it useful for both discrete(cartegorical actor) and continu
         total_c_loss = 0
 
         s, a, r, ns, d, log_prob = self.buffer.all_sample()
+
         old_values = self.critic(self.encoder(s))
-        returns = np.zeros_like(r.numpy())
+        returns = np.zeros_like(r)
         advantages = np.zeros_like(returns)
 
         running_return = np.zeros(1)
@@ -98,9 +99,9 @@ class ImagePPO:#make it useful for both discrete(cartegorical actor) and continu
 
         #GAE
         for t in reversed(range(len(r))):
-            running_return = (r[t] + self.gamma * running_return * (1 - d[t])).numpy()
-            running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - old_values[t]).numpy()
-            running_advantage = (running_tderror + (self.gamma * self.lambda_gae) * running_advantage * (1 - d[t])).numpy()
+            running_return = (r[t] + self.gamma * running_return * (1 - d[t]))
+            running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - old_values[t])
+            running_advantage = (running_tderror + (self.gamma * self.lambda_gae) * running_advantage * (1 - d[t]))
 
             returns[t] = running_return
             previous_value = old_values[t]
@@ -120,11 +121,11 @@ class ImagePPO:#make it useful for both discrete(cartegorical actor) and continu
                 else:
                     batch_index = arr[self.batch_size * epoch: ]
 
-                batch_s = s.numpy()[batch_index]
-                batch_a = a.numpy()[batch_index]
+                batch_s = s[batch_index]
+                batch_a = a[batch_index]
                 batch_returns = returns[batch_index]
                 batch_advantages = advantages[batch_index]
-                batch_old_log_policy = log_prob.numpy()[batch_index]
+                batch_old_log_policy = log_prob[batch_index]
 
                 with tf.GradientTape(persistent=True) as tape:
 
