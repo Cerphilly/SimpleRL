@@ -7,7 +7,7 @@ class Policy_network(tf.keras.Model):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim, ), name='Input')
+        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim, ), dtype=tf.float32, name='Input')
         self.hidden_layers = []
         for i in range(len(hidden_units)):
             self.hidden_layers.append(tf.keras.layers.Dense(hidden_units[i], activation=activation, kernel_initializer=kernel_initializer,
@@ -15,7 +15,8 @@ class Policy_network(tf.keras.Model):
 
         self.output_layer = tf.keras.layers.Dense(self.action_dim, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Output')
-        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32)))
+
+        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32), dtype=tf.float32))
 
     @tf.function
     def call(self, input, activation = 'tanh'):
@@ -41,7 +42,7 @@ class Q_network(tf.keras.Model):
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim + self.action_dim,), name='Input')
+        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim + self.action_dim,), dtype=tf.float32, name='Input')
         self.hidden_layers = []
         for i in range(len(hidden_units)):
             self.hidden_layers.append(
@@ -51,7 +52,7 @@ class Q_network(tf.keras.Model):
         self.output_layer = tf.keras.layers.Dense(1, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Output')
 
-        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32)), tf.constant(np.zeros(shape=(1,) + (self.action_dim,), dtype=np.float32)))
+        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32), dtype=tf.float32), tf.constant(np.zeros(shape=(1,) + (self.action_dim,), dtype=np.float32), dtype=tf.float32))
 
     @tf.function
     def call(self, input1, input2):
@@ -71,7 +72,7 @@ class V_network(tf.keras.Model):
         super(V_network, self).__init__()
         self.state_dim = state_dim
 
-        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim, ), name='Input')
+        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim, ), dtype=tf.float32, name='Input')
         self.hidden_layers = []
         for i in range(len(hidden_units)):
             self.hidden_layers.append(
@@ -79,7 +80,7 @@ class V_network(tf.keras.Model):
                                       bias_initializer=bias_initializer, name='Layer{}'.format(i)))
 
         self.output_layer = tf.keras.layers.Dense(1, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, name='Output')
-        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32)))
+        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32), dtype=tf.float32))
 
     @tf.function
     def call(self, input):

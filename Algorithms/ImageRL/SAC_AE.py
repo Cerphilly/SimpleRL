@@ -12,8 +12,6 @@ from Networks.Decoder import PixelDecoder
 from Common.Utils import copy_weight, soft_update, preprocess_obs
 from Common.Buffer import Buffer
 
-
-
 class SACv2_AE:
     def __init__(self, obs_dim, action_dim, args):
 
@@ -78,7 +76,7 @@ class SACv2_AE:
         return tf.exp(self.log_alpha)
 
     def get_action(self, obs):
-        obs = np.expand_dims(np.array(obs), axis=0)
+        obs = np.expand_dims(np.array(obs, dtype=np.float32), axis=0)
         feature = self.encoder(obs)
         action, _ = self.actor(feature)
         action = action.numpy()[0]
@@ -87,7 +85,7 @@ class SACv2_AE:
 
     def eval_action(self, obs):
 
-        obs = np.expand_dims(np.array(obs), axis=0)
+        obs = np.expand_dims(np.array(obs, dtype=np.float32), axis=0)
         feature = self.encoder(obs)
         action, _ = self.actor(feature, deterministic=True)
         action = action.numpy()[0]
@@ -110,8 +108,7 @@ class SACv2_AE:
         target_min_aq = tf.minimum(self.target_critic1(self.target_encoder(ns), ns_action),
                                    self.target_critic2(self.target_encoder(ns), ns_action))
 
-        target_q = tf.stop_gradient(r + self.gamma * (1 - d) * (
-                target_min_aq - self.alpha.numpy() * ns_logpi))
+        target_q = tf.stop_gradient(r + self.gamma * (1 - d) * (target_min_aq - self.alpha.numpy() * ns_logpi))
         #critic update
         with tf.GradientTape(persistent=True) as tape1:
             critic1_loss = tf.reduce_mean(tf.square(self.critic1(self.encoder(s), a) - target_q))
@@ -132,7 +129,6 @@ class SACv2_AE:
         #actor update
         if self.current_step % self.actor_update == 0:
             with tf.GradientTape() as tape2:
-
                 s_action, s_logpi = self.actor(tf.stop_gradient(self.encoder(s)))
 
                 min_aq_rep = tf.minimum(self.critic1(tf.stop_gradient(self.encoder(s)), s_action),

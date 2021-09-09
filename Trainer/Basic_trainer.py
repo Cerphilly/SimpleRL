@@ -90,7 +90,7 @@ class Basic_trainer:
                         cv2.imshow("{}_{}_{}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array'))
                         cv2.waitKey(1)
                     elif self.domain_type in {'dmc', 'dmcr'}:
-                        cv2.imshow("{}_{}_{}}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array', height=240, width=320))
+                        cv2.imshow("{}_{}_{}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array', height=240, width=320))
                         cv2.waitKey(1)
 
                 action = self.algorithm.eval_action(observation)
@@ -140,7 +140,7 @@ class Basic_trainer:
                         cv2.imshow("{}_{}_{}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array'))
                         cv2.waitKey(1)
                     elif self.domain_type in {'dmc', 'dmcr'}:
-                        cv2.imshow("{}_{}_{}}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array', height=240, width=320))
+                        cv2.imshow("{}_{}_{}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array', height=240, width=320))
                         cv2.waitKey(1)
 
                 if '-ram-' in self.env_name:  # Atari Ram state

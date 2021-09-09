@@ -9,8 +9,8 @@ from Common.Utils import cpu_only, set_seed, gym_env, atari_env,  procgen_env
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Deep Q Network(DQN) example')
     #environment
-    parser.add_argument('--domain_type', default='atari', type=str, help='gym or dmc or atari')
-    parser.add_argument('--env-name', default='PongNoFrameskip-v4', help='CartPole-v0, MountainCar-v0, Acrobot-v1, and atari games, PongNoframeskip-v4')
+    parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc or atari')
+    parser.add_argument('--env-name', default='CartPole-v0', help='CartPole-v0, MountainCar-v0, Acrobot-v1, and atari games, PongNoframeskip-v4')
     parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--discrete', default=True, type=bool, help='Always discrete')
 
@@ -25,9 +25,9 @@ def hyperparameters():
     parser.add_argument('--buffer-size', default=100000, type=int, help='Buffer maximum size')
     parser.add_argument('--train-mode', default='online', help='Offline, Online')
     parser.add_argument('--training-step', default=1, type=int)
-    parser.add_argument('--copy-iter', default=1000, type=int, help='Frequency to update target network')
+    parser.add_argument('--copy-iter', default=100, type=int, help='Frequency to update target network')
     parser.add_argument('--gamma', default=0.99, type=float)
-    parser.add_argument('--learning-rate', default=0.0003, type=float)
+    parser.add_argument('--learning-rate', default=0.001, type=float)
     parser.add_argument('--epsilon', default=0.1, type=float, help='Exploration probability')
     parser.add_argument('--hidden-dim', default=(256, 256), help='hidden dimension of network')
     #atari setting

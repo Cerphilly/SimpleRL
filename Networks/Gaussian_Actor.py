@@ -13,7 +13,7 @@ class Gaussian_Actor(tf.keras.Model):
 
         self.independent_std = independent_std
 
-        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim, ), name='Input')
+        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim, ), dtype=tf.float32, name='Input')
         self.hidden_layers = []
         for i in range(len(hidden_units)):
             self.hidden_layers.append(
@@ -23,7 +23,7 @@ class Gaussian_Actor(tf.keras.Model):
         self.output_layer = tf.keras.layers.Dense(self.action_dim * 2, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Output')
 
-        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32)))
+        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim,), dtype=np.float32), dtype=tf.float32))
 
     @tf.function
     def call(self, input, deterministic=False):
@@ -91,7 +91,7 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         self.log_std_min = log_std_min
         self.log_std_max = log_std_max
 
-        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim, ), name='Input')
+        self.input_layer = tf.keras.layers.InputLayer(input_shape=(self.state_dim, ), dtype=tf.float32, name='Input')
         self.hidden_layers = []
         for i in range(len(hidden_units)):
             self.hidden_layers.append(
@@ -103,7 +103,7 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         self.logstd_layer = tf.keras.layers.Dense(self.action_dim, kernel_initializer=kernel_initializer,
                                                   bias_initializer=bias_initializer, name='Logstd')
 
-        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim, ), dtype=np.float32)))
+        self(tf.constant(np.zeros(shape=(1,) + (self.state_dim, ), dtype=np.float32), dtype=tf.float32))
 
 
     @tf.function

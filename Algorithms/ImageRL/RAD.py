@@ -64,7 +64,7 @@ class RAD_SACv2:
 
         self.aug_funcs = {}
         self.aug_list = {
-            'crop': rad.crop,
+            'crop': rad.random_crop(image_size=self.image_size),
             'grayscale': rad.random_grayscale(),
             'cutout': rad.random_cutout(),
             'cutout_color': rad.random_cutout_color(),
@@ -88,7 +88,7 @@ class RAD_SACv2:
     def get_action(self, obs):
         if obs.shape[-1] != self.image_size:
             obs = center_crop_image(obs, self.image_size)
-        obs = np.expand_dims(np.array(obs), axis=0)
+        obs = np.expand_dims(np.array(obs, dtype=np.float32), axis=0)
         feature = self.encoder(obs)
         action, _ = self.actor(feature)
         action = action.numpy()[0]
@@ -100,7 +100,7 @@ class RAD_SACv2:
         if obs.shape[-1] != self.image_size:
             obs = center_crop_image(obs, self.image_size)
 
-        obs = np.expand_dims(np.array(obs), axis=0)
+        obs = np.expand_dims(np.array(obs, dtype=np.float32), axis=0)
         feature = self.encoder(obs)
         action, _ = self.actor(feature, deterministic=True)
         action = action.numpy()[0]

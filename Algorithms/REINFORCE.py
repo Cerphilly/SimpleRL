@@ -34,7 +34,7 @@ class REINFORCE:
 
 
     def get_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
         if self.discrete == True:
             policy = self.network(state, activation='softmax')
@@ -51,7 +51,7 @@ class REINFORCE:
         return action, log_prob
 
     def eval_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
         if self.discrete == True:
             policy = self.network(state, activation='softmax')
@@ -67,6 +67,10 @@ class REINFORCE:
     def train(self, training_num):
         total_loss = 0
         s, a, r, ns, d, _ = self.buffer.all_sample()
+
+        r = r.numpy()
+        d = d.numpy()
+
         returns = np.zeros_like(r)
 
         running_return = 0
@@ -74,6 +78,7 @@ class REINFORCE:
             running_return = r[t] + self.gamma * running_return * (1-d[t])
             returns[t] = running_return
 
+        returns = tf.convert_to_tensor(returns, dtype=tf.float32)
 
         with tf.GradientTape() as tape:
             if self.discrete == True:

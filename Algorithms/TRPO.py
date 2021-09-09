@@ -132,7 +132,10 @@ class TRPO:
         total_c_loss = 0
         s, a, r, ns, d, old_log_policy = self.buffer.all_sample()
 
-        old_values = self.critic(s)
+        old_values = self.critic(s).numpy()
+
+        r = r.numpy()
+        d = d.numpy()
 
         returns = np.zeros_like(r)
         advantages = np.zeros_like(returns)
@@ -152,6 +155,8 @@ class TRPO:
 
         advantages = (advantages - advantages.mean()) / (advantages.std())
 
+        returns = tf.convert_to_tensor(returns, dtype=tf.float32)
+        advantages = tf.convert_to_tensor(advantages, dtype=tf.float32)
 
         flattened_actor = tf.concat([tf.reshape(variable, [-1]) for variable in self.actor.trainable_variables], axis=0)
         self.update_model(self.backup_actor, flattened_actor)
@@ -172,7 +177,6 @@ class TRPO:
 
         policy_grad = tape.gradient(surrogate, self.actor.trainable_variables)
         flatten_policy_grad = tf.concat([tf.reshape(grad, [-1]) for grad in policy_grad], axis=0)
-
 
         step_dir = self.conjugate_gradient(s, flatten_policy_grad.numpy(), 10)
 
@@ -238,8 +242,8 @@ class TRPO:
             else:
                 batch_index = arr[self.batch_size * epoch2:]
 
-            batch_s = s[batch_index]
-            batch_returns = returns[batch_index]
+            batch_s = tf.gather(s, batch_index)
+            batch_returns = tf.gather(returns, batch_index)
 
             with tf.GradientTape() as tape:
                 critic_loss = 0.5 * tf.reduce_mean(tf.square(tf.stop_gradient(batch_returns) - self.critic(batch_s)))

@@ -20,7 +20,7 @@ class Logger:
 
         if dir_name == None:
             self.current_time = self.log_time()
-            self.dir_name = 'D:/SimpleRL_Logs/Logs/' + env.unwrapped.spec.id + '-' +  algorithm.name + '-' +  self.current_time
+            self.dir_name = 'D:/SimpleRL_Logs/Logs/' + args.domain_type + '-' + args.env_name + '-' +  algorithm.name + '-' +  self.current_time
             print("Log dir: ", self.dir_name)
             os.mkdir(self.dir_name)
             self.save_hyperparameter(args)

@@ -48,7 +48,7 @@ class TD3:
         self.name = 'TD3'
 
     def get_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
         noise = np.random.normal(loc=0, scale=self.actor_noise, size=self.action_dim)
         action = self.actor(state).numpy()[0] + noise
         action = np.clip(action, -1, 1)
@@ -56,7 +56,7 @@ class TD3:
         return action
 
     def eval_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
         action = self.actor(state).numpy()[0]
         action = np.clip(action, -1, 1)
 

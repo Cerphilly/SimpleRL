@@ -42,14 +42,14 @@ class SAC_v1:
         self.name = 'SAC_v1'
 
     def get_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
         action, _ = self.actor(state)
         action = np.clip(action.numpy()[0], -1, 1)
 
         return action
 
     def eval_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
         action, _ = self.actor(state, deterministic=True)
         action = np.clip(action.numpy()[0], -1, 1)
 
@@ -73,7 +73,6 @@ class SAC_v1:
 
             v_gradients = tape1.gradient(v_loss, self.v_network.trainable_variables)
             self.v_network_optimizer.apply_gradients(zip(v_gradients, self.v_network.trainable_variables))
-
 
             target_q = tf.stop_gradient(r + self.gamma * (1 - d) * self.target_v_network(ns))
 

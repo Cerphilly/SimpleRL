@@ -40,7 +40,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         self.name = 'VPG'
 
     def get_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
         if self.discrete == True:
             policy = self.actor(state, activation='softmax').numpy()
@@ -76,7 +76,10 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         total_c_loss = 0
 
         s, a, r, ns, d, _ = self.buffer.all_sample()
-        values = self.critic(s)
+        values = self.critic(s).numpy()
+
+        r = r.numpy()
+        d = d.numpy()
 
         returns = np.zeros_like(r)
         advantages = np.zeros_like(returns)
@@ -93,6 +96,11 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
             returns[t] = running_return
             previous_value = values[t]
             advantages[t] = running_advantage
+
+        advantages = (advantages - advantages.mean()) / advantages.std()
+
+        returns = tf.convert_to_tensor(returns, dtype=tf.float32)
+        advantages = tf.convert_to_tensor(advantages, dtype=tf.float32)
 
         with tf.GradientTape(persistent=True) as tape:
             if self.discrete == True:

@@ -51,14 +51,14 @@ class SAC_v2:
         return tf.exp(self.log_alpha)
 
     def get_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
         action, _ = self.actor(state)
         action = np.clip(action.numpy()[0], -1, 1)
 
         return action
 
     def eval_action(self, state):
-        state = np.expand_dims(np.array(state), axis=0)
+        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
         action, _ = self.actor(state, deterministic=True)
         action = np.clip(action.numpy()[0], -1, 1)
 

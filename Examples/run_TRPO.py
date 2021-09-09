@@ -2,7 +2,7 @@ import argparse
 
 from Algorithms.TRPO import TRPO
 
-from Trainer.On_policy_trainer import On_policy_trainer
+from Trainer.Basic_trainer import Basic_trainer
 from Common.Utils import cpu_only, set_seed, gym_env, dmc_env
 
 def hyperparameters():
@@ -83,7 +83,7 @@ def main(args):
     print("Min action:", min_action)
     print("Discrete: ", args.discrete)
 
-    trainer = On_policy_trainer(env, test_env, algorithm, max_action, min_action, args)
+    trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':

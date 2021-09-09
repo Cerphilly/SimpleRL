@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 from Common.Utils import random_crop, center_crop_images
 
 class Buffer:
@@ -65,8 +66,15 @@ class Buffer:
         states_next = self.ns[ids]
         dones = self.d[ids]
 
+        states = tf.convert_to_tensor(states, dtype=tf.float32)
+        actions = tf.convert_to_tensor(actions, dtype=tf.float32)
+        rewards = tf.convert_to_tensor(rewards, dtype=tf.float32)
+        states_next = tf.convert_to_tensor(states_next, dtype=tf.float32)
+        dones = tf.convert_to_tensor(dones, dtype=tf.float32)
+
         if self.on_policy == True:
             log_probs = self.log_prob[ids]
+            log_probs = tf.convert_to_tensor(log_probs, dtype=tf.float32)
             return states, actions, rewards, states_next, dones, log_probs
 
         return states, actions, rewards, states_next, dones
@@ -79,8 +87,17 @@ class Buffer:
         states_next = self.ns[ids]
         dones = self.d[ids]
 
+        states = tf.convert_to_tensor(states, dtype=tf.float32)
+        actions = tf.convert_to_tensor(actions, dtype=tf.float32)
+        rewards = tf.convert_to_tensor(rewards, dtype=tf.float32)
+        states_next = tf.convert_to_tensor(states_next, dtype=tf.float32)
+        dones = tf.convert_to_tensor(dones, dtype=tf.float32)
+
+
         if self.on_policy == True:
             log_probs = self.log_prob[ids]
+            log_probs = tf.convert_to_tensor(log_probs, dtype=tf.float32)
+
             return states, actions, rewards, states_next, dones, log_probs
 
         return states, actions, rewards, states_next, dones
@@ -101,10 +118,19 @@ class Buffer:
         states_next = random_crop(states_next, image_size)
         pos = random_crop(pos, image_size)
 
+        states = tf.convert_to_tensor(states, dtype=tf.float32)
+        actions = tf.convert_to_tensor(actions, dtype=tf.float32)
+        rewards = tf.convert_to_tensor(rewards, dtype=tf.float32)
+        states_next = tf.convert_to_tensor(states_next, dtype=tf.float32)
+        dones = tf.convert_to_tensor(dones, dtype=tf.float32)
+
+
         cpc_kwargs = dict(obs_anchor=states, obs_pos=pos, time_anchor=None, time_pos=None)
 
         if self.on_policy == True:
             log_probs = self.log_prob[ids]
+            log_probs = tf.convert_to_tensor(log_probs, dtype=tf.float32)
+
             return states, actions, rewards, states_next, dones, log_probs, cpc_kwargs
 
         return states, actions, rewards, states_next, dones, cpc_kwargs
@@ -136,8 +162,16 @@ class Buffer:
             states = func(states)
             states_next = func(states_next)
 
+        states = tf.convert_to_tensor(states, dtype=tf.float32)
+        actions = tf.convert_to_tensor(actions, dtype=tf.float32)
+        rewards = tf.convert_to_tensor(rewards, dtype=tf.float32)
+        states_next = tf.convert_to_tensor(states_next, dtype=tf.float32)
+        dones = tf.convert_to_tensor(dones, dtype=tf.float32)
+
         if self.on_policy == True:
             log_probs = self.log_prob[ids]
+            log_probs = tf.convert_to_tensor(log_probs, dtype=tf.float32)
+
             return states, actions, rewards, states_next, dones, log_probs
 
         return states, actions, rewards, states_next, dones

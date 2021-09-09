@@ -9,10 +9,10 @@ def hyperparameters():
     parser = argparse.ArgumentParser(description='Deep Bisimulation for Control (DBC) example')
     #environment
     parser.add_argument('--algorithm', default='SACv2', help='SACv2')
-    parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
+    parser.add_argument('--domain_type', default='dmcr', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='cartpole/swingup', help='DM Control Suite domain name + task name')
     parser.add_argument('--discrete', default=False, type=bool, help='Always discrete')
-    parser.add_argument('--render', default=False, type=bool)
+    parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
     parser.add_argument('--max-step', default=1000001, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
@@ -32,28 +32,28 @@ def hyperparameters():
     parser.add_argument('--train-alpha', default=True, type=bool)
     parser.add_argument('--gamma', default=0.99, type=float)
     parser.add_argument('--alpha', default=0.1, type=float)
-    parser.add_argument('--actor-lr', default=0.00001, type=float)
-    parser.add_argument('--critic-lr', default=0.00001, type=float)
+    parser.add_argument('--actor-lr', default=0.001, type=float)
+    parser.add_argument('--critic-lr', default=0.001, type=float)
     parser.add_argument('--v-lr', default=0.001, type=float)
     parser.add_argument('--alpha-lr', default=0.0001, type=float)
     parser.add_argument('--tau', default=0.005, type=float)
     parser.add_argument('--actor-update', default=2, type=int)
     parser.add_argument('--critic-update', default=2, type=int)
     parser.add_argument('--hidden-dim', default=(256, 256), help='hidden dimension of network')
-    parser.add_argument('--log_std_min', default=-5, type=int, help='For squashed gaussian actor')
+    parser.add_argument('--log_std_min', default=-10, type=int, help='For squashed gaussian actor')
     parser.add_argument('--log_std_max', default=2, type=int, help='For squashed gaussian actor')
 
     #dbc&encoder
     parser.add_argument('--layer-num', default=4, type=int)
     parser.add_argument('--filter-num', default=32, type=int)
     parser.add_argument('--encoder-tau', default=0.005, type=float)
-    parser.add_argument('--encoder-lr', default=0.00001, type=float)
-    parser.add_argument('--decoder-lr', default=0.00001, type=float)
+    parser.add_argument('--encoder-lr', default=0.0001, type=float)
+    parser.add_argument('--decoder-lr', default=0.0001, type=float)
 
     parser.add_argument('--feature-dim', default=50, type=int)
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
-    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
+    parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
     parser.add_argument('--file', default=True, type=bool, help='when logged, write log')
     parser.add_argument('--numpy', default=True, type=bool, help='when logged, save log in numpy')
@@ -78,7 +78,7 @@ def main(args):
         env, test_env = dmc_image_env(args.env_name, args.image_size, args.frame_stack, args.frame_skip, random_seed)
 
     elif args.domain_type == 'dmcr':
-        env, test_env = dmcr_env(args.env_name, args.image_size, args.frame_skip, random_seed, mode='classic')
+        env, test_env = dmcr_env(args.env_name, args.image_size, args.frame_skip, random_seed, mode='generalization')
 
     state_dim = (3 * args.frame_stack, args.image_size, args.image_size)
     action_dim = env.action_space.shape[0]

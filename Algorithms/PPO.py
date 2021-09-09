@@ -59,7 +59,6 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             action = action.numpy()[0]
             log_prob = log_prob.numpy()[0]
 
-
         return action, log_prob
 
     def eval_action(self, state):
@@ -81,7 +80,10 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         total_c_loss = 0
 
         s, a, r, ns, d, log_prob = self.buffer.all_sample()
-        old_values = self.critic(s)
+        old_values = self.critic(s).numpy()
+
+        r = r.numpy()
+        d = d.numpy()
 
         returns = np.zeros_like(r)
         advantages = np.zeros_like(returns)
@@ -101,6 +103,8 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             advantages[t] = running_advantage
 
         advantages = (advantages - advantages.mean()) / (advantages.std())
+        advantages = tf.convert_to_tensor(advantages, dtype=tf.float32)
+        returns = tf.convert_to_tensor(returns, dtype=tf.float32)
 
         n = len(s)
         arr = np.arange(n)
@@ -113,11 +117,11 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                 else:
                     batch_index = arr[self.batch_size * epoch: ]
 
-                batch_s = s[batch_index]
-                batch_a = a[batch_index]
-                batch_returns = returns[batch_index]
-                batch_advantages = advantages[batch_index]
-                batch_old_log_policy = log_prob[batch_index]
+                batch_s = tf.gather(s, batch_index)
+                batch_a = tf.gather(a, batch_index)
+                batch_returns = tf.gather(returns, batch_index)
+                batch_advantages = tf.gather(advantages, batch_index)
+                batch_old_log_policy = tf.gather(log_prob, batch_index)
 
                 with tf.GradientTape(persistent=True) as tape:
 

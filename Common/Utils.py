@@ -114,11 +114,11 @@ def dmcr_env(env_name, image_size, frame_skip, random_seed, mode='classic'):
 
     domain_name = env_name.split('/')[0]
     task_name = env_name.split('/')[1]
-    if mode == 'classic':
+    if mode == 'classic':#loads a training and testing environment that have the same visual seed
         env, test_env = dmcr.benchmarks.classic(domain_name, task_name, visual_seed=random_seed, width=image_size, height=image_size, frame_skip=frame_skip)
-    elif mode == 'generalization':
-        env, test_env = dmcr.benchmarks.visual_generalization(domain_name, task_name, num_levels=random_seed, width=image_size, height=image_size, frame_skip=frame_skip)
-    elif mode == 'sim2real':
+    elif mode == 'generalization':#creates a training environment that selects a new visual seed from a pre-set range after every reset(), while the testing environment samples from visual seeds 1-1,000,000
+        env, test_env = dmcr.benchmarks.visual_generalization(domain_name, task_name, num_levels=100, width=image_size, height=image_size, frame_skip=frame_skip)
+    elif mode == 'sim2real':#approximates the challenge of transferring control policies from simulation to the real world by measuring how many distinct training levels the agent needs access to before it can succesfully operate in the original DMC visuals that it has never encountered.
         env, test_env = dmcr.benchmarks.visual_sim2real(domain_name, task_name, num_levels=random_seed, width=image_size, height=image_size, frame_skip=frame_skip)
 
     return env, test_env

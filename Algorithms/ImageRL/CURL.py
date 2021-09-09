@@ -69,7 +69,7 @@ class CURL_SACv1:
         if obs.shape[-1] != self.image_size:
             obs = center_crop_image(obs, self.image_size)
 
-        obs = np.expand_dims(np.array(obs), axis=0)
+        obs = np.expand_dims(np.array(obs, dtype=np.float32), axis=0)
         feature = self.encoder(obs)
         action, _ = self.actor(feature)
         action = action.numpy()[0]
@@ -81,7 +81,7 @@ class CURL_SACv1:
         if obs.shape[-1] != self.image_size:
             obs = center_crop_image(obs, self.image_size)
 
-        obs = np.expand_dims(np.array(obs), axis=0)
+        obs = np.expand_dims(np.array(obs, dtype=np.float32), axis=0)
         feature = self.encoder(obs)
         action, _ = self.actor(feature, deterministic=True)
         action = action.numpy()[0]
@@ -103,8 +103,7 @@ class CURL_SACv1:
 
         s_action, s_logpi = self.actor(self.encoder(s))
 
-        min_aq = tf.minimum(self.critic1(self.encoder(s), s_action),
-                            self.critic2(self.encoder(s), s_action))
+        min_aq = tf.minimum(self.critic1(self.encoder(s), s_action), self.critic2(self.encoder(s), s_action))
         target_v = tf.stop_gradient(min_aq - self.alpha * s_logpi)
 
         with tf.GradientTape() as tape1:
@@ -121,17 +120,12 @@ class CURL_SACv1:
             critic1_loss = 0.5 * tf.reduce_mean(tf.square(self.critic1(self.encoder(s), a) - target_q))
             critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
 
-        critic1_gradients = tape2.gradient(critic1_loss,
-                                           self.encoder.trainable_variables + self.critic1.trainable_variables)
+        critic1_gradients = tape2.gradient(critic1_loss, self.encoder.trainable_variables + self.critic1.trainable_variables)
 
-        critic2_gradients = tape2.gradient(critic2_loss,
-                                           self.encoder.trainable_variables + self.critic2.trainable_variables)
+        critic2_gradients = tape2.gradient(critic2_loss, self.encoder.trainable_variables + self.critic2.trainable_variables)
 
-        self.critic1_optimizer.apply_gradients(
-            zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
-
-        self.critic2_optimizer.apply_gradients(
-            zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
+        self.critic1_optimizer.apply_gradients(zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
+        self.critic2_optimizer.apply_gradients(zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
 
         del tape2
 
@@ -254,7 +248,7 @@ class CURL_SACv2:
         if obs.shape[-1] != self.image_size:
             obs = center_crop_image(obs, self.image_size)
 
-        obs = np.expand_dims(np.array(obs), axis=0)
+        obs = np.expand_dims(np.array(obs, dtype=np.float32), axis=0)
         feature = self.encoder(obs)
         action, _ = self.actor(feature)
         action = action.numpy()[0]
@@ -266,7 +260,7 @@ class CURL_SACv2:
         if obs.shape[-1] != self.image_size:
             obs = center_crop_image(obs, self.image_size)
 
-        obs = np.expand_dims(np.array(obs), axis=0)
+        obs = np.expand_dims(np.array(obs, dtype=np.float32), axis=0)
         feature = self.encoder(obs)
         action, _ = self.actor(feature, deterministic=True)
         action = action.numpy()[0]
@@ -335,7 +329,6 @@ class CURL_SACv2:
             self.log_alpha_optimizer.apply_gradients(zip(log_alpha_gradients, [self.log_alpha]))
 
             del tape3
-
 
         if self.current_step % self.critic_update == 0:
             soft_update(self.critic1, self.target_critic1, self.tau)

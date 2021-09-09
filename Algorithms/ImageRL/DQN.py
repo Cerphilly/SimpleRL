@@ -49,14 +49,14 @@ class ImageDQN:
         if np.random.random() < self.epsilon:
             return np.random.randint(low=0, high=self.action_dim)
         else:
-            obs = np.expand_dims(np.array(obs), axis=0)
+            obs = np.expand_dims(np.array(obs, dtype=np.float32), axis=0)
             feature = self.encoder(obs)
             q_value = self.network(feature, activation='linear').numpy()
             best_action = np.argmax(q_value, axis=1)[0]
             return best_action
 
     def eval_action(self, obs):
-        obs = np.expand_dims(np.array(obs), axis=0)
+        obs = np.expand_dims(np.array(obs, dtype=np.float32), axis=0)
         feature = self.encoder(obs)
         q_value = self.network(feature, activation='linear').numpy()
         best_action = np.argmax(q_value, axis=1)[0]
