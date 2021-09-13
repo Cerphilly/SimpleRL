@@ -6,8 +6,8 @@ import numpy as np
 
 from Common.Buffer import Buffer
 from Common.Utils import copy_weight
-from Networks.Basic_Networks import Policy_network
-from Networks.Encoder import PixelEncoder
+from Network.Basic_Networks import Policy_network
+from Network.Encoder import PixelEncoder
 
 
 class ImageDQN:

@@ -21,7 +21,7 @@ from Algorithms.TD3 import TD3
 from Algorithms.SAC_v1 import SAC_v1
 from Algorithms.SAC_v2 import SAC_v2
 
-from Networks.Atari_Network import Atari_Actor, Atari_V_network
+from Network.Atari_Network import Atari_Actor, Atari_V_network
 
 np.set_printoptions(threshold=sys.maxsize)
 

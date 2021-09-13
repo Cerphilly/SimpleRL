@@ -7,9 +7,9 @@ import tensorflow_probability as tfp
 import numpy as np
 
 from Common.Buffer import Buffer
-from Networks.Basic_Networks import Policy_network, V_network
-from Networks.Gaussian_Actor import Gaussian_Actor
-from Networks.Encoder import PixelEncoder
+from Network.Basic_Networks import Policy_network, V_network
+from Network.Gaussian_Actor import Gaussian_Actor
+from Network.Encoder import PixelEncoder
 
 class ImagePPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
     def __init__(self, obs_dim, action_dim, args):

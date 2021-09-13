@@ -7,8 +7,8 @@ import tensorflow_probability as tfp
 import numpy as np
 
 from Common.Buffer import Buffer
-from Networks.Basic_Networks import Policy_network, V_network
-from Networks.Gaussian_Actor import Gaussian_Actor
+from Network.Basic_Networks import Policy_network, V_network
+from Network.Gaussian_Actor import Gaussian_Actor
 
 class PPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
     def __init__(self, state_dim, action_dim, args):

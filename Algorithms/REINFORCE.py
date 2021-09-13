@@ -5,8 +5,8 @@ import tensorflow_probability as tfp
 import numpy as np
 
 from Common.Buffer import Buffer
-from Networks.Basic_Networks import Policy_network
-from Networks.Gaussian_Actor import Gaussian_Actor
+from Network.Basic_Networks import Policy_network
+from Network.Gaussian_Actor import Gaussian_Actor
 
 
 class REINFORCE:

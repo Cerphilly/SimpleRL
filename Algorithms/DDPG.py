@@ -5,7 +5,7 @@ import numpy as np
 
 from Common.Buffer import Buffer
 from Common.Utils import copy_weight, soft_update
-from Networks.Basic_Networks import Policy_network, Q_network
+from Network.Basic_Networks import Policy_network, Q_network
 
 
 class DDPG:

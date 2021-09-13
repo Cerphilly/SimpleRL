@@ -3,10 +3,10 @@
 import tensorflow as tf
 import numpy as np
 
-from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
-from Networks.Basic_Networks import Q_network, V_network, Policy_network
-from Networks.Encoder import PixelEncoder
-from Networks.CURL import CURL
+from Network.Gaussian_Actor import Squashed_Gaussian_Actor
+from Network.Basic_Networks import Q_network, V_network, Policy_network
+from Network.Encoder import PixelEncoder
+from Network.CURL import CURL
 
 from Common.Utils import copy_weight, soft_update, center_crop_image
 from Common.Buffer import Buffer

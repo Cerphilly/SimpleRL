@@ -4,10 +4,10 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 import numpy as np
 
-from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
-from Networks.Basic_Networks import Q_network
-from Networks.Encoder import PixelEncoder
-from Networks.Decoder import PixelDecoder
+from Network.Gaussian_Actor import Squashed_Gaussian_Actor
+from Network.Basic_Networks import Q_network
+from Network.Encoder import PixelEncoder
+from Network.Decoder import PixelDecoder
 
 from Common.Utils import copy_weight, soft_update, preprocess_obs
 from Common.Buffer import Buffer

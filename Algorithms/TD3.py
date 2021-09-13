@@ -5,8 +5,8 @@ import numpy as np
 
 from Common.Buffer import Buffer
 from Common.Utils import copy_weight, soft_update
-from Networks.Basic_Networks import Policy_network, Q_network
-from Networks.D2RL_Networks import D2RL_Policy, D2RL_Q
+from Network.Basic_Networks import Policy_network, Q_network
+from Network.D2RL_Networks import D2RL_Policy, D2RL_Q
 
 class TD3:
     def __init__(self, state_dim, action_dim, args):

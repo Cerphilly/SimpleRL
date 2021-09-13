@@ -4,7 +4,7 @@ import tensorflow as tf
 import numpy as np
 
 from Common.Buffer import Buffer
-from Networks.Dueling_Network import Dueling_Network
+from Network.Dueling_Network import Dueling_Network
 
 class Dueling_DQN:
     def __init__(self, state_dim, action_dim, args):

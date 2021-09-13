@@ -4,7 +4,7 @@ from Algorithms.TD3 import TD3
 from Algorithms.SAC_v1 import SAC_v1
 from Algorithms.SAC_v2 import SAC_v2
 
-from Networks.D2RL_Networks import *
+from Network.D2RL_Networks import *
 
 from Common.Utils import copy_weight
 

@@ -6,9 +6,9 @@ import random
 from collections import deque
 from skimage.util.shape import view_as_windows
 
-from Networks.Basic_Networks import *
-from Networks.Gaussian_Actor import *
-from Networks.D2RL_Networks import *
+from Network.Basic_Networks import *
+from Network.Gaussian_Actor import *
+from Network.D2RL_Networks import *
 
 
 

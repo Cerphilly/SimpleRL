@@ -9,7 +9,7 @@ def hyperparameters():
     parser = argparse.ArgumentParser(description='Reinforcement learning with Augmented Data (RAD) example')
     #environment
     parser.add_argument('--algorithm', default='SACv2', help='SACv2')
-    parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
+    parser.add_argument('--domain_type', default='dmc/image', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='cartpole/swingup', help='DM Control Suite domain name + task name')
     parser.add_argument('--discrete', default=False, type=bool, help='Always Continuous')
     parser.add_argument('--render', default=False, type=bool)
@@ -28,7 +28,7 @@ def hyperparameters():
     #parser.add_argument('--data-augs', default='no_aug', type=str, help='no aug if you want to do SAC:pixel')
 
     #sac
-    parser.add_argument('--batch-size', default=512, type=int, help='Mini-batch size')
+    parser.add_argument('--batch-size', default=256, type=int, help='Mini-batch size')
     parser.add_argument('--buffer-size', default=100000, type=int, help='Buffer maximum size')
     parser.add_argument('--train-mode', default='online', help='online')
     parser.add_argument('--training-step', default=1, type=int)
@@ -42,7 +42,7 @@ def hyperparameters():
     parser.add_argument('--tau', default=0.01, type=float)
     parser.add_argument('--actor-update', default=1, type=int)
     parser.add_argument('--critic-update', default=2, type=int)
-    parser.add_argument('--hidden-dim', default=(1024, 1024), help='hidden dimension of network')
+    parser.add_argument('--hidden-dim', default=(512, 512), help='hidden dimension of network')
     parser.add_argument('--log_std_min', default=-10, type=int, help='For squashed gaussian actor')
     parser.add_argument('--log_std_max', default=2, type=int, help='For squashed gaussian actor')
 
@@ -53,7 +53,7 @@ def hyperparameters():
     parser.add_argument('--feature-dim', default=50, type=int)
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
-    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
+    parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
     parser.add_argument('--file', default=True, type=bool, help='when logged, write log')
     parser.add_argument('--numpy', default=True, type=bool, help='when logged, save log in numpy')

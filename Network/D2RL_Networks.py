@@ -1,8 +1,8 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
 
-from Networks.Basic_Networks import Policy_network, Q_network, V_network
-from Networks.Gaussian_Actor import Gaussian_Actor, Squashed_Gaussian_Actor
+from Network.Basic_Networks import Policy_network, Q_network, V_network
+from Network.Gaussian_Actor import Gaussian_Actor, Squashed_Gaussian_Actor
 
 class D2RL_Policy(Policy_network):
     def __init__(self, state_dim, action_dim, hidden_units=(256, 256, 256, 256), activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):

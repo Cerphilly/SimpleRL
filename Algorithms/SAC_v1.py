@@ -5,8 +5,8 @@ import numpy as np
 
 from Common.Buffer import Buffer
 from Common.Utils import copy_weight, soft_update
-from Networks.Basic_Networks import Q_network, V_network
-from Networks.Gaussian_Actor import Squashed_Gaussian_Actor
+from Network.Basic_Networks import Q_network, V_network
+from Network.Gaussian_Actor import Squashed_Gaussian_Actor
 
 class SAC_v1:
     def __init__(self, state_dim, action_dim, args):
