@@ -1,8 +1,8 @@
 #D2RL: Deep Dense Architectures in Reinforcement Learning, Sinha et al, 2020
 
-from Algorithms.TD3 import TD3
-from Algorithms.SAC_v1 import SAC_v1
-from Algorithms.SAC_v2 import SAC_v2
+from Algorithm.TD3 import TD3
+from Algorithm.SAC_v1 import SAC_v1
+from Algorithm.SAC_v2 import SAC_v2
 
 from Network.D2RL_Networks import *
 

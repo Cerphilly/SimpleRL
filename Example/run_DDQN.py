@@ -1,6 +1,6 @@
 import argparse
 
-from Algorithms.DDQN import DDQN
+from Algorithm.DDQN import DDQN
 from Common.Utils import cpu_only, set_seed, gym_env
 
 from Trainer.Basic_trainer import Basic_trainer

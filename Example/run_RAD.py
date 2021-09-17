@@ -1,6 +1,6 @@
 import argparse
 
-from Algorithms.ImageRL.RAD import RAD_SACv2
+from Algorithm.ImageRL.RAD import RAD_SACv2
 
 from Trainer.Basic_trainer import Basic_trainer
 from Common.Utils import cpu_only, set_seed, dmc_image_env, dmcr_env
@@ -12,7 +12,7 @@ def hyperparameters():
     parser.add_argument('--domain_type', default='dmc/image', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='cartpole/swingup', help='DM Control Suite domain name + task name')
     parser.add_argument('--discrete', default=False, type=bool, help='Always Continuous')
-    parser.add_argument('--render', default=False, type=bool)
+    parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
     parser.add_argument('--max-step', default=100001, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
@@ -24,14 +24,15 @@ def hyperparameters():
     parser.add_argument('--frame-skip', default=8, type=int)
     parser.add_argument('--image-size', default=84, type=int)
     parser.add_argument('--pre-image-size', default=100, type=int)
-    parser.add_argument('--data-augs', default='crop', type=str, help='data augmentation: crop, grayscale, random cutout, etc')
+    #parser.add_argument('--data-augs', default='crop', type=str, help='data augmentation: crop, grayscale, random cutout, etc')
     #parser.add_argument('--data-augs', default='no_aug', type=str, help='no aug if you want to do SAC:pixel')
+    parser.add_argument('--data-augs', default='crop-grayscale-cutout-cutout_color-rand_conv-color_jitter', type=str, help='no aug if you want to do SAC:pixel')
 
     #sac
     parser.add_argument('--batch-size', default=256, type=int, help='Mini-batch size')
     parser.add_argument('--buffer-size', default=100000, type=int, help='Buffer maximum size')
-    parser.add_argument('--train-mode', default='online', help='online')
-    parser.add_argument('--training-step', default=1, type=int)
+    parser.add_argument('--train-mode', default='offline', help='online')
+    parser.add_argument('--training-step', default=250, type=int)
     parser.add_argument('--train-alpha', default=True, type=bool)
     parser.add_argument('--gamma', default=0.99, type=float)
     parser.add_argument('--alpha', default=0.1, type=float)

@@ -65,13 +65,13 @@ class RAD_SACv2:
         self.aug_funcs = {}
         self.aug_list = {
             'crop': rad.random_crop(image_size=self.image_size),
-            'grayscale': rad.random_grayscale(),
+            'grayscale': rad.random_grayscale(prob=1),
             'cutout': rad.random_cutout(),
             'cutout_color': rad.random_cutout_color(),
-            'flip': rad.random_flip(),
-            'rotate': rad.random_rotation(),
+            'flip': rad.random_flip(prob=1),
+            'rotate': rad.random_rotation(prob=1),
             'rand_conv': rad.random_convolution(),
-            'color_jitter': rad.random_color_jitter(),
+            'color_jitter': rad.random_color_jitter(batch_size=self.batch_size),
             'no_aug': rad.no_aug
         }
         for aug_name in args.data_augs.split('-'):
@@ -107,7 +107,7 @@ class RAD_SACv2:
 
         return action
 
-    def train(self, local_step):
+    def train(self, training_step):
         self.current_step += 1
 
         total_a_loss = 0
@@ -115,76 +115,66 @@ class RAD_SACv2:
         total_alpha_loss = 0
         loss_list = []
 
-        s, a, r, ns, d = self.buffer.rad_sample(self.batch_size, self.aug_funcs, self.pre_image_size)
+        for i in range(training_step):
 
-        ns_action, ns_logpi = self.actor(self.encoder(ns))
+            s, a, r, ns, d = self.buffer.ucb_sample(self.batch_size, self.aug_funcs, self.pre_image_size)
 
-        target_min_aq = tf.minimum(self.target_critic1(self.target_encoder(ns), ns_action),
-                                   self.target_critic2(self.target_encoder(ns), ns_action))
+            ns_action, ns_logpi = self.actor(self.encoder(ns))
 
-        target_q = tf.stop_gradient(r + self.gamma * (1 - d) * (
-                target_min_aq - self.alpha.numpy() * ns_logpi))
+            target_min_aq = tf.minimum(self.target_critic1(self.target_encoder(ns), ns_action),
+                                       self.target_critic2(self.target_encoder(ns), ns_action))
 
-        with tf.GradientTape(persistent=True) as tape1:
-            critic1_loss = tf.reduce_mean(tf.square(self.critic1(self.encoder(s), a) - target_q))
-            critic2_loss = tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
+            target_q = tf.stop_gradient(r + self.gamma * (1 - d) * (
+                    target_min_aq - self.alpha.numpy() * ns_logpi))
 
-        critic1_gradients = tape1.gradient(critic1_loss,
-                                           self.encoder.trainable_variables + self.critic1.trainable_variables)
-        self.critic1_optimizer.apply_gradients(
-            zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
+            with tf.GradientTape(persistent=True) as tape1:
+                critic1_loss = tf.reduce_mean(tf.square(self.critic1(self.encoder(s), a) - target_q))
+                critic2_loss = tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
 
-        critic2_gradients = tape1.gradient(critic2_loss,
-                                           self.encoder.trainable_variables + self.critic2.trainable_variables)
-        self.critic2_optimizer.apply_gradients(
-            zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
+            critic1_gradients = tape1.gradient(critic1_loss,
+                                               self.encoder.trainable_variables + self.critic1.trainable_variables)
+            self.critic1_optimizer.apply_gradients(
+                zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
 
-        del tape1
+            critic2_gradients = tape1.gradient(critic2_loss,
+                                               self.encoder.trainable_variables + self.critic2.trainable_variables)
+            self.critic2_optimizer.apply_gradients(
+                zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
 
-        with tf.GradientTape() as tape2:
+            del tape1
 
-            s_action, s_logpi = self.actor(tf.stop_gradient(self.encoder(s)))
+            with tf.GradientTape() as tape2:
 
-            min_aq_rep = tf.minimum(self.critic1(tf.stop_gradient(self.encoder(s)), s_action),
-                                    self.critic2(tf.stop_gradient(self.encoder(s)), s_action))
+                s_action, s_logpi = self.actor(tf.stop_gradient(self.encoder(s)))
 
-            actor_loss = tf.reduce_mean(self.alpha.numpy() * s_logpi - min_aq_rep)
+                min_aq_rep = tf.minimum(self.critic1(tf.stop_gradient(self.encoder(s)), s_action),
+                                        self.critic2(tf.stop_gradient(self.encoder(s)), s_action))
 
-        actor_gradients = tape2.gradient(actor_loss, self.actor.trainable_variables)
-        self.actor_optimizer.apply_gradients(zip(actor_gradients, self.actor.trainable_variables))
-        del tape2
+                actor_loss = tf.reduce_mean(self.alpha.numpy() * s_logpi - min_aq_rep)
 
-        if self.train_alpha == True:
-            with tf.GradientTape() as tape3:
-                _, s_logpi = self.actor(self.encoder(s))
-                alpha_loss = -tf.exp(self.log_alpha) * tf.stop_gradient(s_logpi + self.target_entropy)
-                alpha_loss = tf.nn.compute_average_loss(alpha_loss)
-                #alpha_loss = tf.reduce_mean(alpha_loss)
+            actor_gradients = tape2.gradient(actor_loss, self.actor.trainable_variables)
+            self.actor_optimizer.apply_gradients(zip(actor_gradients, self.actor.trainable_variables))
+            del tape2
 
-            log_alpha_gradients = tape3.gradient(alpha_loss, [self.log_alpha])
-            self.log_alpha_optimizer.apply_gradients(zip(log_alpha_gradients, [self.log_alpha]))
+            if self.train_alpha == True:
+                with tf.GradientTape() as tape3:
+                    _, s_logpi = self.actor(self.encoder(s))
+                    alpha_loss = -tf.exp(self.log_alpha) * tf.stop_gradient(s_logpi + self.target_entropy)
+                    alpha_loss = tf.nn.compute_average_loss(alpha_loss)
+                    #alpha_loss = tf.reduce_mean(alpha_loss)
 
-            del tape3
+                log_alpha_gradients = tape3.gradient(alpha_loss, [self.log_alpha])
+                self.log_alpha_optimizer.apply_gradients(zip(log_alpha_gradients, [self.log_alpha]))
 
-        if self.current_step % self.critic_update == 0:
-            soft_update(self.critic1, self.target_critic1, self.tau)
-            soft_update(self.critic2, self.target_critic2, self.tau)
-            soft_update(self.encoder, self.target_encoder, self.encoder_tau)
+                del tape3
 
+            if self.current_step % self.critic_update == 0:
+                soft_update(self.critic1, self.target_critic1, self.tau)
+                soft_update(self.critic2, self.target_critic2, self.tau)
+                soft_update(self.encoder, self.target_encoder, self.encoder_tau)
 
-        total_c1_loss += critic1_loss.numpy()
-        total_c2_loss += critic2_loss.numpy()
+            if self.train_alpha == True:
+                total_alpha_loss += alpha_loss.numpy()
 
-        loss_list.append(['Loss/Critic1', total_c1_loss])
-        loss_list.append(['Loss/Critic2', total_c2_loss])
-
-        total_a_loss += actor_loss.numpy()
-        loss_list.append(['Loss/Actor', total_a_loss])
-
-        if self.train_alpha == True:
-            total_alpha_loss += alpha_loss.numpy()
-            loss_list.append(['Loss/Alpha', total_alpha_loss])
-
-        loss_list.append(['Alpha', tf.exp(self.log_alpha).numpy()])
 
         return loss_list

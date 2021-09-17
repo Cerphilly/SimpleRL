@@ -3,7 +3,7 @@ import tensorflow as tf
 import random
 import numpy as np
 
-from Algorithms.TD3 import TD3
+from Algorithm.TD3 import TD3
 
 from Common.Utils import cpu_only, set_seed, gym_env, dmc_env
 from Trainer.Basic_trainer import Basic_trainer

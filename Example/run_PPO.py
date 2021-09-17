@@ -1,20 +1,20 @@
 import argparse
 
 
-from Algorithms.PPO import PPO
-from Algorithms.ImageRL.PPO import ImagePPO
+from Algorithm.PPO import PPO
+from Algorithm.ImageRL.PPO import ImagePPO
 from Common.Utils import cpu_only, set_seed, gym_env, dmc_env, dmc_image_env, dmcr_env, procgen_env
 from Trainer.Basic_trainer import Basic_trainer
 
 def hyperparameters():
     parser = argparse.ArgumentParser(description='Proximal Policy Gradient(PPO) example')
     #environment
-    parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='CartPole-v0', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
-    parser.add_argument('--discrete', default=True, type=bool, help='whether the environment is discrete or not')
+    parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
+    parser.add_argument('--env-name', default='cartpole/swingup', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
+    parser.add_argument('--discrete', default=False, type=bool, help='whether the environment is discrete or not')
     parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--training-start', default=0, type=int, help='First step to start training')
-    parser.add_argument('--max-step', default=100000, type=int, help='Maximum training step')
+    parser.add_argument('--max-step', default=1000000, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=False, type=bool, help='whether to perform evaluation')
     parser.add_argument('--eval-step', default=10000, type=int, help='Frequency in performance evaluation')
     parser.add_argument('--eval-episode', default=10, type=int, help='Number of episodes to perform evaluation')

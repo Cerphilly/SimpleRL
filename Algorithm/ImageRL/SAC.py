@@ -1,4 +1,4 @@
-#Soft Actor-Critic Algorithms and Applications, Haarnoja et al, 2018
+#Soft Actor-Critic Algorithm and Applications, Haarnoja et al, 2018
 
 import tensorflow as tf
 import numpy as np

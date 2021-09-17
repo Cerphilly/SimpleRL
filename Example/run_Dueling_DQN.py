@@ -1,6 +1,6 @@
 import argparse
 
-from Algorithms.Dueling_DQN import Dueling_DQN
+from Algorithm.Dueling_DQN import Dueling_DQN
 
 from Trainer.Basic_trainer import Basic_trainer
 from Common.Utils import cpu_only, set_seed, gym_env

@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 import random
 
-from Algorithms.VPG import VPG
+from Algorithm.VPG import VPG
 
 from Trainer.On_policy_trainer import On_policy_trainer
 from Common.Utils import set_seed, cpu_only, gym_env, dmc_env

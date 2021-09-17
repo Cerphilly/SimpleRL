@@ -1,4 +1,4 @@
-#Proximal Policy Optimization Algorithms, Schulman et al, 2017
+#Proximal Policy Optimization Algorithm, Schulman et al, 2017
 #High Dimensional Continuous Control Using Generalized Advantage Estimation, Schulman et al. 2016(b)
 #https://spinningup.openai.com/en/latest/algorithms/ppo.html
 

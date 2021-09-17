@@ -1,6 +1,6 @@
 import argparse
 
-from Algorithms.ImageRL.CURL import CURL_SACv1, CURL_TD3, CURL_SACv2
+from Algorithm.ImageRL.CURL import CURL_SACv1, CURL_TD3, CURL_SACv2
 
 from Trainer.Basic_trainer import Basic_trainer
 from Common.Utils import cpu_only, set_seed, dmc_image_env, dmcr_env

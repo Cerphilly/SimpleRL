@@ -1,7 +1,7 @@
 import argparse
 
-from Algorithms.DQN import DQN
-from Algorithms.ImageRL.DQN import ImageDQN
+from Algorithm.DQN import DQN
+from Algorithm.ImageRL.DQN import ImageDQN
 
 from Trainer.Basic_trainer import Basic_trainer
 from Common.Utils import cpu_only, set_seed, gym_env, atari_env,  procgen_env

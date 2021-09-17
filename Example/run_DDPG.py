@@ -1,7 +1,7 @@
 import argparse
 
 
-from Algorithms.DDPG import DDPG
+from Algorithm.DDPG import DDPG
 from Common.Utils import cpu_only, set_seed, gym_env, dmc_env
 
 from Trainer.Basic_trainer import Basic_trainer

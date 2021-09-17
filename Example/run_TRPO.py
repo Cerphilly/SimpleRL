@@ -1,6 +1,6 @@
 import argparse
 
-from Algorithms.TRPO import TRPO
+from Algorithm.TRPO import TRPO
 
 from Trainer.Basic_trainer import Basic_trainer
 from Common.Utils import cpu_only, set_seed, gym_env, dmc_env

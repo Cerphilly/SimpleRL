@@ -1,5 +1,5 @@
 import argparse
-from Algorithms.SAC_v1 import SAC_v1
+from Algorithm.SAC_v1 import SAC_v1
 
 from Trainer.Basic_trainer import Basic_trainer
 from Common.Utils import cpu_only, set_seed, gym_env, dmc_env

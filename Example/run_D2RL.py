@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 import random
 
-from Algorithms.D2RL import D2RL_TD3, D2RL_SAC_v2, D2RL_SAC_v1
+from Algorithm.D2RL import D2RL_TD3, D2RL_SAC_v2, D2RL_SAC_v1
 
 from Trainer.Basic_trainer import Basic_trainer
 

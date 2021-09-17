@@ -177,6 +177,44 @@ class Buffer:
         return states, actions, rewards, states_next, dones
 
 
+    def ucb_sample(self, batch_size, aug_funcs, pre_image_size=100):
+        ids = np.random.randint(0, self.max_size if self.full else self.idx, size=batch_size)
+
+        states = self.s[ids]
+        actions = self.a[ids]
+        rewards = self.r[ids]
+        states_next = self.ns[ids]
+        dones = self.d[ids]
+
+        aug_list = ['crop', 'grayscale', 'cutout', 'cutout_color', 'rand_conv', 'color_jitter']
+        aug = np.random.choice(aug_list)
+
+        func = aug_funcs[aug]
+
+        if aug != 'crop':
+            states = center_crop_images(states, 84)
+            states_next = center_crop_images(states_next, 84)
+
+        states = func(states)
+        states_next = func(states_next)
+
+        states = tf.convert_to_tensor(states, dtype=tf.float32)
+        actions = tf.convert_to_tensor(actions, dtype=tf.float32)
+        rewards = tf.convert_to_tensor(rewards, dtype=tf.float32)
+        states_next = tf.convert_to_tensor(states_next, dtype=tf.float32)
+        dones = tf.convert_to_tensor(dones, dtype=tf.float32)
+
+        if self.on_policy == True:
+            log_probs = self.log_prob[ids]
+            log_probs = tf.convert_to_tensor(log_probs, dtype=tf.float32)
+
+            return states, actions, rewards, states_next, dones, log_probs
+
+        return states, actions, rewards, states_next, dones
+
+
+
+
 
 
 

@@ -7,19 +7,19 @@ import sys
 import datetime
 from matplotlib import pyplot as plt
 
-from Algorithms.REINFORCE import REINFORCE
-from Algorithms.VPG import VPG
-from Algorithms.TRPO import TRPO
-from Algorithms.PPO import PPO
+from Algorithm.REINFORCE import REINFORCE
+from Algorithm.VPG import VPG
+from Algorithm.TRPO import TRPO
+from Algorithm.PPO import PPO
 
-from Algorithms.DQN import DQN
-from Algorithms.DDQN import DDQN
-from Algorithms.Dueling_DQN import Dueling_DQN
+from Algorithm.DQN import DQN
+from Algorithm.DDQN import DDQN
+from Algorithm.Dueling_DQN import Dueling_DQN
 
-from Algorithms.DDPG import DDPG
-from Algorithms.TD3 import TD3
-from Algorithms.SAC_v1 import SAC_v1
-from Algorithms.SAC_v2 import SAC_v2
+from Algorithm.DDPG import DDPG
+from Algorithm.TD3 import TD3
+from Algorithm.SAC_v1 import SAC_v1
+from Algorithm.SAC_v2 import SAC_v2
 
 from Network.Atari_Network import Atari_Actor, Atari_V_network
 

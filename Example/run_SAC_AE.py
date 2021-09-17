@@ -1,6 +1,6 @@
 import argparse
 
-from Algorithms.ImageRL.SAC_AE import SACv2_AE
+from Algorithm.ImageRL.SAC_AE import SACv2_AE
 
 from Trainer.Basic_trainer import Basic_trainer
 from Common.Utils import cpu_only, set_seed, dmc_image_env, dmcr_env

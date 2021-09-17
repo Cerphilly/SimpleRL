@@ -1,6 +1,6 @@
 import argparse
 
-from Algorithms.ImageRL.DBC import DBC_SACv2
+from Algorithm.ImageRL.DBC import DBC_SACv2
 
 from Trainer.Basic_trainer import Basic_trainer
 from Common.Utils import cpu_only, set_seed, dmc_image_env, dmcr_env

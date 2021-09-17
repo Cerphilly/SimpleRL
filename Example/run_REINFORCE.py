@@ -1,6 +1,6 @@
 import argparse
 
-from Algorithms.REINFORCE import REINFORCE
+from Algorithm.REINFORCE import REINFORCE
 
 from Trainer.On_policy_trainer import On_policy_trainer
 from Common.Utils import set_seed, cpu_only, gym_env, dmc_env
