@@ -92,9 +92,7 @@ class ImageSAC_v2:
             target_min_aq = tf.minimum(self.target_critic1(self.target_encoder(ns), ns_action), self.target_critic2(self.target_encoder(ns), ns_action))
 
             target_q = tf.stop_gradient(r + self.gamma * (1 - d) * (target_min_aq - self.alpha.numpy() * ns_logpi))
-
             with tf.GradientTape(persistent=True) as tape1:
-
                 critic1_loss = 0.5 * tf.reduce_mean(tf.square(self.critic1(self.encoder(s), a) - target_q))
                 critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
 

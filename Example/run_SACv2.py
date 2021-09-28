@@ -11,7 +11,7 @@ def hyperparameters():
     parser = argparse.ArgumentParser(description='Soft Actor Critic (SAC) v2 example')
     #environment
     parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc, dmc/image')
-    parser.add_argument('--env-name', default='InvertedDoublePendulum-v2', help='Pendulum-v0, MountainCarContinuous-v0')
+    parser.add_argument('--env-name', default='HalfCheetah-v2', help='Pendulum-v0, MountainCarContinuous-v0')
     parser.add_argument('--discrete', default=False, type=bool, help='Always Continuous')
     parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
@@ -94,7 +94,7 @@ def main(args):
     elif args.domain_type in {'dmc/image', 'dmcr'}:
         algorithm = ImageSAC_v2(state_dim, action_dim, args)
 
-    print("Training of", args.domain_name + '_' + args.env_name)
+    print("Training of", args.domain_type + '_' + args.env_name)
     print("Algorithm:", algorithm.name)
     print("State dim:", state_dim)
     print("Action dim:", action_dim)
