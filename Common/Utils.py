@@ -85,8 +85,8 @@ def atari_env(env_name, image_size, frame_stack, frame_skip, random_seed):
 def dmc_env(env_name, random_seed):
     import dmc2gym
     # deepmind control suite
-    domain_name = env_name.split('/')[0]
-    task_name = env_name.split('/')[1]
+    domain_name = env_name.split('_')[0]
+    task_name = env_name.split('_')[1]
     env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed)
     test_env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed)
 
@@ -94,8 +94,8 @@ def dmc_env(env_name, random_seed):
 
 def dmc_image_env(env_name, image_size, frame_stack, frame_skip, random_seed):
     import dmc2gym
-    domain_name = env_name.split('/')[0]
-    task_name = env_name.split('/')[1]
+    domain_name = env_name.split('_')[0]
+    task_name = env_name.split('_')[1]
     env = dmc2gym.make(domain_name=domain_name, task_name=task_name, seed=random_seed, visualize_reward=False,
                        from_pixels=True, height=image_size, width=image_size,
                        frame_skip=frame_skip)  # Pre image size for curl, image size for dbc
@@ -112,8 +112,8 @@ def dmcr_env(env_name, image_size, frame_skip, random_seed, mode='classic'):
 
     import dmc_remastered as dmcr
 
-    domain_name = env_name.split('/')[0]
-    task_name = env_name.split('/')[1]
+    domain_name = env_name.split('_')[0]
+    task_name = env_name.split('_')[1]
     if mode == 'classic':#loads a training and testing environment that have the same visual seed
         env, test_env = dmcr.benchmarks.classic(domain_name, task_name, visual_seed=random_seed, width=image_size, height=image_size, frame_skip=frame_skip)
     elif mode == 'generalization':#creates a training environment that selects a new visual seed from a pre-set range after every reset(), while the testing environment samples from visual seeds 1-1,000,000

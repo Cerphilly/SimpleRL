@@ -3,7 +3,7 @@ import numpy as np
 from Common.Utils import copy_weight
 
 class PixelEncoder(tf.keras.Model):
-    def __init__(self, obs_dim, feature_dim = 50, layer_num=2, filter_num=32, data_format='channels_first', activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
+    def __init__(self, obs_dim, feature_dim = 50, layer_num=2, filter_num=36, data_format='channels_first', activation='relu', kernel_initializer='glorot_uniform', bias_initializer='zeros'):
         super(PixelEncoder, self).__init__()
 
         self.obs_dim = obs_dim
@@ -46,10 +46,27 @@ class PixelEncoder(tf.keras.Model):
 
 
 if __name__ == '__main__':
-    a = PixelEncoder((9, 84, 84), layer_num=4)
+    a = PixelEncoder((3, 84, 84), layer_num=4)
+    """
+    (3, 3, 9, 32)
+    (32,)
+    (3, 3, 32, 32)
+    (32,)
+    (3, 3, 32, 32)
+    (32,)
+    (3, 3, 32, 32)
+    (32,)
+    (39200, 50)
+    (50,)
+    (50,)
+    (50,)    
+    """
     b = PixelEncoder((3, 84, 84))
-    a.save_weights()
-    input = tf.random.normal((1,9,84,84))
+    input = tf.random.normal((1,3,84,84))
     print(a(input))
     a.summary()
-    print(a.conv_layers[0].shape)
+    for variable in a.trainable_variables:
+        print(variable.shape)
+
+    print(a.ln.beta, a.ln.gamma)
+

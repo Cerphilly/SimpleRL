@@ -10,7 +10,7 @@ def hyperparameters():
     parser = argparse.ArgumentParser(description='Proximal Policy Gradient(PPO) example')
     #environment
     parser.add_argument('--domain_type', default='dmc', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='cartpole/swingup', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
+    parser.add_argument('--env-name', default='cartpole_swingup', help='Pendulum-v0, MountainCarContinuous-v0, CartPole-v0')
     parser.add_argument('--discrete', default=False, type=bool, help='whether the environment is discrete or not')
     parser.add_argument('--render', default=True, type=bool)
     parser.add_argument('--training-start', default=0, type=int, help='First step to start training')

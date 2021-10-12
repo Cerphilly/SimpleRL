@@ -11,15 +11,15 @@ def hyperparameters():
     parser = argparse.ArgumentParser(description='Soft Actor Critic (SAC) v2 example')
     #environment
     parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc, dmc/image')
-    parser.add_argument('--env-name', default='HalfCheetah-v2', help='Pendulum-v0, MountainCarContinuous-v0')
+    parser.add_argument('--env-name', default='InvertedPendulumSwing-v2', help='Pendulum-v0, MountainCarContinuous-v0')
     parser.add_argument('--discrete', default=False, type=bool, help='Always Continuous')
-    parser.add_argument('--render', default=True, type=bool)
+    parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
     parser.add_argument('--max-step', default=100001, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
     parser.add_argument('--eval-step', default=10000, type=int, help='Frequency in performance evaluation')
     parser.add_argument('--eval-episode', default=10, type=int, help='Number of episodes to perform evaluation')
-    parser.add_argument('--random-seed', default=-1, type=int, help='Random seed setting')
+    parser.add_argument('--random-seed', default=1234, type=int, help='Random seed setting')
     #sac
     parser.add_argument('--batch-size', default=256, type=int, help='Mini-batch size')
     parser.add_argument('--buffer-size', default=1000000, type=int, help='Buffer maximum size')
@@ -33,7 +33,7 @@ def hyperparameters():
     parser.add_argument('--alpha-lr', default=0.0001, type=float)
     parser.add_argument('--tau', default=0.01, type=float)
     parser.add_argument('--critic-update', default=1, type=int)
-    parser.add_argument('--hidden-dim', default=(1024, 1024), help='hidden dimension of network')
+    parser.add_argument('--hidden-dim', default=(256, 256), help='hidden dimension of network')
     parser.add_argument('--log_std_min', default=-10, type=int, help='For squashed gaussian actor')
     parser.add_argument('--log_std_max', default=2, type=int, help='For squashed gaussian actor')
     #image
@@ -46,13 +46,13 @@ def hyperparameters():
     parser.add_argument('--feature-dim', default=50, type=int)
 
     parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
-    parser.add_argument('--log', default=False, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
+    parser.add_argument('--log', default=True, type=bool, help='use tensorboard summary writer to log, if false, cannot use the features below')
     parser.add_argument('--tensorboard', default=True, type=bool, help='when logged, write in tensorboard')
-    parser.add_argument('--file', default=False, type=bool, help='when logged, write log')
-    parser.add_argument('--numpy', default=False, type=bool, help='when logged, save log in numpy')
+    parser.add_argument('--file', default=True, type=bool, help='when logged, write log')
+    parser.add_argument('--numpy', default=True, type=bool, help='when logged, save log in numpy')
 
-    parser.add_argument('--model', default=False, type=bool, help='when logged, save model')
-    parser.add_argument('--model-freq', default=10000, type=int, help='model saving frequency')
+    parser.add_argument('--model', default=True, type=bool, help='when logged, save model')
+    parser.add_argument('--model-freq', default=100000, type=int, help='model saving frequency')
     parser.add_argument('--buffer', default=False, type=bool, help='when logged, save buffer')
     parser.add_argument('--buffer-freq', default=10000, type=int, help='buffer saving frequency')
 
@@ -78,7 +78,7 @@ def main(args):
         env, test_env = dmc_image_env(args.env_name, args.image_size, args.frame_stack, args.frame_skip, random_seed)
 
     elif args.domain_type == 'dmcr':
-        env, test_env = dmcr_env(args.env_name, args.image_size, args.frame_skip, random_seed, 'classic')
+        env, test_env = dmcr_env(args.env_name, args.image_size, args.frame_skip, random_seed, 'sim2real')
 
     state_dim = env.observation_space.shape[0]
 

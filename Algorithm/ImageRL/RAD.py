@@ -113,11 +113,10 @@ class RAD_SACv2:
         total_a_loss = 0
         total_c1_loss, total_c2_loss = 0, 0
         total_alpha_loss = 0
-        loss_list = []
 
         for i in range(training_step):
 
-            s, a, r, ns, d = self.buffer.ucb_sample(self.batch_size, self.aug_funcs, self.pre_image_size)
+            s, a, r, ns, d = self.buffer.rad_sample(self.batch_size, self.aug_funcs, self.pre_image_size)
 
             ns_action, ns_logpi = self.actor(self.encoder(ns))
 
@@ -140,6 +139,7 @@ class RAD_SACv2:
                                                self.encoder.trainable_variables + self.critic2.trainable_variables)
             self.critic2_optimizer.apply_gradients(
                 zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
+
 
             del tape1
 
@@ -173,8 +173,11 @@ class RAD_SACv2:
                 soft_update(self.critic2, self.target_critic2, self.tau)
                 soft_update(self.encoder, self.target_encoder, self.encoder_tau)
 
+            total_a_loss += actor_loss.numpy()
+            total_c1_loss += critic1_loss.numpy()
+            total_c2_loss += critic2_loss.numpy()
             if self.train_alpha == True:
                 total_alpha_loss += alpha_loss.numpy()
 
 
-        return loss_list
+        return [['Loss/Actor', total_a_loss], ['Loss/Critic1', total_c1_loss], ['Loss/Critic2', total_c2_loss], ['Loss/alpha', total_alpha_loss], ['Alpha', tf.exp(self.log_alpha).numpy()]]

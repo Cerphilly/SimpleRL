@@ -92,6 +92,14 @@ class V_network(tf.keras.Model):
 
         return output
 
+if __name__ == '__main__':
+    a = Policy_network(3, 2, (4, 3))
+    print(a.get_weights())
+    a.layers[-1].set_weights([np.zeros((3, 2)), np.ones(2)])
+    print(a.get_weights())
+    for i in range(len(a.trainable_variables)):
+        if i == len(a.trainable_variables) - 1:
+            print(a.trainable_variables[i])
 
 
 

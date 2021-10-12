@@ -126,6 +126,7 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
 
         else:
             sample_action = dist.sample()
+            #sample_action = mu + sigma * tf.random.normal(sigma.shape)
             tanh_sample = tf.nn.tanh(sample_action)
             log_prob = dist.log_prob(sample_action)
 
