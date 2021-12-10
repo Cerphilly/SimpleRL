@@ -65,8 +65,4 @@ if __name__ == '__main__':
     input = tf.random.normal((1,3,84,84))
     print(a(input))
     a.summary()
-    for variable in a.trainable_variables:
-        print(variable.shape)
-
-    print(a.ln.beta, a.ln.gamma)
 

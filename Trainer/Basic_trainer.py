@@ -145,6 +145,7 @@ class Basic_trainer:
 
                 if '-ram-' in self.env_name:  # Atari Ram state
                     observation = observation / 255.
+                print(observation)
 
                 if self.total_step <= self.algorithm.training_start:
                    action = self.env.action_space.sample()
@@ -160,7 +161,6 @@ class Basic_trainer:
                         env_action = self.max_action * np.clip(action, -1, 1)
                     else:
                         env_action = action
-
                     next_observation, reward, done, _ = self.env.step(env_action)
 
                 if self.local_step + 1 == 1000:

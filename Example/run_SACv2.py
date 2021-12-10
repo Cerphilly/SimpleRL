@@ -74,7 +74,7 @@ def main(args):
     elif args.domain_type == 'dmc':
         env, test_env = dmc_env(args.env_name, random_seed)
 
-    elif args.domain_type == 'dmc/image':
+    elif args.domain_type == 'dmc_image':
         env, test_env = dmc_image_env(args.env_name, args.image_size, args.frame_stack, args.frame_skip, random_seed)
 
     elif args.domain_type == 'dmcr':
@@ -82,7 +82,7 @@ def main(args):
 
     state_dim = env.observation_space.shape[0]
 
-    if args.domain_type in {'dmc/image', 'dmcr'}:
+    if args.domain_type in {'dmc_image', 'dmcr'}:
         state_dim = env.observation_space.shape
 
     action_dim = env.action_space.shape[0]
@@ -91,7 +91,7 @@ def main(args):
 
     if args.domain_type in {'gym', 'dmc'}:
         algorithm = SAC_v2(state_dim, action_dim, args)
-    elif args.domain_type in {'dmc/image', 'dmcr'}:
+    elif args.domain_type in {'dmc_image', 'dmcr'}:
         algorithm = ImageSAC_v2(state_dim, action_dim, args)
 
     print("Training of", args.domain_type + '_' + args.env_name)

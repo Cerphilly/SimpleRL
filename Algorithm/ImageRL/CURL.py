@@ -321,7 +321,7 @@ class CURL_SACv2:
         if self.train_alpha == True:
             with tf.GradientTape() as tape3:
                 _, s_logpi = self.actor(self.encoder(s))
-                alpha_loss = -(tf.exp(self.log_alpha) * tf.stop_gradient(s_logpi+ self.target_entropy))
+                alpha_loss = -(tf.exp(self.log_alpha) * tf.stop_gradient(s_logpi + self.target_entropy))
                 alpha_loss = tf.nn.compute_average_loss(alpha_loss)
                 #alpha_loss = tf.reduce_mean(alpha_loss)
 

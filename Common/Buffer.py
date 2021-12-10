@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from Common.Utils import random_crop, center_crop_images
+from Common.Data_Augmentation import crop, grayscale, cutout, cutout_color, convolution
 
 class Buffer:
     def __init__(self, state_dim, action_dim, max_size=1e6, on_policy=False):
@@ -39,6 +40,20 @@ class Buffer:
         self.idx = (self.idx + 1) % self.max_size
         if self.idx == 0:
             self.full = True
+
+    def export(self):
+        ids = np.arange(self.max_size if self.full else self.idx)
+        states = self.s[ids]
+        actions = self.a[ids]
+        rewards = self.r[ids]
+        states_next = self.ns[ids]
+        dones = self.d[ids]
+        log_prob = None
+
+        if self.on_policy == True:
+            log_prob = self.log_prob[ids]
+
+        return states, actions, rewards, states_next, dones, log_prob
 
     def delete(self):
         if type(self.state_dim) == int:
@@ -117,6 +132,7 @@ class Buffer:
         states = random_crop(states, image_size)
         states_next = random_crop(states_next, image_size)
         pos = random_crop(pos, image_size)
+        #pos = center_crop_images(pos, image_size)
 
         states = tf.convert_to_tensor(states, dtype=tf.float32)
         actions = tf.convert_to_tensor(actions, dtype=tf.float32)
@@ -134,6 +150,56 @@ class Buffer:
             return states, actions, rewards, states_next, dones, log_probs, cpc_kwargs
 
         return states, actions, rewards, states_next, dones, cpc_kwargs
+
+
+    def cpc2_sample(self, batch_size, image_size=84):
+        # ImageRL/CURL
+        ids = np.random.randint(0, self.max_size if self.full else self.idx, size=batch_size)
+
+        states = self.s[ids]
+        actions = self.a[ids]
+        rewards = self.r[ids]
+        states_next = self.ns[ids]
+        dones = self.d[ids]
+
+        pos = states.copy()
+        pos_aug = np.random.randint(0, 5)
+
+        states = random_crop(states, image_size)
+        states_next = random_crop(states_next, image_size)
+        if pos_aug == 0:
+            pos = random_crop(pos, image_size)
+        else:
+            pos = center_crop_images(pos, image_size)
+            #grayscale, cutout, cutout_color, convolution
+            if pos_aug == 1:
+                pos = grayscale(pos)
+            if pos_aug == 2:
+                pos = cutout(pos)
+            if pos_aug == 3:
+                pos = cutout_color(pos)
+            if pos_aug == 4:
+                pos = convolution(pos)
+
+        pos = tf.convert_to_tensor(pos, dtype=tf.float32)
+
+        states = tf.convert_to_tensor(states, dtype=tf.float32)
+        actions = tf.convert_to_tensor(actions, dtype=tf.float32)
+        rewards = tf.convert_to_tensor(rewards, dtype=tf.float32)
+        states_next = tf.convert_to_tensor(states_next, dtype=tf.float32)
+        dones = tf.convert_to_tensor(dones, dtype=tf.float32)
+
+
+        cpc_kwargs = dict(obs_anchor=states, obs_pos=pos, time_anchor=None, time_pos=None)
+
+        if self.on_policy == True:
+            log_probs = self.log_prob[ids]
+            log_probs = tf.convert_to_tensor(log_probs, dtype=tf.float32)
+
+            return states, actions, rewards, states_next, dones, log_probs, cpc_kwargs
+
+        return states, actions, rewards, states_next, dones, cpc_kwargs
+
 
     def rad_sample(self, batch_size, aug_funcs, pre_image_size=100):
         ids = np.random.randint(0, self.max_size if self.full else self.idx, size=batch_size)

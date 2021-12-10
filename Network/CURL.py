@@ -21,6 +21,13 @@ class CURL(tf.keras.Model):
 
     @tf.function
     def compute_logits(self, z_a, z_pos):
+        """
+        Uses logits trick for CURL:
+        - compute (B,B) matrix z_a (W z_pos.T)
+        - positives are all diagonal elements
+        - negatives are all other elements
+        - to compute loss use multiclass cross entropy with identity matrix for labels
+        """
         Wz = tf.matmul(self.W, tf.transpose(z_pos))
         logits = tf.matmul(z_a, Wz)
         logits = logits - tf.reduce_max(logits, axis=1, keepdims=True)

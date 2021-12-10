@@ -115,12 +115,15 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         mu = self.mean_layer(z)
         sigma = tf.exp(tf.clip_by_value(self.logstd_layer(z), self.log_std_min, self.log_std_max))
 
-        dist = tfp.distributions.MultivariateNormalDiag(loc=mu, scale_diag=sigma, validate_args=True, allow_nan_stats=False)
+        #dist = tfp.distributions.MultivariateNormalDiag(loc=mu, scale_diag=sigma, validate_args=True, allow_nan_stats=False)
+        dist = tfp.distributions.Normal(loc=mu, scale=sigma, validate_args=True, allow_nan_stats=False)
 
         if deterministic == True:
             tanh_mean = tf.nn.tanh(mu)
             log_prob = dist.log_prob(mu)
-            log_pi = tf.reshape(log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_mean) + 1e-6), axis=1), shape=(-1, 1))
+            #log_pi = tf.reshape(log_prob, shape=(-1, 1)) - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_mean) + 1e-6), axis=1, keepdims=True)
+            log_pi = tf.reduce_sum(log_prob - tf.math.log(1 - tf.square(tanh_mean) + 1e-6), axis=-1, keepdims=True)
+
 
             return tanh_mean, log_pi
 
@@ -129,8 +132,8 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
             #sample_action = mu + sigma * tf.random.normal(sigma.shape)
             tanh_sample = tf.nn.tanh(sample_action)
             log_prob = dist.log_prob(sample_action)
-
-            log_pi = tf.reshape(log_prob - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=1), shape=(-1, 1))
+            #log_pi = tf.reshape(log_prob, (-1, 1)) - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_mean) + 1e-6), axis=1, keepdims=True)
+            log_pi = tf.reduce_sum(log_prob - tf.math.log(1 - tf.square(tanh_sample) + 1e-6), axis=-1, keepdims=True)
 
             return tanh_sample, log_pi
 
@@ -142,7 +145,8 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
 
         mu = self.mean_layer(z)
         sigma = tf.exp(tf.clip_by_value(self.logstd_layer(z), self.log_std_min, self.log_std_max))
-        dist = tfp.distributions.MultivariateNormalDiag(loc=mu, scale_diag=sigma, validate_args=True, allow_nan_stats=False)
+        #dist = tfp.distributions.MultivariateNormalDiag(loc=mu, scale_diag=sigma, validate_args=True, allow_nan_stats=False)
+        dist = tfp.distributions.Normal(loc=mu, scale=sigma, validate_args=True, allow_nan_stats=False)
 
         return dist
 
@@ -159,6 +163,13 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
     def entropy(self, states):
         dist = self.dist(states)
         return dist.entropy()
+
+
+if __name__ == '__main__':
+    a = Squashed_Gaussian_Actor(5, 2)
+    b = np.random.normal(size=(5, 5))
+    print(a(b))
+
 
 
 

@@ -14,7 +14,7 @@ def crop(images, out=84):
     w1 = np.random.randint(0, crop_max, b)
     h1 = np.random.randint(0, crop_max, b)
     cropped = np.empty((b, c, out, out), dtype=images.dtype)
-    for i, (img, w11, h11) in enumerate(zip(images, w1, h1)):
+    for i, (img, w11, h11) in enumerate(zip(images,  w1, h1)):
         cropped[i] = img[:, h11:h11 + out, w11:w11 + out]
 
     return cropped
@@ -34,7 +34,7 @@ class random_crop:
 
         return cropped
 
-def grayscale(images, p=1.):#same as RAD's grayscale, but output dtype is uint8 and numpy array
+def grayscale(images):#same as RAD's grayscale, but output dtype is uint8 and numpy array
     assert images.dtype == 'uint8'
 
     b, c, h, w = images.shape
@@ -44,12 +44,7 @@ def grayscale(images, p=1.):#same as RAD's grayscale, but output dtype is uint8 
     gray_images = gray_images.astype(np.uint8).astype(np.float32)
     gray_images = gray_images[:,:,None,:,:] * np.ones([1,1,3,1,1], dtype=np.float32)
 
-    mask = np.random.uniform(0, 1, size=(b,)) <= p
-
-    images = np.reshape(images, gray_images.shape)
-    mask = (mask[:, None] * np.ones([1, frames]))
-    mask = mask[:,:,None,None,None]
-    output = mask * gray_images + (1 - mask) * images
+    output = gray_images
     output = np.reshape(output, [b, -1, h, w])
 
     return output.astype(np.uint8)
@@ -147,17 +142,11 @@ class random_cutout_color:
         return new_images
 
 
-def flip(images, p=1.):
+def flip(images):
     b, c, h, w = images.shape
     flipped_images = np.flip(images, axis=3)
-    mask = np.random.uniform(0, 1, size=(b,)) <= p
-    frames = images.shape[1]
 
-    images = np.reshape(images, flipped_images.shape)
-
-    mask = mask[:, None] * np.ones([1, frames]).astype(np.bool)
-    mask = mask[:, :, None, None]
-    output = mask * flipped_images + (1 - mask) * images
+    output = flipped_images
 
     output = np.reshape(output, [b, -1, h, w])
     output = output.astype(np.uint8)

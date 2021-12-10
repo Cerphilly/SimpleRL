@@ -75,7 +75,7 @@ def main(args):
 
     random_seed = set_seed(args.random_seed)
 
-    if args.domain_type == 'dmc/image':
+    if args.domain_type == 'dmc_image':
 
         env, test_env = dmc_image_env(args.env_name. args.image_size, args.frame_stack, args.frame_skip, random_seed)
 

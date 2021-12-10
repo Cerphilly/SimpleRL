@@ -160,6 +160,7 @@ def random_crop(imgs, output_size, data_format='channels_first'):#random crop fo
     n = imgs.shape[0]
     img_size = imgs.shape[-1]
     crop_max = img_size - output_size
+    imgs = np.transpose(imgs, (0, 2, 3, 1))
 
     w1 = np.random.randint(0, crop_max, n)
     h1 = np.random.randint(0, crop_max, n)

@@ -12,8 +12,8 @@ def hyperparameters():
     parser.add_argument('--domain_type', default='dmcr', type=str, help='gym or dmc')
     parser.add_argument('--env-name', default='cartpole_swingup', help='DM Control Suite domain name + task name')
     parser.add_argument('--discrete', default=False, type=bool, help='Always Continuous')
-    parser.add_argument('--render', default=False, type=bool)
-    parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
+    parser.add_argument('--render', default=True, type=bool)
+    parser.add_argument('--training-start', default=100000, type=int, help='First step to start training')
     parser.add_argument('--max-step', default=200001, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
     parser.add_argument('--eval-step', default=10000, type=int, help='Frequency in performance evaluation')
@@ -81,7 +81,7 @@ def main(args):
     # random seed settinga
     random_seed = set_seed(args.random_seed)
 
-    if args.domain_type == 'dmc/image':
+    if args.domain_type == 'dmc_image':
         env, test_env = dmc_image_env(args.env_name, args.pre_image_size, args.frame_stack, args.frame_skip, random_seed)
 
     elif args.domain_type == 'dmcr':

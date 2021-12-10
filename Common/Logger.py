@@ -156,28 +156,52 @@ class Logger:
                 self.test_episode += 1
                 self.test_dict = {'Episode': self.test_episode}
 
-
     def write_tensorboard(self, tag, values, step):#global_step: episode
         #Reward/Train, Reward/Test, Loss/Train, Duration/Train
         with self.writer.as_default():
             values = self.set_type(tag, values)
             tf.summary.scalar(tag, values, step)
 
-    def save_model(self, algorithm, step):
-        for name, network in algorithm.network_list.items():
+    def save_model(self, step):
+        for name, network in self.algorithm.network_list.items():
             network.save_weights(os.path.join(os.path.join(self.model_dir, name), '{}_{}'.format(name, step)))
             print("Save  | {} Network in step {} saved".format(name, step))
 
-    def save_buffer(self, buffer, step):
+    def save_buffer(self, step):
         os.mkdir(os.path.join(self.buffer_dir, str(step)))
-        s, a, r, ns, d = buffer.export(log = False)
+        s, a, r, ns, d, log_prob = self.algorithm.buffer.export()
         np.save(os.path.join(os.path.join(self.buffer_dir, str(step)), "s_{}.npy".format(step)), s)
         np.save(os.path.join(os.path.join(self.buffer_dir, str(step)), "a_{}.npy".format(step)), a)
         np.save(os.path.join(os.path.join(self.buffer_dir, str(step)), "r_{}.npy".format(step)), r)
         np.save(os.path.join(os.path.join(self.buffer_dir, str(step)), "ns_{}.npy".format(step)), ns)
         np.save(os.path.join(os.path.join(self.buffer_dir, str(step)), "d_{}.npy".format(step)), d)
 
+        if self.algorithm.buffer.on_policy == True:
+            np.save(os.path.join(os.path.join(self.buffer_dir, str(step)), "log_prob_{}.npy".format(step)), log_prob)
+
         print("Save  | Buffer in step {} saved".format(step))
+
+
+    def load_model(self, step):
+        for name, network in self.algorithm.network_list.items():
+            network.load_weights(os.path.join(os.path.join(self.model_dir, name), '{}_{}'.format(name, step)))
+            print("Load  | {} Network in step {} loaded".format(name, step))
+
+
+    def load_buffer(self, step):
+        s = np.load(os.path.join(os.path.join(self.buffer_dir, str(step)), "s_{}.npy".format(step)))
+        a = np.load(os.path.join(os.path.join(self.buffer_dir, str(step)), "a_{}.npy".format(step)))
+        r = np.load(os.path.join(os.path.join(self.buffer_dir, str(step)), "r_{}.npy".format(step)))
+        ns = np.load(os.path.join(os.path.join(self.buffer_dir, str(step)), "ns_{}.npy".format(step)))
+        d = np.load(os.path.join(os.path.join(self.buffer_dir, str(step)), "d_{}.npy".format(step)))
+
+        log_prob = None
+        if self.algorithm.buffer.on_policy == True:
+            log_prob = np.load(os.path.join(os.path.join(self.buffer_dir, str(step)), "log_prob_{}.npy".format(step)))
+
+        self.algorithm.buffer.load(s, a, r, ns, d, log_prob)
+
+        print("Load  | Buffer in step {} loaded".format(step))
 
 
 
