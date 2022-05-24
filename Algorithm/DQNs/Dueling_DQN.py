@@ -1,10 +1,13 @@
-#Dueling Network Architectures for Deep Reinforcement Learning, Wang et al, 2015.
+# Dueling Network Architectures for Deep Reinforcement Learning, Wang et al, 2015.
 
 import tensorflow as tf
 import numpy as np
 
 from Common.Buffer import Buffer
+from Common.Utils import remove_argument
+
 from Network.Dueling_Network import Dueling_Network
+
 
 class Dueling_DQN:
     def __init__(self, state_dim, action_dim, args):
@@ -22,10 +25,19 @@ class Dueling_DQN:
         self.training_step = args.training_step
         self.current_step = 0
 
-        self.network = Dueling_Network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.network = Dueling_Network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
 
         self.network_list = {'Network': self.network}
-        self.name = 'Dueling DQN'
+        self.name = 'Dueling_DQN'
+
+    @staticmethod
+    def get_config(parser):
+        parser.add_argument('--epsilon', default=0.1, type=float, help='Action Exploration probability')
+        parser.add_argument('--copy-iter', default=100, type=int, help='Frequency to update target network')
+        remove_argument(parser, ['actor_lr', 'critic_lr', 'v_lr'])
+
+        return parser
 
     def get_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
@@ -36,7 +48,7 @@ class Dueling_DQN:
             return np.random.randint(low=0, high=self.action_dim)
         else:
             return np.argmax(q_value, axis=1)[0]
-        
+
     def eval_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
@@ -55,8 +67,9 @@ class Dueling_DQN:
             target_q = tf.stop_gradient(target_q)
 
             with tf.GradientTape() as tape:
-
-                q_value = tf.reduce_sum(self.network(s) * tf.squeeze(tf.one_hot(tf.dtypes.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
+                q_value = tf.reduce_sum(
+                    self.network(s) * tf.squeeze(tf.one_hot(tf.dtypes.cast(a, tf.int32), self.action_dim), axis=1),
+                    axis=1, keepdims=True)
                 loss = 0.5 * tf.math.reduce_mean(tf.square(target_q - q_value))
 
             variables = self.network.trainable_variables

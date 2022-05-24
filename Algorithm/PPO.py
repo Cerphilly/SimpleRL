@@ -7,8 +7,10 @@ import tensorflow_probability as tfp
 import numpy as np
 
 from Common.Buffer import Buffer
-from Network.Basic_Networks import Policy_network, V_network
-from Network.Gaussian_Actor import Gaussian_Actor
+from Common.Utils import remove_argument
+from Network.Basic_Network import Policy_network, V_network
+from Network.Gaussian_Policy import Gaussian_Policy
+#todo: require overall remake
 
 class PPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
     def __init__(self, state_dim, action_dim, args):
@@ -17,14 +19,16 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
         self.buffer = Buffer(state_dim=state_dim, action_dim=action_dim if args.discrete == False else 1, max_size=args.buffer_size, on_policy=True)
 
-        self.ppo_mode = args.ppo_mode #mode: 'clip'
-        assert self.ppo_mode is 'clip'
+        self.ppo_mode = 'clip' #mode: 'clip'
+        assert self.ppo_mode == 'clip'
 
         self.gamma = args.gamma
         self.lambda_gae = args.lambda_gae
         self.batch_size = args.batch_size
         self.clip = args.clip
 
+        self.beta = 1
+        self.dtarg = 0.01
 
         self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
         self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
@@ -35,14 +39,29 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         self.training_step = args.training_step
 
         if self.discrete == True:
-            self.actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim, kernel_initializer='RandomUniform')
+            self.actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
         else:
-            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim, kernel_initializer='RandomUniform')
+            self.actor = Gaussian_Policy(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units, log_std_min=args.log_std_min, log_std_max=args.log_std_max, squash=False,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
 
-        self.critic = V_network(self.state_dim)
+        self.critic = V_network(state_dim=self.state_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
 
         self.network_list = {'Actor': self.actor, 'Critic': self.critic}
         self.name = 'PPO'
+
+    @staticmethod
+    def get_config(parser):
+        parser.add_argument('--log_std_min', default=-20, type=int, help='For gaussian actor')
+        parser.add_argument('--log_std_max', default=2, type=int, help='For gaussian actor')
+        parser.add_argument('--lambda-gae', default=0.96, type=float)
+        #parser.add_argument('--ppo-mode', default='clip', choices=['clip'])
+        parser.add_argument('--clip', default=0.2, type=float)
+
+        remove_argument(parser, ['learning_rate', 'v_lr'])
+
+        return parser
 
     def get_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
@@ -145,6 +164,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
 
                         ratio = tf.exp(log_policy - batch_old_log_policy)
                         surrogate = ratio * batch_advantages
+
                         if self.ppo_mode == 'clip':
                             clipped_surrogate = tf.clip_by_value(ratio, 1-self.clip, 1+self.clip) * batch_advantages
 

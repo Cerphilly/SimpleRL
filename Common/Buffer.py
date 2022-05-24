@@ -1,7 +1,5 @@
 import numpy as np
 import tensorflow as tf
-from Common.Utils import random_crop, center_crop_images
-from Common.Data_Augmentation import crop, grayscale, cutout, cutout_color, convolution
 
 class Buffer:
     def __init__(self, state_dim, action_dim, max_size=1e6, on_policy=False):
@@ -52,8 +50,9 @@ class Buffer:
 
         if self.on_policy == True:
             log_prob = self.log_prob[ids]
+            return {"states": states, "actions": actions, "rewards": rewards, "states_next": states_next, "dones": dones, "log_probs": log_prob}
 
-        return states, actions, rewards, states_next, dones, log_prob
+        return {"states": states, "actions": actions, "rewards": rewards, "states_next": states_next, "dones": dones}
 
     def delete(self):
         if type(self.state_dim) == int:
@@ -116,179 +115,3 @@ class Buffer:
             return states, actions, rewards, states_next, dones, log_probs
 
         return states, actions, rewards, states_next, dones
-
-    def cpc_sample(self, batch_size, image_size=84):
-        # ImageRL/CURL
-        ids = np.random.randint(0, self.max_size if self.full else self.idx, size=batch_size)
-
-        states = self.s[ids]
-        actions = self.a[ids]
-        rewards = self.r[ids]
-        states_next = self.ns[ids]
-        dones = self.d[ids]
-
-        pos = states.copy()
-
-        states = random_crop(states, image_size)
-        states_next = random_crop(states_next, image_size)
-        pos = random_crop(pos, image_size)
-        #pos = center_crop_images(pos, image_size)
-
-        states = tf.convert_to_tensor(states, dtype=tf.float32)
-        actions = tf.convert_to_tensor(actions, dtype=tf.float32)
-        rewards = tf.convert_to_tensor(rewards, dtype=tf.float32)
-        states_next = tf.convert_to_tensor(states_next, dtype=tf.float32)
-        dones = tf.convert_to_tensor(dones, dtype=tf.float32)
-
-
-        cpc_kwargs = dict(obs_anchor=states, obs_pos=pos, time_anchor=None, time_pos=None)
-
-        if self.on_policy == True:
-            log_probs = self.log_prob[ids]
-            log_probs = tf.convert_to_tensor(log_probs, dtype=tf.float32)
-
-            return states, actions, rewards, states_next, dones, log_probs, cpc_kwargs
-
-        return states, actions, rewards, states_next, dones, cpc_kwargs
-
-
-    def cpc2_sample(self, batch_size, image_size=84):
-        # ImageRL/CURL
-        ids = np.random.randint(0, self.max_size if self.full else self.idx, size=batch_size)
-
-        states = self.s[ids]
-        actions = self.a[ids]
-        rewards = self.r[ids]
-        states_next = self.ns[ids]
-        dones = self.d[ids]
-
-        pos = states.copy()
-        pos_aug = np.random.randint(0, 5)
-
-        states = random_crop(states, image_size)
-        states_next = random_crop(states_next, image_size)
-        if pos_aug == 0:
-            pos = random_crop(pos, image_size)
-        else:
-            pos = center_crop_images(pos, image_size)
-            #grayscale, cutout, cutout_color, convolution
-            if pos_aug == 1:
-                pos = grayscale(pos)
-            if pos_aug == 2:
-                pos = cutout(pos)
-            if pos_aug == 3:
-                pos = cutout_color(pos)
-            if pos_aug == 4:
-                pos = convolution(pos)
-
-        pos = tf.convert_to_tensor(pos, dtype=tf.float32)
-
-        states = tf.convert_to_tensor(states, dtype=tf.float32)
-        actions = tf.convert_to_tensor(actions, dtype=tf.float32)
-        rewards = tf.convert_to_tensor(rewards, dtype=tf.float32)
-        states_next = tf.convert_to_tensor(states_next, dtype=tf.float32)
-        dones = tf.convert_to_tensor(dones, dtype=tf.float32)
-
-
-        cpc_kwargs = dict(obs_anchor=states, obs_pos=pos, time_anchor=None, time_pos=None)
-
-        if self.on_policy == True:
-            log_probs = self.log_prob[ids]
-            log_probs = tf.convert_to_tensor(log_probs, dtype=tf.float32)
-
-            return states, actions, rewards, states_next, dones, log_probs, cpc_kwargs
-
-        return states, actions, rewards, states_next, dones, cpc_kwargs
-
-
-    def rad_sample(self, batch_size, aug_funcs, pre_image_size=100):
-        ids = np.random.randint(0, self.max_size if self.full else self.idx, size=batch_size)
-
-        states = self.s[ids]
-        actions = self.a[ids]
-        rewards = self.r[ids]
-        states_next = self.ns[ids]
-        dones = self.d[ids]
-
-        for aug, func in aug_funcs.items():
-            if 'crop' in aug or 'cutout' in aug:
-                states = func(states)
-                states_next = func(states_next)
-
-            elif 'translate' in aug:
-                states = center_crop_images(states, pre_image_size)
-                states_next = center_crop_images(states_next, pre_image_size)
-
-                states, random_idxs = func(states, return_random_idxs=True)
-                states_next = func(states_next, **random_idxs)
-
-        for aug, func in aug_funcs.items():
-            if 'crop' in aug or 'cutout' in aug or 'translate' in aug:
-                continue
-            states = func(states)
-            states_next = func(states_next)
-
-        states = tf.convert_to_tensor(states, dtype=tf.float32)
-        actions = tf.convert_to_tensor(actions, dtype=tf.float32)
-        rewards = tf.convert_to_tensor(rewards, dtype=tf.float32)
-        states_next = tf.convert_to_tensor(states_next, dtype=tf.float32)
-        dones = tf.convert_to_tensor(dones, dtype=tf.float32)
-
-        if self.on_policy == True:
-            log_probs = self.log_prob[ids]
-            log_probs = tf.convert_to_tensor(log_probs, dtype=tf.float32)
-
-            return states, actions, rewards, states_next, dones, log_probs
-
-        return states, actions, rewards, states_next, dones
-
-
-    def ucb_sample(self, batch_size, aug_funcs, pre_image_size=100):
-        ids = np.random.randint(0, self.max_size if self.full else self.idx, size=batch_size)
-
-        states = self.s[ids]
-        actions = self.a[ids]
-        rewards = self.r[ids]
-        states_next = self.ns[ids]
-        dones = self.d[ids]
-
-        aug_list = ['crop', 'grayscale', 'cutout', 'cutout_color', 'rand_conv', 'color_jitter']
-        aug = np.random.choice(aug_list)
-
-        func = aug_funcs[aug]
-
-        if aug != 'crop':
-            states = center_crop_images(states, 84)
-            states_next = center_crop_images(states_next, 84)
-
-        states = func(states)
-        states_next = func(states_next)
-
-        states = tf.convert_to_tensor(states, dtype=tf.float32)
-        actions = tf.convert_to_tensor(actions, dtype=tf.float32)
-        rewards = tf.convert_to_tensor(rewards, dtype=tf.float32)
-        states_next = tf.convert_to_tensor(states_next, dtype=tf.float32)
-        dones = tf.convert_to_tensor(dones, dtype=tf.float32)
-
-        if self.on_policy == True:
-            log_probs = self.log_prob[ids]
-            log_probs = tf.convert_to_tensor(log_probs, dtype=tf.float32)
-
-            return states, actions, rewards, states_next, dones, log_probs
-
-        return states, actions, rewards, states_next, dones
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

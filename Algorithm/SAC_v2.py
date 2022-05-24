@@ -4,9 +4,9 @@ import tensorflow as tf
 import numpy as np
 
 from Common.Buffer import Buffer
-from Common.Utils import copy_weight, soft_update
-from Network.Basic_Networks import Q_network
-from Network.Gaussian_Actor import Squashed_Gaussian_Actor
+from Common.Utils import copy_weight, soft_update, remove_argument, modify_default, modify_choices
+from Network.Basic_Network import Q_network
+from Network.Gaussian_Policy import Gaussian_Policy
 
 
 class SAC_v2:
@@ -29,22 +29,43 @@ class SAC_v2:
         self.current_step = 0
         self.critic_update = args.critic_update
 
-        self.log_alpha = tf.Variable(np.log(args.alpha), dtype=tf.float32, trainable=True)
+        self.log_alpha = tf.Variable(np.log(args.alpha), dtype=tf.float32, trainable=args.train_alpha)
         self.target_entropy = -action_dim
         self.alpha_optimizer = tf.keras.optimizers.Adam(args.alpha_lr)
         self.train_alpha = args.train_alpha
 
-        self.actor = Squashed_Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim, args.log_std_min, args.log_std_max)
-        self.critic1 = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
-        self.target_critic1 = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
-        self.critic2 = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
-        self.target_critic2 = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.actor = Gaussian_Policy(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units, log_std_min=args.log_std_min, log_std_max=args.log_std_max, squash=True,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.critic1 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.target_critic1 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.critic2 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.target_critic2 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
 
         copy_weight(self.critic1, self.target_critic1)
         copy_weight(self.critic2, self.target_critic2)
 
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
         self.name = 'SAC_v2'
+
+    @staticmethod
+    def get_config(parser):
+        parser.add_argument('--log_std_min', default=-10, type=int, help='For gaussian actor')
+        parser.add_argument('--log_std_max', default=2, type=int, help='For gaussian actor')
+        parser.add_argument('--tau', default=0.005, type=float, help='Network soft update rate')
+        parser.add_argument('--alpha', default=0.2, type=float)
+        parser.add_argument('--train-alpha', default=True, type=bool)
+        parser.add_argument('--alpha-lr', default=0.0005, type=float)
+
+        parser.add_argument('--critic-update', default=1, type=int)
+
+        remove_argument(parser, ['learning_rate', 'v_lr'])
+        modify_choices(parser, 'train_mode', ['offline', 'online'])
+
+        return parser
 
     @property
     def alpha(self):

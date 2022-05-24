@@ -2,25 +2,27 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 
-from Algorithm.REINFORCE import REINFORCE
+from Algorithm.DQNs.DDQN import DDQN
+
+from Common.Utils import gym_env, env_info, set_seed, cpu_only
+from Common.Config import basic_config
 
 from Trainer.Basic_trainer import Basic_trainer
-from Common.Utils import set_seed, cpu_only, gym_env, dmc_env, env_info, discrete_env
-from Common.Config import on_policy_config
 
-def reinforce_configurations(parser):
+def ddqn_configurations(parser):
     parser.set_defaults(domain_type ='gym')
-    parser.set_defaults(env_name ='InvertedPendulum-v2')
-    parser.set_defaults(render = False)
+    parser.set_defaults(env_name ='CartPole-v0')
+    parser.set_defaults(render = True)
     parser.set_defaults(eval = True)
-    parser.set_defaults(eval_step = 10000)
+    parser.set_defaults(eval_step = 1000)
     parser.set_defaults(eval_episode = 1)
     parser.set_defaults(random_seed = -1)
-    parser.set_defaults(training_start = 0)
+    parser.set_defaults(training_start = 200)
+    parser.set_defaults(batch_size = 256)
     parser.set_defaults(train_mode = 'offline')
-    parser.set_defaults(training_step = 1)
-
-
+    parser.set_defaults(training_step = 200)
+    parser.set_defaults(copy_iter = 100)
+    parser.set_defaults(epsilon = 0.1)
     return parser
 
 def main(args):
@@ -33,25 +35,22 @@ def main(args):
     #env setting
     if args.domain_type == 'gym':
         env, test_env = gym_env(args.env_name, random_seed)
-
-    elif args.domain_type == 'dmc':
-        env, test_env = dmc_env(args.env_name, random_seed)
-
     else:
-        raise ValueError("only gym and dmc allowed")
+        raise ValueError("only gym allowed")
 
     state_dim, action_dim, max_action, min_action = env_info(env)
 
-    args.discrete = discrete_env(env)
-    algorithm = REINFORCE(state_dim, action_dim, args)
+    algorithm = DDQN(state_dim, action_dim, args)
 
     trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':
-    parser = on_policy_config()
-    parser = REINFORCE.get_config(parser)
-    parser = reinforce_configurations(parser)
+    parser = basic_config()
+    parser = DDQN.get_config(parser)
+    parser = ddqn_configurations(parser)
     args = parser.parse_args()
+    print(args)
+
     main(args)
 

@@ -4,9 +4,8 @@ import tensorflow as tf
 import numpy as np
 
 from Common.Buffer import Buffer
-from Common.Utils import copy_weight, soft_update
-from Network.Basic_Networks import Policy_network, Q_network
-
+from Common.Utils import copy_weight, soft_update, remove_argument
+from Network.Basic_Network import Policy_network, Q_network
 
 class DDPG:
     def __init__(self, state_dim, action_dim, args):
@@ -19,7 +18,6 @@ class DDPG:
         self.state_dim = state_dim
         self.action_dim = action_dim
 
-
         self.batch_size = args.batch_size
         self.gamma = args.gamma
         self.tau = args.tau
@@ -28,10 +26,14 @@ class DDPG:
         self.training_step = args.training_step
         self.current_step = 0
 
-        self.actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
-        self.target_actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
-        self.critic = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
-        self.target_critic = Q_network(self.state_dim, self.action_dim, args.hidden_dim)
+        self.actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.target_actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.critic = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.target_critic = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
 
         copy_weight(self.actor, self.target_actor)
         copy_weight(self.critic, self.target_critic)
@@ -39,10 +41,18 @@ class DDPG:
         self.network_list = {'Actor': self.actor, 'Target_Actor': self.target_actor, 'Critic': self.critic, 'Target_Critic': self.target_critic}
         self.name = 'DDPG'
 
+    @staticmethod
+    def get_config(parser):
+        parser.add_argument('--noise-scale', default=0.1, type=float, help='Action Noise Stddev')
+        parser.add_argument('--tau', default=0.005, type=float, help='Network soft update rate')
+        remove_argument(parser, ['learning_rate', 'v_lr'])
+
+        return parser
+
     def get_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
         noise = np.random.normal(loc=0, scale=self.noise_scale, size = self.action_dim)
-        action = self.actor(state).numpy()[0] + noise
+        action = self.actor(state, activation='tanh').numpy()[0] + noise
 
         action = np.clip(action, -1, 1)
 
@@ -50,7 +60,7 @@ class DDPG:
 
     def eval_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
-        action = self.actor(state).numpy()[0]
+        action = self.actor(state, activation='tanh').numpy()[0]
 
         action = np.clip(action, -1, 1)
 
@@ -64,12 +74,12 @@ class DDPG:
             self.current_step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
-            value_next = tf.stop_gradient(self.target_critic(ns, self.target_actor(ns)))
+            value_next = tf.stop_gradient(self.target_critic(ns, self.target_actor(ns, activation='tanh')))
             target_value = r + (1 - d) * self.gamma * value_next
 
             with tf.GradientTape(persistent=True) as tape:
                 critic_loss = 0.5 * tf.reduce_mean(tf.square(target_value - self.critic(s, a)))
-                actor_loss = -tf.reduce_mean(self.critic(s, self.actor(s)))
+                actor_loss = -tf.reduce_mean(self.critic(s, self.actor(s, activation='tanh')))
 
             critic_grad = tape.gradient(critic_loss, self.critic.trainable_variables)
             self.critic_optimizer.apply_gradients(zip(critic_grad, self.critic.trainable_variables))

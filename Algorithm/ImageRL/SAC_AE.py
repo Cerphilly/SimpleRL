@@ -4,25 +4,25 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 import numpy as np
 
-from Network.Gaussian_Actor import Squashed_Gaussian_Actor
-from Network.Basic_Networks import Q_network
+from Network.Gaussian_Policy import Gaussian_Policy
+from Network.Basic_Network import Q_network
 from Network.Encoder import PixelEncoder
 from Network.Decoder import PixelDecoder
 
-from Common.Utils import copy_weight, soft_update, preprocess_obs
+from Common.Utils import copy_weight, soft_update, preprocess_obs, modify_choices, remove_argument
 from Common.Buffer import Buffer
 
 class SACv2_AE:
     def __init__(self, obs_dim, action_dim, args):
 
-        self.buffer = Buffer(obs_dim, action_dim, args.buffer_size)
+        self.buffer = Buffer(state_dim=obs_dim, action_dim=action_dim, max_size=args.buffer_size, on_policy=False)
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.image_size = args.image_size
         self.current_step = 0
 
-        self.log_alpha = tf.Variable(initial_value=tf.math.log(args.alpha), trainable=True)
+        self.log_alpha = tf.Variable(initial_value=tf.math.log(args.alpha), trainable=args.train_alpha)
         self.target_entropy = -action_dim
         self.gamma = args.gamma
 
@@ -43,15 +43,24 @@ class SACv2_AE:
         self.training_step = args.training_step
         self.train_alpha = args.train_alpha
 
-        self.actor = Squashed_Gaussian_Actor(self.feature_dim, self.action_dim, args.hidden_dim, args.log_std_min, args.log_std_max)
-        self.critic1 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim)
-        self.critic2 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim)
-        self.target_critic1 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim)
-        self.target_critic2 = Q_network(self.feature_dim, self.action_dim, args.hidden_dim)
+        self.actor = Gaussian_Policy(state_dim=self.feature_dim, action_dim=self.action_dim, hidden_units=args.hidden_units, log_std_min=args.log_std_min, log_std_max=args.log_std_max, squash=True,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
 
-        self.encoder = PixelEncoder(self.obs_dim, self.feature_dim, self.layer_num, self.filter_num)
-        self.target_encoder = PixelEncoder(self.obs_dim, self.feature_dim, self.layer_num, self.filter_num)
-        self.decoder = PixelDecoder(self.obs_dim, self.feature_dim, self.layer_num, self.filter_num)
+        self.critic1 = Q_network(state_dim=self.feature_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.critic2 = Q_network(state_dim=self.feature_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.target_critic1 = Q_network(state_dim=self.feature_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.target_critic2 = Q_network(state_dim=self.feature_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+
+        self.encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=self.layer_num, filter_num=self.filter_num, data_format=args.data_format,
+                                    activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.target_encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=self.layer_num, filter_num=self.filter_num, data_format=args.data_format,
+                                    activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.decoder = PixelDecoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=self.layer_num, filter_num=self.filter_num, data_format=args.data_format,
+                                    activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
 
         copy_weight(self.critic1, self.target_critic1)
         copy_weight(self.critic2, self.target_critic2)
@@ -63,6 +72,7 @@ class SACv2_AE:
 
         self.encoder_optimizer = tf.keras.optimizers.Adam(args.encoder_lr)
         self.decoder_optimizer = tfa.optimizers.AdamW(weight_decay=self.decoder_weight_lambda, learning_rate=args.decoder_lr)
+        #self.decoder_optimizer = tf.keras.optimizers.experimental.AdamW(learning_rate=args.decoder_lr, weight_decay=args.decoder_weight_lambda)
 
         self.log_alpha_optimizer = tf.keras.optimizers.Adam(args.alpha_lr, beta_1=0.5)
 
@@ -70,6 +80,29 @@ class SACv2_AE:
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2,
                              'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2, 'Encoder': self.encoder, 'Target_Encoder': self.target_encoder, 'Decoder': self.decoder}
         self.name = 'SACv2_AE'
+
+    @staticmethod
+    def get_config(parser):
+        parser.add_argument('--log_std_min', default=-10, type=int, help='For gaussian actor')
+        parser.add_argument('--log_std_max', default=2, type=int, help='For gaussian actor')
+        parser.add_argument('--tau', default=0.005, type=float, help='Network soft update rate')
+        parser.add_argument('--alpha', default=0.2, type=float)
+        parser.add_argument('--train-alpha', default=True, type=bool)
+        parser.add_argument('--alpha-lr', default=0.0005, type=float)
+
+        parser.add_argument('--encoder-lr', default=0.001, type=float)
+        parser.add_argument('--decoder-lr', default=0.001, type=float)
+        parser.add_argument('--decoder-latent-lambda', default=1e-6, type=float)
+        parser.add_argument('--decoder-weight-lambda', default=1e-7, type=float)
+
+        parser.add_argument('--actor-update', default=2, type=int)
+        parser.add_argument('--critic-update', default=2, type=int)
+        parser.add_argument('--decoder-update', default=1, type=int)
+
+        remove_argument(parser, ['learning_rate', 'v_lr'])
+        modify_choices(parser, 'train_mode', ['offline', 'online'])
+
+        return parser
 
     @property
     def alpha(self):

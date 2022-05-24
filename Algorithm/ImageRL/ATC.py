@@ -1,5 +1,7 @@
-#RAD: Reinforcement Learning with Augmented Data, Laskin et al, 2020
-#Reference: https://github.com/MishaLaskin/rad (official repo)
+#Decoupling Representation Learning from Reinforcement Learning, Stooke et al, 2020
+#ATC: Augmented Temporal Contrast
+#DMControl Online RL implementation only
+#official: https://github.com/astooke/rlpyt/tree/master/rlpyt/ul
 
 import tensorflow as tf
 import numpy as np
@@ -13,9 +15,8 @@ from Common.Image_Augmentation import *
 from Common.Buffer import Buffer
 
 
-class RADBuffer(Buffer):
-    #todo: implement other data augmentations(maybe)
-    def rad_sample(self, batch_size, image_size=84, data_format='channels_first', aug='crop'):
+class ATCBuffer(Buffer):
+    def atc_sample(self, batch_size, image_size=84, data_format='channels_first'):
         ids = np.random.randint(0, self.max_size if self.full else self.idx, size=batch_size)
         states = self.s[ids]
         actions = self.a[ids]
@@ -23,15 +24,7 @@ class RADBuffer(Buffer):
         states_next = self.ns[ids]
         dones = self.d[ids]
 
-        if aug == 'crop':
-            states = random_crop(states, image_size, data_format)
-            states_next = random_crop(states_next, image_size, data_format)
-        elif aug == 'translate':
-            states, random_idxs = random_translate(states, image_size, return_random_idxs=True, data_format=data_format)
-            states_next = random_translate(states_next, image_size, h1s=random_idxs['h1s'], w1s=random_idxs['w1s'], data_format=data_format)
 
-        else:
-            raise NotImplementedError
 
         states = tf.convert_to_tensor(states, dtype=tf.float32)
         actions = tf.convert_to_tensor(actions, dtype=tf.float32)
@@ -48,25 +41,17 @@ class RADBuffer(Buffer):
 
         return states, actions, rewards, states_next, dones
 
-class RAD_SACv2:
+class ATC_SACv2:
     def __init__(self, obs_dim, action_dim, args):
 
-        self.data_aug = args.data_aug
 
-        if self.data_aug == 'crop':
-            assert args.image_size < args.pre_image_size
-
-        elif self.data_aug == 'translate':
-            assert args.image_size > args.pre_image_size
-
-        self.buffer = RADBuffer(state_dim=(obs_dim[0], args.pre_image_size, args.pre_image_size) if args.data_format == 'channels_first' else (args.pre_image_size, args.pre_image_size, obs_dim[-1]),
+        self.buffer = ATCBuffer(state_dim=(obs_dim[0], args.pre_image_size, args.pre_image_size) if args.data_format == 'channels_first' else (args.pre_image_size, args.pre_image_size, obs_dim[-1]),
                                     action_dim=action_dim, max_size=args.buffer_size)
 
 
         self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.image_size = args.image_size
-        self.pre_image_size = args.pre_image_size
         self.current_step = 0
 
         self.log_alpha = tf.Variable(initial_value=tf.math.log(args.alpha), trainable=args.train_alpha)
@@ -101,10 +86,14 @@ class RAD_SACv2:
         self.target_critic2 = Q_network(state_dim=self.feature_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
                                       activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
 
-        self.encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=self.layer_num, filter_num=self.filter_num, data_format=args.data_format,
+        self.encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=self.layer_num, filter_num=self.filter_num, strides=(2,1,1,1), data_format=args.data_format,
                                     activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
         self.target_encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=self.layer_num, filter_num=self.filter_num, data_format=args.data_format,
                                     activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+
+        self.compressor = 0
+        self.target_compressor = 0
+        self.predictor = 0
 
         copy_weight(self.critic1, self.target_critic1)
         copy_weight(self.critic2, self.target_critic2)
@@ -119,9 +108,8 @@ class RAD_SACv2:
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2,
                              'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2, 'Encoder': self.encoder, 'Target_Encoder': self.target_encoder}
 
-        self.aug_funcs = {}
 
-        self.name = 'RAD_SACv2'
+        self.name = 'ATC_SACv2'
 
     @staticmethod
     def get_config(parser):
@@ -131,8 +119,6 @@ class RAD_SACv2:
         parser.add_argument('--alpha', default=0.1, type=float)
         parser.add_argument('--train-alpha', default=True, type=bool)
         parser.add_argument('--alpha-lr', default=0.0005, type=float)
-        parser.add_argument('--pre-image-size', default=100, type=int)
-        parser.add_argument('--data_aug', default='crop', choices=['crop', 'translate'])
 
         parser.add_argument('--critic-update', default=2, type=int)
 
@@ -147,19 +133,6 @@ class RAD_SACv2:
 
 
     def get_action(self, obs):
-        if obs.shape[-1] != self.image_size:
-            if self.data_aug == 'crop':
-                obs = center_crop(obs, self.image_size, self.data_format)
-            elif self.data_aug == 'translate':
-                obs = center_translate(obs, self.image_size, self.data_format)
-
-
-        # import matplotlib.pyplot as plt
-        #
-        # print(obs.shape)
-        # plt.imshow(obs[0])
-        # plt.show()
-
         obs = np.expand_dims(np.array(obs, dtype=np.float32), axis=0)
         feature = self.encoder(obs)
         action, _ = self.actor(feature)
@@ -168,12 +141,6 @@ class RAD_SACv2:
         return action
 
     def eval_action(self, obs):
-        if obs.shape[-1] != self.image_size:
-            if self.data_aug == 'crop':
-                obs = center_crop(obs, self.image_size, self.data_format)
-            elif self.data_aug == 'translate':
-                obs = center_translate(obs, self.image_size, self.data_format)
-
         obs = np.expand_dims(np.array(obs, dtype=np.float32), axis=0)
         feature = self.encoder(obs)
         action, _ = self.actor(feature, deterministic=True)
@@ -190,7 +157,7 @@ class RAD_SACv2:
 
         for i in range(training_step):
 
-            s, a, r, ns, d = self.buffer.rad_sample(self.batch_size, self.image_size, self.data_format, self.data_aug)
+            s, a, r, ns, d = self.buffer.atc_sample(self.batch_size, self.image_size, self.data_format)
 
             ns_action, ns_logpi = self.actor(self.encoder(ns))
 

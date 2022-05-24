@@ -1,28 +1,32 @@
 import cv2
 import numpy as np
+import time
 
+from Common.Utils import discrete_env, render_env
 from Common.Logger import Logger
 
 class Basic_trainer:
     def __init__(self, env, test_env, algorithm, max_action, min_action, args):
         self.domain_type = args.domain_type
         self.env_name = args.env_name
+
         self.env = env
         self.test_env = test_env
 
         self.algorithm = algorithm
 
+        self.logger = Logger(env, test_env, algorithm, max_action, min_action, args)
+
         self.max_action = max_action
         self.min_action = min_action
 
-        self.discrete = args.discrete
+        self.discrete = discrete_env(env)
         self.render = args.render
         self.max_step = args.max_step
 
         self.eval = args.eval
         self.eval_episode = args.eval_episode
         self.eval_step = args.eval_step
-
 
         self.episode = 0
         self.episode_reward = 0
@@ -34,23 +38,17 @@ class Basic_trainer:
 
         if args.train_mode == 'offline':
             self.train_mode = self.offline_train
+
         elif args.train_mode == 'online':
             self.train_mode = self.online_train
-        elif args.train_mode == 'batch':
-            self.train_mode = self.batch_train
+
+            if not self.algorithm.training_step == 1:
+                import warnings
+                warnings.warn("online training means only 1 training step per each step")
+                self.algorithm.training_step = 1
 
         assert self.train_mode is not None
 
-        self.log = args.log
-
-        self.model = args.model
-        self.model_freq = args.model_freq
-        self.buffer = args.buffer
-        self.buffer_freq = args.buffer_freq
-
-        if self.log == True:
-            self.logger = Logger(env, algorithm, args, file=args.file, tensorboard=args.tensorboard, numpy=args.numpy,
-                                 model=args.model, buffer=args.buffer)
 
     def offline_train(self, d, local_step):
         if d:
@@ -59,11 +57,6 @@ class Basic_trainer:
 
     def online_train(self, d, local_step):
         return True
-
-    def batch_train(self, d, local_step):#VPG, TRPO, PPO only
-        if d or local_step == self.algorithm.batch_size:
-            return True
-        return False
 
     def evaluate(self):
         self.eval_num += 1
@@ -75,6 +68,7 @@ class Basic_trainer:
                 break
             episode += 1
             eval_reward = 0
+            local_step = 0
             observation = self.test_env.reset()
 
             if '-ram-' in self.env_name:  # Atari Ram state
@@ -83,15 +77,10 @@ class Basic_trainer:
             done = False
 
             while not done:
+                local_step += 1
+
                 if self.render == True:
-                    if self.domain_type in {'gym', "atari"}:
-                        self.env.render()
-                    elif self.domain_type in {'procgen'}:
-                        cv2.imshow("{}_{}_{}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array'))
-                        cv2.waitKey(1)
-                    elif self.domain_type in {'dmc', 'dmcr'}:
-                        cv2.imshow("{}_{}_{}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array', height=240, width=320))
-                        cv2.waitKey(1)
+                    render_env(self.env, self.env_name, self.domain_type, self.algorithm.name)
 
                 action = self.algorithm.eval_action(observation)
 
@@ -107,14 +96,13 @@ class Basic_trainer:
 
             reward_list.append(eval_reward)
 
-        print("Eval  | Average Reward {:.2f}, Max reward: {:.2f}, Min reward: {:.2f}, Stddev reward: {:.2f} ".format(sum(reward_list)/len(reward_list), max(reward_list), min(reward_list), np.std(reward_list)))
-
-        if self.log == True:
-            self.logger.log('Reward/Test', sum(reward_list)/len(reward_list), self.eval_num, False)
-            self.logger.log('Max Reward/Test', max(reward_list), self.eval_num, False)
-            self.logger.log('Min Reward/Test', min(reward_list), self.eval_num, False)
-            self.logger.log('Stddev Reward/Test', np.std(reward_list), self.eval_num, True)
-
+            #self.logger.log_values([['Reward/Eval', eval_reward], ['Step/Eval', local_step]], mode='eval')
+        '''
+        print("Eval  | Average Reward {:.2f}, Max reward: {:.2f}, Min reward: {:.2f}, Stddev reward: {:.2f} ".format(
+            sum(reward_list) / len(reward_list), max(reward_list), min(reward_list), np.std(reward_list)))
+        '''
+        self.logger.log_values([['Episode/Eval', self.eval_num], ['Reward/Eval', sum(reward_list) / len(reward_list)], ['Max_Reward/Eval', max(reward_list)], ['Min_Reward/Eval', min(reward_list)], ['Stddev_Reward/Eval', np.std(reward_list)]], mode='eval'),
+        self.logger.results('eval')
 
     def run(self):
         while True:
@@ -128,24 +116,18 @@ class Basic_trainer:
 
             observation = self.env.reset()
             done = False
+            time_list = []
 
             while not done:
                 self.local_step += 1
                 self.total_step += 1
+                start_time = time.time()
 
                 if self.render == True:
-                    if self.domain_type in {'gym', "atari"}:
-                        self.env.render()
-                    elif self.domain_type in {'procgen'}:
-                        cv2.imshow("{}_{}_{}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array'))
-                        cv2.waitKey(1)
-                    elif self.domain_type in {'dmc', 'dmcr'}:
-                        cv2.imshow("{}_{}_{}".format(self.algorithm.name, self.domain_type, self.env_name), self.env.render(mode='rgb_array', height=240, width=320))
-                        cv2.waitKey(1)
+                    render_env(self.env, self.env_name, self.domain_type, self.algorithm.name)
 
                 if '-ram-' in self.env_name:  # Atari Ram state
                     observation = observation / 255.
-                print(observation)
 
                 if self.total_step <= self.algorithm.training_start:
                    action = self.env.action_space.sample()
@@ -161,6 +143,7 @@ class Basic_trainer:
                         env_action = self.max_action * np.clip(action, -1, 1)
                     else:
                         env_action = action
+
                     next_observation, reward, done, _ = self.env.step(env_action)
 
                 if self.local_step + 1 == 1000:
@@ -182,28 +165,15 @@ class Basic_trainer:
 
                 if self.total_step >= self.algorithm.training_start and self.train_mode(done, self.local_step):
                     loss_list = self.algorithm.train(self.algorithm.training_step)
-                    if self.log == True:
-                        for loss in loss_list:
-                            self.logger.log(loss[0], loss[1], self.total_step, str(self.episode))
+                    self.logger.log_values(loss_list, mode='train')
 
                 if self.eval == True and self.total_step % self.eval_step == 0:
                     self.evaluate()
 
-                if self.log == True:
-                    if self.model == True and self.total_step % self.model_freq == 0:
-                        self.logger.save_model(self.algorithm, step=self.total_step)
-
-                    if self.buffer == True and self.total_step % self.buffer_freq == 0:
-                        self.logger.save_buffer(buffer=self.algorithm.buffer, step=self.total_step)
-
-            print("Train | Episode: {}, Reward: {:.2f}, Local_step: {}, Total_step: {},".format(self.episode, self.episode_reward, self.local_step, self.total_step))
-
-            if self.log == True:
-                self.logger.log('Reward/Train', self.episode_reward, self.episode, False)
-                self.logger.log('Step/Train', self.local_step, self.episode, False)
-                self.logger.log('Total Step/Train', self.total_step, self.episode, True)
-
-
-
-
-
+            self.logger.log_values([["Episode/Train", self.episode], ["Reward/Train", self.episode_reward], ["Step/Train", self.local_step], ["Total_Step/Train", self.total_step]], mode='train')
+            #print("Train | Episode: {}, Reward: {:.2f} Local_step: {:<10} Total_step: {:<10}".format(self.episode, self.episode_reward, self.local_step, self.total_step))
+            #print(self.logger.return_results('train'))
+            #print(self.logger.return_results('loss'))
+            #print("Train |", self.logger.return_results('train'))
+            #print(self.logger.console_results('train'))
+            self.logger.results('train')

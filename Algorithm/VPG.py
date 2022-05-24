@@ -7,12 +7,13 @@ import tensorflow_probability as tfp
 import numpy as np
 
 from Common.Buffer import Buffer
-from Network.Basic_Networks import Policy_network, V_network
-from Network.Gaussian_Actor import Gaussian_Actor
+from Common.Utils import remove_argument
+
+from Network.Basic_Network import Policy_network, V_network
+from Network.Gaussian_Policy import Gaussian_Policy
 
 class VPG:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
     def __init__(self, state_dim, action_dim, args):
-
 
         self.buffer = Buffer(state_dim, action_dim if args.discrete == False else 1, args.buffer_size, on_policy=True)
         self.discrete = args.discrete
@@ -29,15 +30,28 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         self.training_step = 1
 
         if self.discrete == True:
-            self.actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
+            self.actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
         else:
-            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim)
+            self.actor = Gaussian_Policy(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units, log_std_min=args.log_std_min, log_std_max=args.log_std_max, squash=False,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
 
 
-        self.critic = V_network(self.state_dim)
+        self.critic = V_network(state_dim=self.state_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
 
         self.network_list = {'Actor': self.actor, 'Critic': self.critic}
         self.name = 'VPG'
+
+
+    @staticmethod
+    def get_config(parser):
+        parser.add_argument('--log_std_min', default=-20, type=int, help='For gaussian actor')
+        parser.add_argument('--log_std_max', default=2, type=int, help='For gaussian actor')
+        parser.add_argument('--lambda-gae', default=0.96, type=float)
+        remove_argument(parser, ['learning_rate', 'v_lr', 'batch_size'])
+
+        return parser
 
     def get_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
@@ -89,9 +103,9 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
         running_advantage = np.zeros(1)
 
         for t in reversed(range(len(r))):
-            running_return = (r[t] + self.gamma * running_return * (1 - d[t])).numpy()
-            running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - values[t]).numpy()
-            running_advantage = (running_tderror + (self.gamma * self.lambda_gae) * running_advantage * (1 - d[t])).numpy()
+            running_return = (r[t] + self.gamma * running_return * (1 - d[t]))
+            running_tderror = (r[t] + self.gamma * previous_value * (1 - d[t]) - values[t])
+            running_advantage = (running_tderror + (self.gamma * self.lambda_gae) * running_advantage * (1 - d[t]))
 
             returns[t] = running_return
             previous_value = values[t]
@@ -112,7 +126,8 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
                 dist = self.actor.dist(s)
                 log_policy = dist.log_prob(a)
 
-            actor_loss = -tf.reduce_sum(log_policy * tf.stop_gradient(advantages))
+
+            actor_loss = -tf.reduce_mean(log_policy * tf.stop_gradient(advantages))
             critic_loss = 0.5 * tf.reduce_mean(tf.square(tf.stop_gradient(returns) - self.critic(s)))
 
         actor_variables = self.actor.trainable_variables

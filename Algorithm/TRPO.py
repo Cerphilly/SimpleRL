@@ -8,9 +8,11 @@ import numpy as np
 import copy
 
 from Common.Buffer import Buffer
-from Network.Basic_Networks import Policy_network, V_network
-from Network.Gaussian_Actor import Gaussian_Actor
+from Common.Utils import remove_argument, modify_default
 
+from Network.Basic_Network import Policy_network, V_network
+from Network.Gaussian_Policy import Gaussian_Policy
+#todo: check paper
 class TRPO:
     def __init__(self, state_dim, action_dim, args):
 
@@ -34,16 +36,38 @@ class TRPO:
         self.training_step = args.training_step
 
         if self.discrete == True:
-            self.actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
-            self.backup_actor = Policy_network(self.state_dim, self.action_dim, args.hidden_dim)
-        else:
-            self.actor = Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim)
-            self.backup_actor = Gaussian_Actor(self.state_dim, self.action_dim, args.hidden_dim)
+            self.actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
 
-        self.critic = V_network(self.state_dim)
+            self.backup_actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        else:
+            self.actor = Gaussian_Policy(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units, log_std_min=args.log_std_min, log_std_max=args.log_std_max, squash=False,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+            self.backup_actor = Gaussian_Policy(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units, log_std_min=args.log_std_min, log_std_max=args.log_std_max, squash=False,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+
+        self.critic = V_network(state_dim=self.state_dim, hidden_units=args.hidden_units,
+                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
 
         self.network_list = {'Actor': self.actor, 'Critic': self.critic}
         self.name = 'TRPO'
+
+    @staticmethod
+    def get_config(parser):
+        parser.add_argument('--log_std_min', default=-20, type=int, help='For gaussian actor')
+        parser.add_argument('--log_std_max', default=2, type=int, help='For gaussian actor')
+        parser.add_argument('--lambda-gae', default=0.96, type=float)
+        parser.add_argument('--backtrack-iter', default=10, type=int)
+        parser.add_argument('--backtrack-coeff', default=0.8, type=float)
+        parser.add_argument('--delta', default=0.5, type=float)
+
+        modify_default(parser, 'training_step', 5)
+
+        remove_argument(parser, ['learning_rate', 'v_lr'])
+
+        return parser
+
 
     def get_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)

@@ -2,7 +2,5 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/Custom_Gym" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/dm_control2gym" vcs="Git" />
   </component>
 </project>
