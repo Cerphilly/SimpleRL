@@ -4,9 +4,9 @@ import tensorflow as tf
 import numpy as np
 
 from Common.Buffer import Buffer
-from Common.Utils import copy_weight, soft_update, remove_argument, modify_choices
-from Network.Basic_Network import Q_network, V_network
-from Network.Gaussian_Policy import Gaussian_Policy
+from Common.Utils import copy_weight, soft_update
+from Network.Basic_Networks import Q_network, V_network
+from Network.Gaussian_Actor import Squashed_Gaussian_Actor
 
 class SAC_v1:
     def __init__(self, state_dim, action_dim, args):
@@ -29,35 +29,18 @@ class SAC_v1:
         self.training_step = args.training_step
         self.current_step = 0
 
-        self.actor = Gaussian_Policy(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units, log_std_min=args.log_std_min, log_std_max=args.log_std_max, squash=True,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
-
-        self.critic1 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
-        self.critic2 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
-        self.v_network = V_network(state_dim=self.state_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
-        self.target_v_network = V_network(state_dim=self.state_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
-
+        self.actor = Squashed_Gaussian_Actor(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim,
+                                             log_std_min=args.log_std_min, log_std_max=args.log_std_max, activation=args.activation)
+        self.critic1 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
+        self.critic2 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
+        self.v_network = V_network(state_dim=self.state_dim, hidden_units=args.hidden_dim, activation=args.activation)
+        self.target_v_network = V_network(state_dim=self.state_dim,
+                                          hidden_units=args.hidden_dim, activation=args.activation)
 
         copy_weight(self.v_network, self.target_v_network)
 
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'V_network': self.v_network, 'Target_V_network': self.target_v_network}
         self.name = 'SAC_v1'
-
-    @staticmethod
-    def get_config(parser):
-        parser.add_argument('--log_std_min', default=-10, type=int, help='For gaussian actor')
-        parser.add_argument('--log_std_max', default=2, type=int, help='For gaussian actor')
-        parser.add_argument('--tau', default=0.005, type=float, help='Network soft update rate')
-        parser.add_argument('--alpha', default=0.2, type=float)
-
-        remove_argument(parser, ['learning_rate'])
-        modify_choices(parser, 'train_mode', ['offline', 'online'])
-
-        return parser
 
     def get_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
@@ -73,7 +56,6 @@ class SAC_v1:
 
         return action
 
-
     def train(self, training_num):
         total_a_loss = 0
         total_c1_loss, total_c2_loss = 0, 0
@@ -81,6 +63,7 @@ class SAC_v1:
         for i in range(training_num):
             self.current_step += 1
 
+            #v_network training
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
             s_action, s_logpi = self.actor(s)
             min_aq = tf.minimum(self.critic1(s, s_action), self.critic2(s, s_action))
@@ -92,6 +75,7 @@ class SAC_v1:
             v_gradients = tape1.gradient(v_loss, self.v_network.trainable_variables)
             self.v_network_optimizer.apply_gradients(zip(v_gradients, self.v_network.trainable_variables))
 
+            #critic network training
             target_q = tf.stop_gradient(r + self.gamma * (1 - d) * self.target_v_network(ns))
 
             with tf.GradientTape(persistent=True) as tape2:
@@ -104,6 +88,7 @@ class SAC_v1:
             critic2_gradients = tape2.gradient(critic2_loss, self.critic2.trainable_variables)
             self.critic2_optimizer.apply_gradients(zip(critic2_gradients, self.critic2.trainable_variables))
 
+            #actor network training
             with tf.GradientTape() as tape3:
                 s_action, s_logpi = self.actor(s)
 
@@ -113,6 +98,7 @@ class SAC_v1:
             actor_grad = tape3.gradient(actor_loss, self.actor.trainable_variables)
             self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
+            #v network update
             soft_update(self.v_network, self.target_v_network, self.tau)
 
             del tape1, tape2, tape3
@@ -123,6 +109,7 @@ class SAC_v1:
             total_v_loss += v_loss.numpy()
 
 
-        return [['Loss/Actor', total_a_loss], ['Loss/Critic1', total_c1_loss], ['Loss/Critic2', total_c2_loss], ['Loss/V', total_v_loss]]
+        return {'Loss': {'Actor': total_a_loss, 'Critic1': total_c1_loss, 'Critic2': total_c2_loss, 'V': total_v_loss}}
+
 
 

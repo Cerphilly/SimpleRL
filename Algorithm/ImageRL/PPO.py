@@ -9,13 +9,13 @@ import numpy as np
 from Common.Buffer import Buffer
 from Network.Basic_Networks import Policy_network, V_network
 from Network.Gaussian_Actor import Gaussian_Actor
+from Network.Encoder import PixelEncoder
 
-class PPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
-    def __init__(self, state_dim, action_dim, args):
+class ImagePPO:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
+    def __init__(self, obs_dim, action_dim, args):
 
         self.discrete = args.discrete
-
-        self.buffer = Buffer(state_dim=state_dim, action_dim=action_dim if args.discrete == False else 1, max_size=args.buffer_size, on_policy=True)
+        self.buffer = Buffer(state_dim=obs_dim, action_dim=action_dim if args.discrete == False else 1, max_size=args.buffer_size, on_policy=True)
 
         self.ppo_mode = args.ppo_mode #mode: 'clip'
         assert self.ppo_mode is 'clip'
@@ -25,54 +25,59 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         self.batch_size = args.batch_size
         self.clip = args.clip
 
-
         self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
         self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
-        self.state_dim = state_dim
+        self.obs_dim = obs_dim
         self.action_dim = action_dim
         self.training_start = 0
         self.training_step = args.training_step
 
-        if self.discrete:
-            self.actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim,
-                                        activation=args.activation)
-        else:
-            self.actor = Gaussian_Actor(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim,
-                                        activation=args.activation)
+        self.feature_dim = args.feature_dim
 
-        self.critic = V_network(state_dim=self.state_dim, hidden_units=args.hidden_dim, activation=args.activation)
+        if self.discrete:
+            self.actor = Policy_network(state_dim=self.feature_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
+        else:
+            self.actor = Gaussian_Actor(state_dim=self.feature_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
+
+        self.critic = V_network(state_dim=self.feature_dim, hidden_units=args.hidden_dim, activation=args.activation)
+        self.encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
+                                    kernel_size=args.kernel_size, strides=args.strides, data_format='channels_first', activation=args.activation)
 
         self.network_list = {'Actor': self.actor, 'Critic': self.critic}
         self.name = 'PPO'
 
-    def get_action(self, state):
-        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
+    def get_action(self, observation):
+        observation = np.expand_dims(np.array(observation, dtype=np.float32), axis=0)
 
         if self.discrete:
-            policy = self.actor(state, activation='softmax')
+            feature = self.encoder(observation)
+            policy = self.actor(feature, activation='softmax')
             dist = tfp.distributions.Categorical(probs=policy)
             action = dist.sample().numpy()
             log_prob = dist.log_prob(action).numpy()
             action = action[0]
 
         else:
-            action, log_prob = self.actor(state)
+            feature = self.encoder(observation)
+            action, log_prob = self.actor(feature)
             action = action.numpy()[0]
             log_prob = log_prob.numpy()[0]
 
         return action, log_prob
 
-    def eval_action(self, state):
-        state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
+    def eval_action(self, observation):
+        observation = np.expand_dims(np.array(observation, dtype=np.float32), axis=0)
 
         if self.discrete:
-            policy = self.actor(state, activation='softmax')
+            feature = self.encoder(observation)
+            policy = self.actor(feature, activation='softmax')
             dist = tfp.distributions.Categorical(probs=policy)
             action = dist.sample().numpy()[0]
 
         else:
-            action, _ = self.actor(state, deterministic=True)
+            feature = self.encoder(observation)
+            action, _ = self.actor(feature, deterministic=True)
             action = action.numpy()[0]
 
         return action
@@ -82,11 +87,11 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
         total_c_loss = 0
 
         s, a, r, ns, d, log_prob = self.buffer.all_sample()
-        old_values = self.critic(s).numpy()
 
         r = r.numpy()
         d = d.numpy()
 
+        old_values = self.critic(self.encoder(s)).numpy()
         returns = np.zeros_like(r)
         advantages = np.zeros_like(returns)
 
@@ -105,6 +110,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
             advantages[t] = running_advantage
 
         advantages = (advantages - advantages.mean()) / (advantages.std())
+
         advantages = tf.convert_to_tensor(advantages, dtype=tf.float32)
         returns = tf.convert_to_tensor(returns, dtype=tf.float32)
 
@@ -128,9 +134,9 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                 with tf.GradientTape(persistent=True) as tape:
 
                     if self.discrete:
-                        policy = self.actor(batch_s, activation='softmax')
+                        policy = self.actor(tf.stop_gradient(self.encoder(batch_s)), activation='softmax')
                         dist = tfp.distributions.Categorical(probs=policy)
-                        log_policy = tf.reshape(dist.log_prob(tf.squeeze(batch_a)), (len(batch_index), -1))
+                        log_policy = tf.reshape(dist.log_prob(tf.squeeze(batch_a)), (-1, 1))
                         ratio = tf.exp(log_policy - batch_old_log_policy)
                         surrogate = ratio * batch_advantages
 
@@ -142,7 +148,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                             raise NotImplementedError
 
                     else:
-                        dist = self.actor.dist(batch_s)
+                        dist = self.actor.dist(self.encoder(batch_s))
                         log_policy = dist.log_prob(batch_a)
 
                         ratio = tf.exp(log_policy - batch_old_log_policy)
@@ -155,16 +161,13 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                         else:
                             raise NotImplementedError
 
-                    critic_loss = 0.5 * tf.reduce_mean(tf.square(batch_returns - self.critic(batch_s)))
+                    critic_loss = 0.5 * tf.reduce_mean(tf.square(batch_returns - self.critic(self.encoder(batch_s))))
 
-                actor_variables = self.actor.trainable_variables
-                critic_variables = self.critic.trainable_variables
+                actor_gradients = tape.gradient(actor_loss, self.actor.trainable_variables)
+                critic_gradients = tape.gradient(critic_loss, self.encoder.trainable_variables + self.critic.trainable_variables)
 
-                actor_gradients = tape.gradient(actor_loss, actor_variables)
-                critic_gradients = tape.gradient(critic_loss, critic_variables)
-
-                self.actor_optimizer.apply_gradients(zip(actor_gradients, actor_variables))
-                self.critic_optimizer.apply_gradients(zip(critic_gradients, critic_variables))
+                self.actor_optimizer.apply_gradients(zip(actor_gradients, self.actor.trainable_variables))
+                self.critic_optimizer.apply_gradients(zip(critic_gradients, self.encoder.trainable_variables + self.critic.trainable_variables))
 
                 del tape
 
@@ -172,6 +175,8 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                 total_c_loss += critic_loss.numpy()
 
         self.buffer.delete()
-        return {'Loss': {'Actor': total_a_loss, 'Critic': total_c_loss}, 'Value': {'Entropy': tf.reduce_mean(dist.entropy()).numpy()}}
+
+        return {'Loss': {'Actor': total_a_loss, 'Critic': total_c_loss},
+                'Value': {'Entropy': tf.reduce_mean(dist.entropy()).numpy()}}
 
 

@@ -4,8 +4,10 @@ import tensorflow as tf
 import numpy as np
 
 from Common.Buffer import Buffer
-from Common.Utils import copy_weight, soft_update, remove_argument
-from Network.Basic_Network import Policy_network, Q_network
+from Common.Utils import copy_weight, soft_update
+from Network.Basic_Networks import Policy_network, Q_network
+from Network.D2RL_Networks import D2RL_Policy, D2RL_Q
+
 
 class TD3:
     def __init__(self, state_dim, action_dim, args):
@@ -32,18 +34,12 @@ class TD3:
         self.training_step = args.training_step
         self.current_step = 0
 
-        self.actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
-        self.target_actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
-        self.critic1 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
-        self.target_critic1 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
-        self.critic2 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
-        self.target_critic2 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
+        self.target_actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
+        self.critic1 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
+        self.target_critic1 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
+        self.critic2 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
+        self.target_critic2 = Q_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
 
         copy_weight(self.actor, self.target_actor)
         copy_weight(self.critic1, self.target_critic1)
@@ -52,29 +48,17 @@ class TD3:
         self.network_list = {'Actor': self.actor, 'Critic1': self.critic1, 'Critic2': self.critic2, 'Target_Critic1': self.target_critic1, 'Target_Critic2': self.target_critic2}
         self.name = 'TD3'
 
-    @staticmethod
-    def get_config(parser):
-        parser.add_argument('--actor-noise', default=0.1, type=float, help='Action Noise Stddev')
-        parser.add_argument('--target-noise', default=0.2, type=float, help='Target Actor Action Noise Stddev')
-        parser.add_argument('--tau', default=0.005, type=float, help='Network soft update rate')
-        parser.add_argument('--noise-clip', default=0.5, type=float, help='Maximum noise size')
-        parser.add_argument('--policy-delay', default=2, type=int, help='train actor once in every policy delay step')
-
-        remove_argument(parser, ['learning_rate', 'v_lr'])
-
-        return parser
-
     def get_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
         noise = np.random.normal(loc=0, scale=self.actor_noise, size=self.action_dim)
-        action = self.actor(state, activation='tanh').numpy()[0] + noise
+        action = self.actor(state).numpy()[0] + noise
         action = np.clip(action, -1, 1)
 
         return action
 
     def eval_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
-        action = self.actor(state, activation='tanh').numpy()[0]
+        action = self.actor(state).numpy()[0]
         action = np.clip(action, -1, 1)
 
         return action
@@ -82,12 +66,13 @@ class TD3:
     def train(self, training_num):
         total_a_loss = 0
         total_c1_loss, total_c2_loss = 0, 0
+
         for i in range(training_num):
             self.current_step += 1
             s, a, r, ns, d = self.buffer.sample(self.batch_size)
 
-            target_action = tf.clip_by_value(self.target_actor(ns, activation='tanh') +
-                                             tf.clip_by_value(tf.random.normal(shape=self.target_actor(ns, activation='tanh').shape, mean=0, stddev=self.target_noise), -self.noise_clip, self.noise_clip), -1, 1)
+            #critic network training
+            target_action = tf.clip_by_value(self.target_actor(ns) + tf.clip_by_value(tf.random.normal(shape=self.target_actor(ns).shape, mean=0, stddev=self.target_noise), -self.noise_clip, self.noise_clip), -1, 1)
 
             target_value = tf.stop_gradient(r + self.gamma * (1 - d) * tf.minimum(self.target_critic1(ns, target_action), self.target_critic2(ns, target_action)))
 
@@ -101,27 +86,25 @@ class TD3:
             critic2_grad = tape.gradient(critic2_loss, self.critic2.trainable_variables)
             self.critic2_optimizer.apply_gradients(zip(critic2_grad, self.critic2.trainable_variables))
 
+            #actor network training
             if self.current_step % self.policy_delay == 0:
                 with tf.GradientTape() as tape2:
-                    actor_loss = -tf.reduce_mean(self.critic1(s, self.actor(s, activation='tanh')))
+                    actor_loss = -tf.reduce_mean(self.critic1(s, self.actor(s)))
 
                 actor_grad = tape2.gradient(actor_loss, self.actor.trainable_variables)
                 self.actor_optimizer.apply_gradients(zip(actor_grad, self.actor.trainable_variables))
 
+                #target network update
                 soft_update(self.actor, self.target_actor, self.tau)
                 soft_update(self.critic1, self.target_critic1, self.tau)
                 soft_update(self.critic2, self.target_critic2, self.tau)
 
-                total_a_loss += actor_loss.numpy()
-
-                del tape2
-
-            del tape
-
+            del tape, tape2
+            total_a_loss += actor_loss.numpy()
             total_c1_loss += critic1_loss.numpy()
             total_c2_loss += critic2_loss.numpy()
 
-        return [['Loss/Actor', total_a_loss], ['Loss/Critic1', total_c1_loss], ['Loss/Critic2', total_c2_loss]]
+        return {'Loss': {'Actor': total_a_loss, 'Critic1': total_c1_loss, 'Critic2': total_c2_loss}}
 
 
 

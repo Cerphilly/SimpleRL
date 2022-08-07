@@ -1,31 +1,41 @@
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+import argparse
+
 
 from Algorithm.DDPG import DDPG
-from Common.Utils import env_info, gym_env, dmc_env, cpu_only, set_seed
-from Common.Config import basic_config
+from Common.Utils import cpu_only, set_seed, gym_env, dmc_env, print_envs, print_args, env_info
 
 from Trainer.Basic_trainer import Basic_trainer
 
-def ddpg_configurations(parser):
-    parser.set_defaults(domain_type ='gym')
-    parser.set_defaults(env_name ='Pendulum-v1')
-    parser.set_defaults(render = True)
-    parser.set_defaults(eval = True)
-    parser.set_defaults(eval_step = 1000)
-    parser.set_defaults(eval_episode = 1)
-    parser.set_defaults(random_seed = -1)
-    parser.set_defaults(training_start = 600)
-    parser.set_defaults(batch_size = 256)
-    parser.set_defaults(train_mode = 'online')
-    parser.set_defaults(training_step = 1)
-    parser.set_defaults(actor_lr=0.001)
-    parser.set_defaults(critic_lr=0.001)
-    parser.set_defaults(tau = 0.005)
-    parser.set_defaults(noise_scale = 0.1)
-    return parser
+def hyperparameters():
+    parser = argparse.ArgumentParser(description='Deep Deterministic Policy Gradient(DDPG) example')
+    #environment
+    parser.add_argument('--domain_type', default='gym', type=str, help='gym or dmc')
+    parser.add_argument('--env-name', default='InvertedPendulum-v2', help='Pendulum-v0, MountainCarContinuous-v0')
+    parser.add_argument('--render', default=True, type=bool)
+    parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
+    parser.add_argument('--max-step', default=1000000, type=int, help='Maximum training step')
+    parser.add_argument('--eval', default=False, type=bool, help='whether to perform evaluation')
+    parser.add_argument('--eval-step', default=1000, type=int, help='Frequency in performance evaluation')
+    parser.add_argument('--eval-episode', default=1, type=int, help='Number of episodes to perform evaluation')
+    parser.add_argument('--random-seed', default=-1, type=int, help='Random seed setting')
+    #ddpg
+    parser.add_argument('--batch-size', default=256, type=int, help='Mini-batch size')
+    parser.add_argument('--buffer-size', default=1000000, type=int, help='Buffer maximum size')
+    parser.add_argument('--train-mode', default='online', help='offline, online')
+    parser.add_argument('--training-step', default=1, type=int)
+    parser.add_argument('--gamma', default=0.99, type=float)
+    parser.add_argument('--actor-lr', default=0.001, type=float)
+    parser.add_argument('--critic-lr', default=0.001, type=float)
+    parser.add_argument('--noise-scale', default=0.1, type=float)
+    parser.add_argument('--tau', default=0.005, type=float)
+    parser.add_argument('--hidden-dim', default=(256, 256), help='hidden dimension of network')
+    parser.add_argument('--activation', default='relu')
 
+    parser.add_argument('--cpu-only', default=False, type=bool, help='force to use cpu only')
+
+    args = parser.parse_args()
+
+    return args
 
 def main(args):
     if args.cpu_only == True:
@@ -42,21 +52,19 @@ def main(args):
          env, test_env = dmc_env(args.env_name, random_seed)
 
     else:
-        raise ValueError("only gym and dmc allowed")
+        raise ValueError
 
     state_dim, action_dim, max_action, min_action = env_info(env)
+
     algorithm = DDPG(state_dim, action_dim, args)
+
+    print_args(args)
+    print_envs(algorithm, max_action, min_action, args)
 
     trainer = Basic_trainer(env, test_env, algorithm, max_action, min_action, args)
     trainer.run()
 
 if __name__ == '__main__':
-    parser = basic_config()
-    parser = DDPG.get_config(parser)
-    parser = ddpg_configurations(parser)
-    args = parser.parse_args()
-    print(args)
-
+    args = hyperparameters()
     main(args)
-
 

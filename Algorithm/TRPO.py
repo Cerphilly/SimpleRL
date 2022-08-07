@@ -8,17 +8,15 @@ import numpy as np
 import copy
 
 from Common.Buffer import Buffer
-from Common.Utils import remove_argument, modify_default
+from Network.Basic_Networks import Policy_network, V_network
+from Network.Gaussian_Actor import Gaussian_Actor
 
-from Network.Basic_Network import Policy_network, V_network
-from Network.Gaussian_Policy import Gaussian_Policy
-#todo: check paper
 class TRPO:
     def __init__(self, state_dim, action_dim, args):
 
         self.discrete = args.discrete
 
-        self.buffer = Buffer(state_dim, action_dim if args.discrete == False else 1, args.buffer_size, on_policy=True)
+        self.buffer = Buffer(state_dim=state_dim, action_dim=action_dim if args.discrete == False else 1, max_size=args.buffer_size, on_policy=True)
 
         self.gamma = args.gamma
         self.lambda_gae = args.lambda_gae
@@ -35,39 +33,17 @@ class TRPO:
         self.training_start = 0
         self.training_step = args.training_step
 
-        if self.discrete == True:
-            self.actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
-
-            self.backup_actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        if self.discrete:
+            self.actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
+            self.backup_actor = Policy_network(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
         else:
-            self.actor = Gaussian_Policy(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units, log_std_min=args.log_std_min, log_std_max=args.log_std_max, squash=False,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
-            self.backup_actor = Gaussian_Policy(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_units, log_std_min=args.log_std_min, log_std_max=args.log_std_max, squash=False,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+            self.actor = Gaussian_Actor(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
+            self.backup_actor = Gaussian_Actor(state_dim=self.state_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
 
-        self.critic = V_network(state_dim=self.state_dim, hidden_units=args.hidden_units,
-                                      activation=args.activation, use_bias=args.use_bias, kernel_initializer=args.kernel_initializer, bias_initializer=args.bias_initializer)
+        self.critic = V_network(state_dim=self.state_dim, hidden_units=args.hidden_dim, activation=args.activation)
 
         self.network_list = {'Actor': self.actor, 'Critic': self.critic}
         self.name = 'TRPO'
-
-    @staticmethod
-    def get_config(parser):
-        parser.add_argument('--log_std_min', default=-20, type=int, help='For gaussian actor')
-        parser.add_argument('--log_std_max', default=2, type=int, help='For gaussian actor')
-        parser.add_argument('--lambda-gae', default=0.96, type=float)
-        parser.add_argument('--backtrack-iter', default=10, type=int)
-        parser.add_argument('--backtrack-coeff', default=0.8, type=float)
-        parser.add_argument('--delta', default=0.5, type=float)
-
-        modify_default(parser, 'training_step', 5)
-
-        remove_argument(parser, ['learning_rate', 'v_lr'])
-
-        return parser
-
 
     def get_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
@@ -88,7 +64,7 @@ class TRPO:
     def eval_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
-        if self.discrete == True:
+        if self.discrete:
             policy = self.actor(state, activation='softmax')
             dist = tfp.distributions.Categorical(probs=policy)
             action = dist.sample().numpy()[0]
@@ -102,7 +78,7 @@ class TRPO:
     def fisher_vector_product(self, states, p):
         with tf.GradientTape() as tape2:
             with tf.GradientTape() as tape1:
-                if self.discrete == True:
+                if self.discrete:
                     kl_divergence = tfp.distributions.kl_divergence(
                         tfp.distributions.Categorical(probs=self.actor(states, activation='softmax')),
                         tfp.distributions.Categorical(probs=self.backup_actor(states, activation='softmax')))
@@ -186,7 +162,7 @@ class TRPO:
         self.update_model(self.backup_actor, flattened_actor)
 
         with tf.GradientTape() as tape:
-            if self.discrete == True:
+            if self.discrete:
                 policy = self.actor(s, activation='softmax')
                 dist = tfp.distributions.Categorical(probs=policy)
                 log_policy = tf.reshape(dist.log_prob(tf.squeeze(a)), (-1, 1))
@@ -217,7 +193,7 @@ class TRPO:
             new_flattened_actor = flattened_actor + fraction * full_step
             self.update_model(self.actor, new_flattened_actor)
 
-            if self.discrete == True:
+            if self.discrete:
                 new_policy = self.actor(s, activation='softmax')
                 new_a_one_hot = tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), depth=self.action_dim), axis=1)
                 new_log_policy = tf.reduce_sum(tf.math.log(new_policy) * tf.stop_gradient(new_a_one_hot), axis=1, keepdims=True)
@@ -230,7 +206,7 @@ class TRPO:
             loss_improve = new_surrogate - surrogate
             expected_improve *= fraction
 
-            if self.discrete == True:
+            if self.discrete:
                 new_kl_divergence = tfp.distributions.kl_divergence(tfp.distributions.Categorical(probs=self.actor(s, activation='softmax')),
                                                                     tfp.distributions.Categorical(probs=self.backup_actor(s, activation='softmax')))
             else:
@@ -279,7 +255,8 @@ class TRPO:
             total_c_loss += critic_loss.numpy()
 
         self.buffer.delete()
-        return [['Loss/Critic', total_c_loss]]
+        return {'Loss': {'Critic': total_c_loss}}
+
 
 
 
