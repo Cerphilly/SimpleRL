@@ -123,11 +123,13 @@ class SACv2_AE:
 
             critic1_gradients = tape1.gradient(critic1_loss,
                                                self.encoder.trainable_variables + self.critic1.trainable_variables)
-            self.critic1_optimizer.apply_gradients(
-                zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
 
             critic2_gradients = tape1.gradient(critic2_loss,
                                                self.encoder.trainable_variables + self.critic2.trainable_variables)
+
+            self.critic1_optimizer.apply_gradients(
+                zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
+
             self.critic2_optimizer.apply_gradients(
                 zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
 

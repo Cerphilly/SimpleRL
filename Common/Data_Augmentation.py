@@ -153,7 +153,7 @@ def random_translate(images, output_size, return_random_idxs=False, h1s=None, w1
         outputs = outputs[0]
 
     if return_random_idxs:
-        return outputs, dict(h1s=h1s, w1s=h1s)
+        return outputs, dict(h1s=h1s, w1s=w1s)
 
     return outputs
 

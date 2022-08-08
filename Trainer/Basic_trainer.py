@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from Common.Utils import discrete_env, render_env
+from Common.Utils import discrete_env, render_env, trim_float
 
 class Basic_trainer:
     def __init__(self, env, test_env, algorithm, max_action, min_action, args):
@@ -32,6 +32,8 @@ class Basic_trainer:
 
         self.train_mode = None
 
+        self.total_loss = {'Loss':{}}
+
         if args.train_mode == 'offline':
             self.train_mode = self.offline_train
         elif args.train_mode == 'online':
@@ -54,6 +56,12 @@ class Basic_trainer:
             return True
 
         return False
+
+    def logger(self, loss_list):
+        if loss_list is None:
+            return
+
+
 
     def evaluate(self):
         self.eval_num += 1
@@ -94,7 +102,8 @@ class Basic_trainer:
             sum(reward_list) / len(reward_list), max(reward_list), min(reward_list), np.std(reward_list)))
 
     def run(self):
-        import time
+        loss_list = None
+
         while True:
             if self.total_step > self.max_step:
                 print("Training finished")
@@ -106,12 +115,11 @@ class Basic_trainer:
 
             observation = self.env.reset()
             done = False
-            time_list = []
 
             while not done:
                 self.local_step += 1
                 self.total_step += 1
-                start_time = time.time()
+
                 if self.render:
                     render_env(self.env, self.env_name, self.domain_type, self.algorithm.name)
 
@@ -150,16 +158,15 @@ class Basic_trainer:
                     self.algorithm.buffer.add(observation, action, reward, next_observation, real_done, log_prob)
 
                 observation = next_observation
-                end_time = time.time()
-                time_list.append(end_time - start_time)
 
                 if self.total_step >= self.algorithm.training_start and self.train_mode(done, self.local_step):
                     loss_list = self.algorithm.train(self.algorithm.training_step)
+                    trim_float(loss_list)
 
-                if self.eval == True and self.total_step % self.eval_step == 0:
+                if self.eval and self.total_step % self.eval_step == 0:
                     self.evaluate()
 
             print("Train | Episode: {} | Reward: {:.2f} | Local_step: {} | Total_step: {} |".format(self.episode,
                                                                                                     self.episode_reward,
                                                                                                     self.local_step,
-                                                                                                    self.total_step))
+                                                                                                    self.total_step), loss_list)

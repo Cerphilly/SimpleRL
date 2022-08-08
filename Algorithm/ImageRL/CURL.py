@@ -158,7 +158,6 @@ class CURL_SACv1:
                 critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
 
             critic1_gradients = tape2.gradient(critic1_loss, self.encoder.trainable_variables + self.critic1.trainable_variables)
-
             critic2_gradients = tape2.gradient(critic2_loss, self.encoder.trainable_variables + self.critic2.trainable_variables)
 
             self.critic1_optimizer.apply_gradients(zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))

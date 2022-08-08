@@ -36,7 +36,7 @@ def hyperparameters():
     return args
 
 def main(args):
-    if args.cpu_only == True:
+    if args.cpu_only:
         cpu_only()
 
     # random seed setting

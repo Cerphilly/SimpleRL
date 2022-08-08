@@ -232,7 +232,10 @@ def discrete_env(env):
     else:
         raise NotImplementedError
 
-
+def trim_float(dictionary, r=3):
+    for key, value in dictionary.items():
+        for key2, value2 in value.items():
+            value[key2] = round(value[key2], r)
 
 
 def render_env(env, env_name, domain_type, algorithm_name):

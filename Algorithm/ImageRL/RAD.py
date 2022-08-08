@@ -32,7 +32,7 @@ class RADBuffer(Buffer):
                 # states_next = center_crop(states_next, image_size)
 
                 states, random_idxs = func(states, output_size=image_size, return_random_idxs=True)
-                states_next = func(states_next, output_size=image_size, **random_idxs)
+                states_next = func(states_next, output_size=image_size, h1s=random_idxs['h1s'], w1s=random_idxs['w1s'])
 
             elif 'cutout' in aug:
                 states = func(states)
@@ -62,7 +62,6 @@ class RAD_SACv2:
     def __init__(self, obs_dim, action_dim, args):
 
         self.data_augs = args.data_augs
-
 
         self.buffer = RADBuffer(state_dim=(obs_dim[0], args.pre_image_size, args.pre_image_size), action_dim=action_dim, max_size=args.buffer_size)
 
@@ -194,11 +193,13 @@ class RAD_SACv2:
 
             critic1_gradients = tape1.gradient(critic1_loss,
                                                self.encoder.trainable_variables + self.critic1.trainable_variables)
-            self.critic1_optimizer.apply_gradients(
-                zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
 
             critic2_gradients = tape1.gradient(critic2_loss,
                                                self.encoder.trainable_variables + self.critic2.trainable_variables)
+
+            self.critic1_optimizer.apply_gradients(
+                zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
+
             self.critic2_optimizer.apply_gradients(
                 zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
 
