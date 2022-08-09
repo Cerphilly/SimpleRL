@@ -155,7 +155,7 @@ class PPO:#make it useful for both discrete(cartegorical actor) and continuous a
                         else:
                             raise NotImplementedError
 
-                    critic_loss = 0.5 * tf.reduce_mean(tf.square(batch_returns - self.critic(batch_s)))
+                    critic_loss = tf.reduce_mean(tf.square(batch_returns - self.critic(batch_s)))
 
                 actor_variables = self.actor.trainable_variables
                 critic_variables = self.critic.trainable_variables

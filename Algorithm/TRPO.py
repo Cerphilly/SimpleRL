@@ -246,7 +246,7 @@ class TRPO:
             batch_returns = tf.gather(returns, batch_index)
 
             with tf.GradientTape() as tape:
-                critic_loss = 0.5 * tf.reduce_mean(tf.square(tf.stop_gradient(batch_returns) - self.critic(batch_s)))
+                critic_loss = tf.reduce_mean(tf.square(tf.stop_gradient(batch_returns) - self.critic(batch_s)))
 
             critic_variables = self.critic.trainable_variables
             critic_gradients = tape.gradient(critic_loss, critic_variables)

@@ -77,8 +77,8 @@ class TD3:
             target_value = tf.stop_gradient(r + self.gamma * (1 - d) * tf.minimum(self.target_critic1(ns, target_action), self.target_critic2(ns, target_action)))
 
             with tf.GradientTape(persistent=True) as tape:
-                critic1_loss = 0.5 * tf.reduce_mean(tf.square(target_value - self.critic1(s, a)))
-                critic2_loss = 0.5 * tf.reduce_mean(tf.square(target_value - self.critic2(s, a)))
+                critic1_loss = tf.reduce_mean(tf.square(target_value - self.critic1(s, a)))
+                critic2_loss = tf.reduce_mean(tf.square(target_value - self.critic2(s, a)))
 
             critic1_grad = tape.gradient(critic1_loss, self.critic1.trainable_variables)
             self.critic1_optimizer.apply_gradients(zip(critic1_grad, self.critic1.trainable_variables))

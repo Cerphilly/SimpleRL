@@ -10,10 +10,10 @@ def hyperparameters():
     #environment
     parser.add_argument('--algorithm', default='SACv2', help='SACv2')
     parser.add_argument('--domain_type', default='dmc_image', type=str, help='gym or dmc')
-    parser.add_argument('--env-name', default='cartpole_swingup', help='DM Control Suite domain name + task name')
+    parser.add_argument('--env-name', default='walker_walk', help='DM Control Suite domain name + task name')
     parser.add_argument('--render', default=False, type=bool)
     parser.add_argument('--training-start', default=1000, type=int, help='First step to start training')
-    parser.add_argument('--max-step', default=200001, type=int, help='Maximum training step')
+    parser.add_argument('--max-step', default=100001, type=int, help='Maximum training step')
     parser.add_argument('--eval', default=True, type=bool, help='whether to perform evaluation')
     parser.add_argument('--eval-step', default=10000, type=int, help='Frequency in performance evaluation')
     parser.add_argument('--eval-episode', default=10, type=int, help='Number of episodes to perform evaluation')
@@ -21,9 +21,9 @@ def hyperparameters():
 
     parser.add_argument('--frame-stack', default=3, type=int)
     parser.add_argument('--frame-skip', default=8, type=int)
-    parser.add_argument('--image-size', default=108, type=int)
+    parser.add_argument('--image-size', default=84, type=int)
     parser.add_argument('--pre-image-size', default=100, type=int)
-    parser.add_argument('--data-augs', default='translate', type=str, help='data augmentation: crop, grayscale, random cutout, etc. do not apply crop and translate together')
+    parser.add_argument('--data-augs', default='crop', type=str, help='data augmentation: crop, grayscale, random cutout, etc. do not apply crop and translate together')
     #parser.add_argument('--data-augs', default='no_aug', type=str, help='no aug if you want to do SAC:pixel')
     #parser.add_argument('--data-augs', default='crop-grayscale-cutout-cutout_color-rand_conv-color_jitter', type=str, help='no aug if you want to do SAC:pixel')
 

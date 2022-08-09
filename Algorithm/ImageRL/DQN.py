@@ -76,7 +76,7 @@ class ImageDQN:
 
             with tf.GradientTape() as tape:
                 selected_values = tf.reduce_sum(self.network(self.encoder(s), activation='linear')*tf.squeeze(tf.one_hot(tf.cast(a, tf.int32), self.action_dim), axis=1), axis=1, keepdims=True)
-                loss = 0.5*tf.reduce_mean(tf.square(target_value - selected_values))
+                loss = tf.reduce_mean(tf.square(target_value - selected_values))
 
             gradients = tape.gradient(loss, self.encoder.trainable_variables + self.network.trainable_variables)
 

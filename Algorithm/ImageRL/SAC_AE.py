@@ -67,6 +67,7 @@ class SACv2_AE:
         self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
         self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
         self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        #self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
         self.encoder_optimizer = tf.keras.optimizers.Adam(args.encoder_lr)
         self.decoder_optimizer = tfa.optimizers.AdamW(weight_decay=self.decoder_weight_lambda, learning_rate=args.decoder_lr)
@@ -120,6 +121,7 @@ class SACv2_AE:
             with tf.GradientTape(persistent=True) as tape1:
                 critic1_loss = tf.reduce_mean(tf.square(self.critic1(self.encoder(s), a) - target_q))
                 critic2_loss = tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
+                #critic_loss = critic1_loss + critic2_loss
 
             critic1_gradients = tape1.gradient(critic1_loss,
                                                self.encoder.trainable_variables + self.critic1.trainable_variables)
@@ -127,11 +129,17 @@ class SACv2_AE:
             critic2_gradients = tape1.gradient(critic2_loss,
                                                self.encoder.trainable_variables + self.critic2.trainable_variables)
 
+            # critic_gradients = tape1.gradient(critic_loss, self.encoder.trainable_variables + self.critic1.trainable_variables
+            #                                   + self.critic2.trainable_variables)
+
             self.critic1_optimizer.apply_gradients(
                 zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
 
             self.critic2_optimizer.apply_gradients(
                 zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
+
+            # self.critic_optimizer.apply_gradients(zip(critic_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables
+            #                                   + self.critic2.trainable_variables))
 
             total_c1_loss += critic1_loss.numpy()
             total_c2_loss += critic2_loss.numpy()

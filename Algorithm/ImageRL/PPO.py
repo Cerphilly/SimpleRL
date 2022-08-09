@@ -161,7 +161,7 @@ class ImagePPO:#make it useful for both discrete(cartegorical actor) and continu
                         else:
                             raise NotImplementedError
 
-                    critic_loss = 0.5 * tf.reduce_mean(tf.square(batch_returns - self.critic(self.encoder(batch_s))))
+                    critic_loss = tf.reduce_mean(tf.square(batch_returns - self.critic(self.encoder(batch_s))))
 
                 actor_gradients = tape.gradient(actor_loss, self.actor.trainable_variables)
                 critic_gradients = tape.gradient(critic_loss, self.encoder.trainable_variables + self.critic.trainable_variables)

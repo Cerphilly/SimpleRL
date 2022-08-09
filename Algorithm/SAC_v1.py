@@ -70,7 +70,7 @@ class SAC_v1:
             target_v = tf.stop_gradient(min_aq - self.alpha * s_logpi)
 
             with tf.GradientTape() as tape1:
-                v_loss = 0.5 * tf.reduce_mean(tf.square(self.v_network(s) - target_v))
+                v_loss = tf.reduce_mean(tf.square(self.v_network(s) - target_v))
 
             v_gradients = tape1.gradient(v_loss, self.v_network.trainable_variables)
             self.v_network_optimizer.apply_gradients(zip(v_gradients, self.v_network.trainable_variables))
@@ -79,8 +79,8 @@ class SAC_v1:
             target_q = tf.stop_gradient(r + self.gamma * (1 - d) * self.target_v_network(ns))
 
             with tf.GradientTape(persistent=True) as tape2:
-                critic1_loss = 0.5 * tf.reduce_mean(tf.square(self.critic1(s, a) - target_q))
-                critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(s, a) - target_q))
+                critic1_loss = tf.reduce_mean(tf.square(self.critic1(s, a) - target_q))
+                critic2_loss = tf.reduce_mean(tf.square(self.critic2(s, a) - target_q))
 
             critic1_gradients = tape2.gradient(critic1_loss, self.critic1.trainable_variables)
             self.critic1_optimizer.apply_gradients(zip(critic1_gradients, self.critic1.trainable_variables))

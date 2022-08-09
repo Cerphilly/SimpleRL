@@ -88,6 +88,8 @@ class CURL_SACv1:
         self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
         self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
         self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        #self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+
         self.v_network_optimizer = tf.keras.optimizers.Adam(args.v_lr)
 
         self.encoder_optimizer = tf.keras.optimizers.Adam(args.encoder_lr)
@@ -142,7 +144,7 @@ class CURL_SACv1:
             target_v = tf.stop_gradient(min_aq - self.alpha * s_logpi)
 
             with tf.GradientTape() as tape1:
-                v_loss = 0.5 * tf.reduce_mean(tf.square(self.v_network(tf.stop_gradient(self.encoder(s))) - target_v))
+                v_loss = tf.reduce_mean(tf.square(self.v_network(tf.stop_gradient(self.encoder(s))) - target_v))
 
             v_gradients = tape1.gradient(v_loss, self.v_network.trainable_variables)
             self.v_network_optimizer.apply_gradients(zip(v_gradients, self.v_network.trainable_variables))
@@ -154,14 +156,22 @@ class CURL_SACv1:
             target_q = tf.stop_gradient(r + self.gamma * (1 - d) * self.target_v_network(self.target_encoder(ns)))
 
             with tf.GradientTape(persistent=True) as tape2:
-                critic1_loss = 0.5 * tf.reduce_mean(tf.square(self.critic1(self.encoder(s), a) - target_q))
-                critic2_loss = 0.5 * tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
+                critic1_loss = tf.reduce_mean(tf.square(self.critic1(self.encoder(s), a) - target_q))
+                critic2_loss = tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
+
+                #critic_loss = critic1_loss + critic2_loss
 
             critic1_gradients = tape2.gradient(critic1_loss, self.encoder.trainable_variables + self.critic1.trainable_variables)
             critic2_gradients = tape2.gradient(critic2_loss, self.encoder.trainable_variables + self.critic2.trainable_variables)
 
+            # critic_gradients = tape2.gradient(critic_loss, self.encoder.trainable_variables + self.critic1.trainable_variables
+            #                                   + self.critic2.trainable_variables)
+
             self.critic1_optimizer.apply_gradients(zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
             self.critic2_optimizer.apply_gradients(zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
+
+            # self.critic_optimizer.apply_gradients(zip(critic_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables
+            #                                           + self.critic2.trainable_variables))
 
             total_c1_loss += critic1_loss.numpy()
             total_c2_loss += critic2_loss.numpy()
@@ -257,6 +267,7 @@ class CURL_SACv2:
         self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
         self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
         self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        #self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
         self.encoder_optimizer = tf.keras.optimizers.Adam(args.encoder_lr)
         self.cpc_optimizer = tf.keras.optimizers.Adam(args.cpc_lr)
@@ -318,15 +329,25 @@ class CURL_SACv2:
                 critic1_loss = tf.reduce_mean(tf.square(self.critic1(self.encoder(s), a) - target_q))
                 critic2_loss = tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
 
+                #critic_loss = critic1_loss + critic2_loss
+
             critic1_gradients = tape1.gradient(critic1_loss,
                                                self.encoder.trainable_variables + self.critic1.trainable_variables)
-            self.critic1_optimizer.apply_gradients(
-                zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
 
             critic2_gradients = tape1.gradient(critic2_loss,
                                                self.encoder.trainable_variables + self.critic2.trainable_variables)
+
+            self.critic1_optimizer.apply_gradients(
+                zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
+
             self.critic2_optimizer.apply_gradients(
                 zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
+
+            # critic_gradients = tape1.gradient(critic_loss, self.encoder.trainable_variables + self.critic1.trainable_variables
+            #                                   + self.critic2.trainable_variables)
+            #
+            # self.critic_optimizer.apply_gradients(zip(critic_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables
+            #                                   + self.critic2.trainable_variables))
 
             total_c1_loss += critic1_loss.numpy()
             total_c2_loss += critic2_loss.numpy()
@@ -441,6 +462,7 @@ class CURL_TD3:
         self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
         self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
         self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        #self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
         self.encoder_optimizer = tf.keras.optimizers.Adam(args.encoder_lr)
         self.cpc_optimizer = tf.keras.optimizers.Adam(args.cpc_lr)
@@ -515,14 +537,21 @@ class CURL_TD3:
                                                       self.target_critic2(self.target_encoder(ns), target_action)))
 
             with tf.GradientTape(persistent=True) as tape2:
-                critic1_loss = 0.5 * tf.reduce_mean(tf.square(target_value - self.critic1(self.encoder(s), a)))
-                critic2_loss = 0.5 * tf.reduce_mean(tf.square(target_value - self.critic2(self.encoder(s), a)))
+                critic1_loss = tf.reduce_mean(tf.square(target_value - self.critic1(self.encoder(s), a)))
+                critic2_loss = tf.reduce_mean(tf.square(target_value - self.critic2(self.encoder(s), a)))
+
+                #critic_loss = critic1_loss + critic2_loss
 
             critic1_grad = tape2.gradient(critic1_loss, self.encoder.trainable_variables + self.critic1.trainable_variables)
-            self.critic1_optimizer.apply_gradients(zip(critic1_grad, self.encoder.trainable_variables + self.critic1.trainable_variables))
-
             critic2_grad = tape2.gradient(critic2_loss, self.encoder.trainable_variables + self.critic2.trainable_variables)
+
+            self.critic1_optimizer.apply_gradients(zip(critic1_grad, self.encoder.trainable_variables + self.critic1.trainable_variables))
             self.critic2_optimizer.apply_gradients(zip(critic2_grad, self.encoder.trainable_variables + self.critic2.trainable_variables))
+
+            # critic_grad = tape2.gradient(critic_loss, self.encoder.trainable_variables + self.critic1.trainable_variables
+            #                              + self.critic2.trainable_variables)
+            # self.critic_optimizer.apply_gradients(zip(critic_grad, self.encoder.trainable_variables + self.critic1.trainable_variables
+            #                                           + self.critic2.trainable_variables))
 
             total_c1_loss += critic1_loss.numpy()
             total_c2_loss += critic2_loss.numpy()

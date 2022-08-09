@@ -113,7 +113,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
                 log_policy = dist.log_prob(a)
 
             actor_loss = -tf.reduce_sum(log_policy * tf.stop_gradient(advantages))
-            critic_loss = 0.5 * tf.reduce_mean(tf.square(tf.stop_gradient(returns) - self.critic(s)))
+            critic_loss = tf.reduce_mean(tf.square(tf.stop_gradient(returns) - self.critic(s)))
 
         actor_variables = self.actor.trainable_variables
         critic_variables = self.critic.trainable_variables

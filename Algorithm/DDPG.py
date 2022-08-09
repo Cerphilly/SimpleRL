@@ -69,7 +69,7 @@ class DDPG:
             target_value = r + (1 - d) * self.gamma * value_next
 
             with tf.GradientTape(persistent=True) as tape:
-                critic_loss = 0.5 * tf.reduce_mean(tf.square(target_value - self.critic(s, a)))
+                critic_loss = tf.reduce_mean(tf.square(target_value - self.critic(s, a)))
                 actor_loss = -tf.reduce_mean(self.critic(s, self.actor(s)))
 
             critic_grad = tape.gradient(critic_loss, self.critic.trainable_variables)
