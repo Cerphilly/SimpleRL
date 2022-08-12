@@ -33,6 +33,12 @@ This code is built in Windows using Anaconda. You can see full environment expor
 You can run algorithms by using examples in `SimpleRL/Example` folder. All `run_XXX.py` defines **Hyperparameters** for the experiment.
 Also, RL `Environment` and `Algorithm`, and its `Trainer` is required to run the experiment.
 
+# Warning
+There are some unresovled errors and things you have to know:
+1. Official benchmark score may not be guaranteed. This can happen due to random seed, hyperparameter, etc.
+2. Especially, **On-policy algorithms** (REINFORCE, VPG, TRPO, PPO) in continous action environment shows poor performance for unknown reasons. 
+3. DBC (Deep Bisimulation for Control) also seems to show performance poorer than the official paper.      
+
 
 # Reference
 - https://spinningup.openai.com/en/latest/index.html
