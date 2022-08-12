@@ -32,4 +32,10 @@ Personal Reinforcement Learning (RL) repo made to backup codes I implemented
 # How to use
 
 # Reference
-
+- https://spinningup.openai.com/en/latest/index.html
+- https://github.com/keiohta/tf2rl
+- https://github.com/reinforcement-learning-kr/pg_travel
+- https://github.com/MishaLaskin/rad
+- https://github.com/MishaLaskin/curl
+- https://github.com/denisyarats/pytorch_sac_ae
+- https://github.com/facebookresearch/deep_bisim4control
