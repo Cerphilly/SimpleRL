@@ -27,9 +27,11 @@ Personal Reinforcement Learning (RL) repo made to backup codes I implemented
   - [DBC](https://arxiv.org/pdf/2006.10742.pdf)
   
 # Installation
-- This code is built in Windows using Anaconda. Full environment is exported as yaml file (tf2.yaml)   
+This code is built in Windows using Anaconda. You can see full environment exported as yaml file (tf2.yaml)   
 
 # How to use
+You can run algorithms by using examples in 'Example'
+
 
 # Reference
 - https://spinningup.openai.com/en/latest/index.html
