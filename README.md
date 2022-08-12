@@ -19,13 +19,43 @@ Personal Reinforcement Learning (RL) repo made to backup codes I implemented
 - [VPG](https://spinningup.openai.com/en/latest/algorithms/vpg.html)
 - [TRPO](https://arxiv.org/pdf/1502.05477.pdf)
 - [PPO](https://arxiv.org/pdf/1707.06347.pdf)
-- [D2RL](https://arxiv.org/pdf/2010.09163.pdf)
 - **ImageRL**<br>
   - [CURL](https://arxiv.org/pdf/2004.04136.pdf)
   - [RAD](https://arxiv.org/pdf/2004.14990.pdf)
   - [SAC_AE](https://arxiv.org/pdf/1910.01741.pdf)
   - [DBC](https://arxiv.org/pdf/2006.10742.pdf)
-  
+- [D2RL](https://arxiv.org/pdf/2010.09163.pdf)
+
+
+## DQNs
+Deep Q Network (DQN) and algorithms derived from it.
+### DQN (Deep Q-Networks)
+### DDQN (Double Deep Q-Networks)
+### Dueling DQN (Dueling Deep Q-Networks)
+<hr>
+
+### DDPG (Deep Deterministic Policy Gradient)
+### TD3 (Twin Delayed Deep Deterministic Policy Gradient)
+### SAC_v1 (Soft Actor Critics)
+### SAC_v2 (Soft Actor Critics)
+<hr>
+
+### REINFORCE 
+### VPG (Vanilla Policy Gradient)
+### TRPO (Trust Region Policy Optimization)
+### PPO (Proximal Policy Optimization)
+
+## ImageRL
+RL algorithms that learns policy from pixels
+### CURL (Contrastive Unsupervised Reinforcement Learning)
+### RAD (Reinforcement learning with Augmented Data)
+### SAC_AE (Soft Actor Critics with AutoEncoder)
+### DBC (Deep Bisimulation for Control)
+<hr>
+
+### D2RL (Deep Dense Architectures in Reinforcement Learning)
+<hr>
+
 # Installation
 This code is built in Windows using Anaconda. You can see full environment exported as yaml file (tf2.yaml)   
 
@@ -34,11 +64,12 @@ You can run algorithms by using examples in `SimpleRL/Example` folder. All `run_
 Also, RL `Environment` and `Algorithm`, and its `Trainer` is required to run the experiment.
 
 # Warning
-There are some unresovled errors and things you have to know:
+There are some unresovled errors and issues you have to know:
 1. Official benchmark score may not be guaranteed. This can happen due to random seed, hyperparameter, etc.
 2. Especially, **On-policy algorithms** (REINFORCE, VPG, TRPO, PPO) in continous action environment shows poor performance for unknown reasons. 
 3. DBC (Deep Bisimulation for Control) also seems to show performance poorer than the official paper.      
 
+***Any advice on code is always welcomed!***
 
 # Reference
 - https://spinningup.openai.com/en/latest/index.html
