@@ -32,39 +32,39 @@ Deep Q Network (DQN) and algorithms derived from it.
 
 <a name='dqn'></a>
 ### DQN (Deep Q-Networks)
-**Paper**: (https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)
+**[Playing Atari with Deep Reinforcement Learning](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf), Mnih et al, 2013** 
 
 <a name='ddqn'></a>
 ### DDQN (Double Deep Q-Networks)
-**Paper**: (https://arxiv.org/pdf/1509.06461.pdf)
+**[Deep Reinforcement Learning with Double Q-learning](https://arxiv.org/pdf/1509.06461.pdf), Hasselt et al 2015.**
 
 <a name='duelingdqn'></a>
 ### Dueling DQN (Dueling Deep Q-Networks)
-**Paper**: (https://arxiv.org/pdf/1511.06581.pdf)
+**[Dueling Network Architectures for Deep Reinforcement Learning](https://arxiv.org/pdf/1511.06581.pdf), Wang et al, 2015.**
 
 <hr>
 
 <a name='ddpg'></a>
 ### DDPG (Deep Deterministic Policy Gradient)
-**Paper**: (https://arxiv.org/pdf/1509.02971.pdf)
+**[Continuous Control With Deep Reinforcement Learning](https://arxiv.org/pdf/1509.02971.pdf), Lillicrap et al, 2015.**
 
 <a name='td3'></a>
 ### TD3 (Twin Delayed Deep Deterministic Policy Gradient)
-**Paper**: (https://arxiv.org/pdf/1802.09477.pdf)
+**[Addressing Function Approximation Error in Actor-Critic Methods](https://arxiv.org/pdf/1802.09477.pdf), Fujimoto et al, 2018.**
 
 <a name='sacv1'></a>
 ### SAC_v1 (Soft Actor Critics)
-**Paper**: (https://arxiv.org/pdf/1801.01290.pdf)
+**[Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor](https://arxiv.org/pdf/1801.01290.pdf), Haarnoja et al, 2018.**
 
 <a name='sacv2'></a>
 ### SAC_v2 (Soft Actor Critics)
-**Paper**: (https://arxiv.org/pdf/1812.05905.pdf)
+**[Soft actor-critic algorithms and applications](https://arxiv.org/pdf/1812.05905.pdf), Haarnoja et al, 2018.**
 
 <hr>
 
 <a name='reinforce'></a>
 ### REINFORCE 
-**Paper**: (https://link.springer.com/content/pdf/10.1007/BF00992696.pdf)
+**[Simple statistical gradient-following algorithms for connectionist reinforcement learning](https://link.springer.com/content/pdf/10.1007/BF00992696.pdf), Ronald J. Williams, 1992.**
 
 <a name='vpg'></a>
 ### VPG (Vanilla Policy Gradient)
@@ -72,11 +72,11 @@ Deep Q Network (DQN) and algorithms derived from it.
 
 <a name='trpo'></a>
 ### TRPO (Trust Region Policy Optimization)
-**Paper**: (https://arxiv.org/pdf/1502.05477.pdf)
+**[Trust Region Policy Optimization](https://arxiv.org/pdf/1502.05477.pdf), Schulman et al, 2015.**
 
 <a name='ppo'></a>
 ### PPO (Proximal Policy Optimization)
-**Paper**: (https://arxiv.org/pdf/1707.06347.pdf)
+**[Proximal Policy Optimization Algorithms](https://arxiv.org/pdf/1707.06347.pdf), Schulman et al, 2017.**
 
 ## ImageRL
 RL algorithms that learns policy from pixels
