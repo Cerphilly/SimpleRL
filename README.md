@@ -8,52 +8,101 @@ Personal Reinforcement Learning (RL) repo made to backup codes I implemented
 
 # Algorithms
 - **DQNs**<br>
-  - [DQN](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)
-  - [DDQN](https://arxiv.org/pdf/1509.06461.pdf)
-  - [Dueling DQN](https://arxiv.org/pdf/1511.06581.pdf)
-- [DDPG](https://arxiv.org/pdf/1509.02971.pdf)
-- [TD3](https://arxiv.org/pdf/1802.09477.pdf)
-- [SAC_v1](https://arxiv.org/pdf/1801.01290.pdf)
-- [SAC_v2](https://arxiv.org/pdf/1812.05905.pdf)
-- [REINFORCE](https://link.springer.com/content/pdf/10.1007/BF00992696.pdf)
-- [VPG](https://spinningup.openai.com/en/latest/algorithms/vpg.html)
-- [TRPO](https://arxiv.org/pdf/1502.05477.pdf)
-- [PPO](https://arxiv.org/pdf/1707.06347.pdf)
+  - [DQN](#dqn)
+  - [DDQN](#ddqn)
+  - [Dueling DQN](#duelingdqn)
+- [DDPG](#ddpg)
+- [TD3](#td3)
+- [SAC_v1](#sacv1)
+- [SAC_v2](#sacv2)
+- [REINFORCE](#reinforce)
+- [VPG](#vpg)
+- [TRPO](#trpo)
+- [PPO](#ppo)
 - **ImageRL**<br>
-  - [CURL](https://arxiv.org/pdf/2004.04136.pdf)
-  - [RAD](https://arxiv.org/pdf/2004.14990.pdf)
-  - [SAC_AE](https://arxiv.org/pdf/1910.01741.pdf)
-  - [DBC](https://arxiv.org/pdf/2006.10742.pdf)
-- [D2RL](https://arxiv.org/pdf/2010.09163.pdf)
+  - [CURL](#curl)
+  - [RAD](#rad)
+  - [SAC_AE](#sacae)
+  - [DBC](#dbc)
+- [D2RL](#d2rl)
 
 
 ## DQNs
 Deep Q Network (DQN) and algorithms derived from it.
+
+<a name='dqn'></a>
 ### DQN (Deep Q-Networks)
+**Paper**: (https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)
+
+<a name='ddqn'></a>
 ### DDQN (Double Deep Q-Networks)
+**Paper**: (https://arxiv.org/pdf/1509.06461.pdf)
+
+<a name='duelingdqn'></a>
 ### Dueling DQN (Dueling Deep Q-Networks)
+**Paper**: (https://arxiv.org/pdf/1511.06581.pdf)
+
 <hr>
 
+<a name='ddpg'></a>
 ### DDPG (Deep Deterministic Policy Gradient)
+**Paper**: (https://arxiv.org/pdf/1509.02971.pdf)
+
+<a name='td3'></a>
 ### TD3 (Twin Delayed Deep Deterministic Policy Gradient)
+**Paper**: (https://arxiv.org/pdf/1802.09477.pdf)
+
+<a name='sacv1'></a>
 ### SAC_v1 (Soft Actor Critics)
+**Paper**: (https://arxiv.org/pdf/1801.01290.pdf)
+
+<a name='sacv2'></a>
 ### SAC_v2 (Soft Actor Critics)
+**Paper**: (https://arxiv.org/pdf/1812.05905.pdf)
+
 <hr>
 
+<a name='reinforce'></a>
 ### REINFORCE 
+**Paper**: (https://link.springer.com/content/pdf/10.1007/BF00992696.pdf)
+
+<a name='vpg'></a>
 ### VPG (Vanilla Policy Gradient)
+**Paper**: (https://spinningup.openai.com/en/latest/algorithms/vpg.html)
+
+<a name='trpo'></a>
 ### TRPO (Trust Region Policy Optimization)
+**Paper**: (https://arxiv.org/pdf/1502.05477.pdf)
+
+<a name='ppo'></a>
 ### PPO (Proximal Policy Optimization)
+**Paper**: (https://arxiv.org/pdf/1707.06347.pdf)
 
 ## ImageRL
 RL algorithms that learns policy from pixels
+
+<a name='curl'></a>
 ### CURL (Contrastive Unsupervised Reinforcement Learning)
+**Paper**: (https://arxiv.org/pdf/2004.04136.pdf)
+
+<a name='rad'></a>
 ### RAD (Reinforcement learning with Augmented Data)
+**Paper**: (https://arxiv.org/pdf/2004.14990.pdf)
+
+<a name='sacae'></a>
 ### SAC_AE (Soft Actor Critics with AutoEncoder)
+**Paper**: (https://arxiv.org/pdf/1910.01741.pdf)
+
+<a name='dbc'></a>
 ### DBC (Deep Bisimulation for Control)
+**Paper**: (https://arxiv.org/pdf/2006.10742.pdf)
+
 <hr>
 
+<a name='d2rl'></a>
 ### D2RL (Deep Dense Architectures in Reinforcement Learning)
+**Paper**: (https://arxiv.org/pdf/2010.09163.pdf)
+
 <hr>
 
 # Installation
