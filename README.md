@@ -30,7 +30,8 @@ Personal Reinforcement Learning (RL) repo made to backup codes I implemented
 This code is built in Windows using Anaconda. You can see full environment exported as yaml file (tf2.yaml)   
 
 # How to use
-You can run algorithms by using examples in 'Example'
+You can run algorithms by using examples in `SimpleRL/Example` folder. All `run_XXX.py` defines **Hyperparameters** for the experiment.
+Also, RL `Environment` and `Algorithm`, and its `Trainer` is required to run the experiment.
 
 
 # Reference
