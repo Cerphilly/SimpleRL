@@ -68,7 +68,7 @@ Deep Q Network (DQN) and algorithms derived from it.
 
 <a name='vpg'></a>
 ### VPG (Vanilla Policy Gradient)
-**Paper**: (https://spinningup.openai.com/en/latest/algorithms/vpg.html)
+**[Policy Gradient Methods for Reinforcement Learning with Function Approximation](https://proceedings.neurips.cc/paper/1999/file/464d828b85b0bed98e80ade0a5c43b0f-Paper.pdf), Sutton et al, 2000.**
 
 <a name='trpo'></a>
 ### TRPO (Trust Region Policy Optimization)
@@ -83,25 +83,25 @@ RL algorithms that learns policy from pixels
 
 <a name='curl'></a>
 ### CURL (Contrastive Unsupervised Reinforcement Learning)
-**Paper**: (https://arxiv.org/pdf/2004.04136.pdf)
+**[CURL: Contrastive Unsupervised Representation Learning for Sample-Efficient Reinforcement Learning](https://arxiv.org/pdf/2004.04136.pdf), Srinivas et al, 2020.**
 
 <a name='rad'></a>
 ### RAD (Reinforcement learning with Augmented Data)
-**Paper**: (https://arxiv.org/pdf/2004.14990.pdf)
+**[RAD: Reinforcement Learning with Augmented Data](https://arxiv.org/pdf/2004.14990.pdf), Laskin et al, 2020.**
 
 <a name='sacae'></a>
 ### SAC_AE (Soft Actor Critics with AutoEncoder)
-**Paper**: (https://arxiv.org/pdf/1910.01741.pdf)
+**[Improving Sample Efficiency in Model-Free Reinforcement Learning from Images](https://arxiv.org/pdf/1910.01741.pdf), Yarats et al, 2020.**
 
 <a name='dbc'></a>
 ### DBC (Deep Bisimulation for Control)
-**Paper**: (https://arxiv.org/pdf/2006.10742.pdf)
+**[Learning Invariant Representations for Reinforcement Learning without Reconstruction](https://arxiv.org/pdf/2006.10742.pdf), A. Zhang et al, 2020.**
 
 <hr>
 
 <a name='d2rl'></a>
 ### D2RL (Deep Dense Architectures in Reinforcement Learning)
-**Paper**: (https://arxiv.org/pdf/2010.09163.pdf)
+**[D2RL: Deep Dense Architectures in Reinforcement Learning](https://arxiv.org/pdf/2010.09163.pdf), Sinha et al, 2020**
 
 <hr>
 
