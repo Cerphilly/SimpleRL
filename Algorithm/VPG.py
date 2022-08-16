@@ -14,7 +14,6 @@ from Network.Gaussian_Actor import Gaussian_Actor
 class VPG:#make it useful for both discrete(cartegorical actor) and continuous actor(gaussian policy)
     def __init__(self, state_dim, action_dim, args):
 
-
         self.buffer = Buffer(state_dim=state_dim, action_dim=action_dim if args.discrete == False else 1, max_size=args.buffer_size, on_policy=True)
         self.discrete = args.discrete
 
@@ -42,7 +41,7 @@ class VPG:#make it useful for both discrete(cartegorical actor) and continuous a
     def get_action(self, state):
         state = np.expand_dims(np.array(state, dtype=np.float32), axis=0)
 
-        if self.discrete == True:
+        if self.discrete:
             policy = self.actor(state, activation='softmax').numpy()
             dist = tfp.distributions.Categorical(probs=policy)
             action = dist.sample().numpy()

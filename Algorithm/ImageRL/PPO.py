@@ -7,6 +7,7 @@ import tensorflow_probability as tfp
 import numpy as np
 
 from Common.Buffer import Buffer
+from Common.Utils import find_channel
 from Network.Basic_Networks import Policy_network, V_network
 from Network.Gaussian_Actor import Gaussian_Actor
 from Network.Encoder import PixelEncoder
@@ -42,7 +43,7 @@ class ImagePPO:#make it useful for both discrete(cartegorical actor) and continu
 
         self.critic = V_network(state_dim=self.feature_dim, hidden_units=args.hidden_dim, activation=args.activation)
         self.encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
-                                    kernel_size=args.kernel_size, strides=args.strides, data_format='channels_first', activation=args.activation)
+                                    kernel_size=args.kernel_size, strides=args.strides, data_format=find_channel(args.domain_type), activation=args.activation)
 
         self.network_list = {'Actor': self.actor, 'Critic': self.critic}
         self.name = 'PPO'

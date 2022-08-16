@@ -15,7 +15,7 @@ from Network.Basic_Networks import Q_network
 from Network.Encoder import PixelEncoder
 from Network.Decoder import PixelDecoder
 
-from Common.Utils import copy_weight, soft_update, preprocess_obs
+from Common.Utils import copy_weight, soft_update, preprocess_obs, find_channel
 from Common.Buffer import Buffer
 
 class SACv2_AE:
@@ -55,19 +55,20 @@ class SACv2_AE:
         self.target_critic2 = Q_network(state_dim=self.feature_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
 
         self.encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
-                                    kernel_size=args.kernel_size, strides=args.strides, activation=args.activation)
+                                    kernel_size=args.kernel_size, strides=args.strides, data_format=find_channel(args.domain_type), activation=args.activation)
         self.target_encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
-                                    kernel_size=args.kernel_size, strides=args.strides, activation=args.activation)
-        self.decoder = PixelDecoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num)
+                                    kernel_size=args.kernel_size, strides=args.strides, data_format=find_channel(args.domain_type), activation=args.activation)
+        self.decoder = PixelDecoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
+                                    data_format=find_channel(args.domain_type), activation=args.activation)
 
         copy_weight(self.critic1, self.target_critic1)
         copy_weight(self.critic2, self.target_critic2)
         copy_weight(self.encoder, self.target_encoder)
 
         self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
-        self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
-        self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
-        #self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        # self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        # self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
         self.encoder_optimizer = tf.keras.optimizers.Adam(args.encoder_lr)
         self.decoder_optimizer = tfa.optimizers.AdamW(weight_decay=self.decoder_weight_lambda, learning_rate=args.decoder_lr)
@@ -118,28 +119,28 @@ class SACv2_AE:
                                        self.target_critic2(self.target_encoder(ns), ns_action))
 
             target_q = tf.stop_gradient(r + self.gamma * (1 - d) * (target_min_aq - self.alpha.numpy() * ns_logpi))
-            with tf.GradientTape(persistent=True) as tape1:
+            with tf.GradientTape() as tape1:
                 critic1_loss = tf.reduce_mean(tf.square(self.critic1(self.encoder(s), a) - target_q))
                 critic2_loss = tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
-                #critic_loss = critic1_loss + critic2_loss
+                critic_loss = critic1_loss + critic2_loss
 
-            critic1_gradients = tape1.gradient(critic1_loss,
-                                               self.encoder.trainable_variables + self.critic1.trainable_variables)
+            # critic1_gradients = tape1.gradient(critic1_loss,
+            #                                    self.encoder.trainable_variables + self.critic1.trainable_variables)
+            #
+            # critic2_gradients = tape1.gradient(critic2_loss,
+            #                                    self.encoder.trainable_variables + self.critic2.trainable_variables)
 
-            critic2_gradients = tape1.gradient(critic2_loss,
-                                               self.encoder.trainable_variables + self.critic2.trainable_variables)
+            critic_gradients = tape1.gradient(critic_loss, self.encoder.trainable_variables + self.critic1.trainable_variables
+                                              + self.critic2.trainable_variables)
 
-            # critic_gradients = tape1.gradient(critic_loss, self.encoder.trainable_variables + self.critic1.trainable_variables
-            #                                   + self.critic2.trainable_variables)
+            # self.critic1_optimizer.apply_gradients(
+            #     zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
+            #
+            # self.critic2_optimizer.apply_gradients(
+            #     zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
 
-            self.critic1_optimizer.apply_gradients(
-                zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
-
-            self.critic2_optimizer.apply_gradients(
-                zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
-
-            # self.critic_optimizer.apply_gradients(zip(critic_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables
-            #                                   + self.critic2.trainable_variables))
+            self.critic_optimizer.apply_gradients(zip(critic_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables
+                                              + self.critic2.trainable_variables))
 
             total_c1_loss += critic1_loss.numpy()
             total_c2_loss += critic2_loss.numpy()

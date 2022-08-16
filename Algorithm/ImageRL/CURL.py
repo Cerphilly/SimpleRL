@@ -8,7 +8,7 @@ from Network.Basic_Networks import Q_network, V_network, Policy_network
 from Network.Encoder import PixelEncoder
 from Network.CURL import CURL
 
-from Common.Utils import copy_weight, soft_update
+from Common.Utils import copy_weight, soft_update, find_channel
 from Common.Buffer import Buffer
 from Common.Data_Augmentation import center_crop, random_crop
 
@@ -76,9 +76,9 @@ class CURL_SACv1:
         self.target_v_network = V_network(state_dim=self.feature_dim, hidden_units=args.hidden_dim, activation=args.activation)
 
         self.encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
-                                    kernel_size=args.kernel_size, strides=args.strides, activation=args.activation)
+                                    kernel_size=args.kernel_size, strides=args.strides, data_format=find_channel(args.domain_type), activation=args.activation)
         self.target_encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
-                                    kernel_size=args.kernel_size, strides=args.strides, activation=args.activation)
+                                    kernel_size=args.kernel_size, strides=args.strides, data_format=find_channel(args.domain_type),activation=args.activation)
 
         self.curl = CURL(z_dim=self.feature_dim, batch_size=self.curl_latent_dim)
 
@@ -86,9 +86,9 @@ class CURL_SACv1:
         copy_weight(self.encoder, self.target_encoder)
 
         self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
-        self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
-        self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
-        #self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        # self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        # self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
         self.v_network_optimizer = tf.keras.optimizers.Adam(args.v_lr)
 
@@ -155,23 +155,23 @@ class CURL_SACv1:
             #critic network training
             target_q = tf.stop_gradient(r + self.gamma * (1 - d) * self.target_v_network(self.target_encoder(ns)))
 
-            with tf.GradientTape(persistent=True) as tape2:
+            with tf.GradientTape() as tape2:
                 critic1_loss = tf.reduce_mean(tf.square(self.critic1(self.encoder(s), a) - target_q))
                 critic2_loss = tf.reduce_mean(tf.square(self.critic2(self.encoder(s), a) - target_q))
 
-                #critic_loss = critic1_loss + critic2_loss
+                critic_loss = critic1_loss + critic2_loss
 
-            critic1_gradients = tape2.gradient(critic1_loss, self.encoder.trainable_variables + self.critic1.trainable_variables)
-            critic2_gradients = tape2.gradient(critic2_loss, self.encoder.trainable_variables + self.critic2.trainable_variables)
+            # critic1_gradients = tape2.gradient(critic1_loss, self.encoder.trainable_variables + self.critic1.trainable_variables)
+            # critic2_gradients = tape2.gradient(critic2_loss, self.encoder.trainable_variables + self.critic2.trainable_variables)
 
-            # critic_gradients = tape2.gradient(critic_loss, self.encoder.trainable_variables + self.critic1.trainable_variables
-            #                                   + self.critic2.trainable_variables)
+            critic_gradients = tape2.gradient(critic_loss, self.encoder.trainable_variables + self.critic1.trainable_variables
+                                              + self.critic2.trainable_variables)
 
-            self.critic1_optimizer.apply_gradients(zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
-            self.critic2_optimizer.apply_gradients(zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
-
-            # self.critic_optimizer.apply_gradients(zip(critic_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables
-            #                                           + self.critic2.trainable_variables))
+            # self.critic1_optimizer.apply_gradients(zip(critic1_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables))
+            # self.critic2_optimizer.apply_gradients(zip(critic2_gradients, self.encoder.trainable_variables + self.critic2.trainable_variables))
+            #
+            self.critic_optimizer.apply_gradients(zip(critic_gradients, self.encoder.trainable_variables + self.critic1.trainable_variables
+                                                      + self.critic2.trainable_variables))
 
             total_c1_loss += critic1_loss.numpy()
             total_c2_loss += critic2_loss.numpy()
@@ -254,9 +254,9 @@ class CURL_SACv2:
         self.target_critic2 = Q_network(state_dim=self.feature_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
 
         self.encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
-                                    kernel_size=args.kernel_size, strides=args.strides, activation=args.activation)
+                                    kernel_size=args.kernel_size, strides=args.strides, data_format=find_channel(args.domain_type), activation=args.activation)
         self.target_encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
-                                    kernel_size=args.kernel_size, strides=args.strides, activation=args.activation)
+                                    kernel_size=args.kernel_size, strides=args.strides, data_format=find_channel(args.domain_type), activation=args.activation)
 
         copy_weight(self.critic1, self.target_critic1)
         copy_weight(self.critic2, self.target_critic2)
@@ -448,9 +448,9 @@ class CURL_TD3:
         self.target_critic2 = Q_network(state_dim=self.feature_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
 
         self.encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
-                                    kernel_size=args.kernel_size, strides=args.strides, activation=args.activation)
+                                    kernel_size=args.kernel_size, strides=args.strides, data_format=find_channel(args.domain_type), activation=args.activation)
         self.target_encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
-                                    kernel_size=args.kernel_size, strides=args.strides, activation=args.activation)
+                                    kernel_size=args.kernel_size, strides=args.strides, data_format=find_channel(args.domain_type), activation=args.activation)
 
         copy_weight(self.actor, self.target_actor)
         copy_weight(self.critic1, self.target_critic1)

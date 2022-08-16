@@ -15,8 +15,9 @@ class TD3:
         self.buffer = Buffer(state_dim, action_dim, args.buffer_size)
 
         self.actor_optimizer = tf.keras.optimizers.Adam(args.actor_lr)
-        self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
-        self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        # self.critic1_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        # self.critic2_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
+        self.critic_optimizer = tf.keras.optimizers.Adam(args.critic_lr)
 
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -76,15 +77,24 @@ class TD3:
 
             target_value = tf.stop_gradient(r + self.gamma * (1 - d) * tf.minimum(self.target_critic1(ns, target_action), self.target_critic2(ns, target_action)))
 
-            with tf.GradientTape(persistent=True) as tape:
+            with tf.GradientTape() as tape1:
                 critic1_loss = tf.reduce_mean(tf.square(target_value - self.critic1(s, a)))
                 critic2_loss = tf.reduce_mean(tf.square(target_value - self.critic2(s, a)))
 
-            critic1_grad = tape.gradient(critic1_loss, self.critic1.trainable_variables)
-            self.critic1_optimizer.apply_gradients(zip(critic1_grad, self.critic1.trainable_variables))
+                critic_loss = critic1_loss + critic2_loss
 
-            critic2_grad = tape.gradient(critic2_loss, self.critic2.trainable_variables)
-            self.critic2_optimizer.apply_gradients(zip(critic2_grad, self.critic2.trainable_variables))
+            # critic1_grad = tape.gradient(critic1_loss, self.critic1.trainable_variables)
+            # self.critic1_optimizer.apply_gradients(zip(critic1_grad, self.critic1.trainable_variables))
+            #
+            # critic2_grad = tape.gradient(critic2_loss, self.critic2.trainable_variables)
+            # self.critic2_optimizer.apply_gradients(zip(critic2_grad, self.critic2.trainable_variables))
+
+            critic_gradients = tape1.gradient(critic_loss, self.critic1.trainable_variables
+                                              + self.critic2.trainable_variables)
+
+            self.critic_optimizer.apply_gradients(zip(critic_gradients, self.critic1.trainable_variables
+                                                      + self.critic2.trainable_variables))
+            del tape1
 
             #actor network training
             if self.current_step % self.policy_delay == 0:
@@ -99,8 +109,10 @@ class TD3:
                 soft_update(self.critic1, self.target_critic1, self.tau)
                 soft_update(self.critic2, self.target_critic2, self.tau)
 
-            del tape, tape2
-            total_a_loss += actor_loss.numpy()
+                del tape2
+
+                total_a_loss += actor_loss.numpy()
+
             total_c1_loss += critic1_loss.numpy()
             total_c2_loss += critic2_loss.numpy()
 

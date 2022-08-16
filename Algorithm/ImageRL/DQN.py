@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 
 from Common.Buffer import Buffer
-from Common.Utils import copy_weight
+from Common.Utils import copy_weight, find_channel
 from Network.Basic_Networks import Policy_network
 from Network.Encoder import PixelEncoder
 
@@ -34,9 +34,9 @@ class ImageDQN:
         self.target_network = Policy_network(state_dim=self.feature_dim, action_dim=self.action_dim, hidden_units=args.hidden_dim, activation=args.activation)
 
         self.encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
-                                    kernel_size=args.kernel_size, strides=args.strides, data_format='channels_first', activation=args.activation)
+                                    kernel_size=args.kernel_size, strides=args.strides, data_format=find_channel(args.domain_type), activation=args.activation)
         self.target_encoder = PixelEncoder(obs_dim=self.obs_dim, feature_dim=self.feature_dim, layer_num=args.layer_num, filter_num=args.filter_num,
-                                    kernel_size=args.kernel_size, strides=args.strides, data_format='channels_first', activation=args.activation)
+                                    kernel_size=args.kernel_size, strides=args.strides, data_format=find_channel(args.domain_type), activation=args.activation)
 
         copy_weight(self.network, self.target_network)
         copy_weight(self.encoder, self.target_encoder)

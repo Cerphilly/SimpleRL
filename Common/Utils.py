@@ -44,7 +44,7 @@ def set_seed(random_seed):
 
     return random_seed
 
-
+#####################################################################
 def gym_env(env_name, random_seed):
     import gym
     # openai gym
@@ -59,6 +59,7 @@ def gym_env(env_name, random_seed):
     return env, test_env
 
 def atari_env(env_name, image_size, frame_stack, frame_skip, random_seed):
+    #channel_first
     import gym
     from gym.wrappers import AtariPreprocessing, FrameStack
     env = gym.make(env_name)
@@ -90,6 +91,7 @@ def dmc_env(env_name, random_seed):
     return env, test_env
 
 def dmc_image_env(env_name, image_size, frame_stack, frame_skip, random_seed):
+    #channel_first env
     import dmc2gym
     domain_name = env_name.split('_')[0]
     task_name = env_name.split('_')[1]
@@ -104,8 +106,9 @@ def dmc_image_env(env_name, image_size, frame_stack, frame_skip, random_seed):
 
     return env, test_env
 
-def dmcr_env(env_name, image_size, frame_skip, random_seed, mode='classic'):
+def dmcr_env(env_name, image_size, frame_stack, frame_skip, random_seed, mode='classic'):
     #https://github.com/jakegrigsby/dmc_remastered
+    #channel_first env
     '''
     A version of the DeepMind Control Suite with randomly generated graphics, for measuring visual generalization in continuous control.
     '''
@@ -116,18 +119,20 @@ def dmcr_env(env_name, image_size, frame_skip, random_seed, mode='classic'):
     domain_name = env_name.split('_')[0]
     task_name = env_name.split('_')[1]
     if mode == 'classic':#loads a training and testing environment that have the same visual seed
-        env, test_env = dmcr.benchmarks.classic(domain_name, task_name, visual_seed=random_seed, width=image_size, height=image_size, frame_skip=frame_skip)
+        env, test_env = dmcr.benchmarks.classic(domain_name, task_name, visual_seed=random_seed, frame_stack=frame_stack, width=image_size, height=image_size, frame_skip=frame_skip)
     elif mode == 'generalization':#creates a training environment that selects a new visual seed from a pre-set range after every reset(), while the testing environment samples from visual seeds 1-1,000,000
-        env, test_env = dmcr.benchmarks.visual_generalization(domain_name, task_name, num_levels=100, width=image_size, height=image_size, frame_skip=frame_skip)
+        env, test_env = dmcr.benchmarks.visual_generalization(domain_name, task_name, num_levels=100, frame_stack=frame_stack, width=image_size, height=image_size, frame_skip=frame_skip)
     elif mode == 'sim2real':#approximates the challenge of transferring control policies from simulation to the real world by measuring how many distinct training levels the agent needs access to before it can succesfully operate in the original DMC visuals that it has never encountered.
-        env, test_env = dmcr.benchmarks.visual_sim2real(domain_name, task_name, num_levels=random_seed, width=image_size, height=image_size, frame_skip=frame_skip)
+        env, test_env = dmcr.benchmarks.visual_sim2real(domain_name, task_name, num_levels=random_seed, frame_stack=frame_stack, width=image_size, height=image_size, frame_skip=frame_skip)
 
     return env, test_env
 
-def procgen_env(env_name, frame_stack, random_seed):
+def procgen_env(env_name, frame_stack):
+    #channel_last env
     import gym
     env_name = "procgen:procgen-{}-v0".format(env_name)
     env = gym.make(env_name, render_mode='rgb_array')
+    print(env.reset().shape)
     env._max_episode_steps = 1000
     env = FrameStack(env, frame_stack, data_format='channels_last')
 
@@ -136,6 +141,10 @@ def procgen_env(env_name, frame_stack, random_seed):
     test_env = FrameStack(test_env, frame_stack, data_format='channels_last')
 
     return env, test_env
+
+
+#####################################################################
+
 
 def preprocess_obs(obs, bits=5):
 
@@ -150,8 +159,6 @@ def preprocess_obs(obs, bits=5):
     obs = obs + tf.random.uniform(shape=obs.shape) / bins
     obs = obs - 0.5
     return obs
-
-
 # def random_crop(imgs, output_size, data_format='channels_first'):#random crop for curl
 #     """
 #     Vectorized way to do random crop using sliding windows
@@ -196,8 +203,6 @@ def preprocess_obs(obs, bits=5):
 #
 #     image = image[:, :, top:top + new_h, left:left + new_w]
 #     return image
-
-
 def env_info(env):
     if isinstance(env.observation_space, Box):
         state_dim = env.observation_space.shape
@@ -231,6 +236,16 @@ def discrete_env(env):
         return False
     else:
         raise NotImplementedError
+
+def find_channel(domain_type):
+    if domain_type in {'gym', 'dmc'}:
+        return None
+    elif domain_type in {'dmc_image', 'atari', 'dmcr'}:
+        return 'channels_first'
+    elif domain_type in {'procgen'}:
+        return 'channels_last'
+    else:
+        raise ValueError
 
 def trim_float(dictionary, r=3):
     for key, value in dictionary.items():
@@ -335,12 +350,18 @@ class FrameStack(gym.Wrapper):
 
     def _get_obs(self):
         assert len(self._frames) == self._k
-        if self.channel_first == True:
+        if self.channel_first:
             return np.concatenate(list(self._frames), axis=0)
-        elif self.channel_first == False:
+
+        else:
             return np.concatenate(list(self._frames), axis=-1)
 
 
 
+if __name__ == '__main__':
+    #env, test_env = atari_env('PongNoFrameskip-v4', 100, 3, 4, 1234)
+    env, test_env = procgen_env('coinrun',3, 1234)
+
+    print(env.reset().shape)
 
 
