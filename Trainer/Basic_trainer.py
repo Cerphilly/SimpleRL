@@ -121,7 +121,7 @@ class Basic_trainer:
                 self.total_step += 1
 
                 if self.render:
-                    render_env(self.env, self.env_name, self.domain_type, self.algorithm.name)
+                    render_env(self.test_env, self.env_name, self.domain_type, self.algorithm.name)
 
                 if '-ram-' in self.env_name:  # Atari Ram state
                     observation = observation / 255.
@@ -151,6 +151,7 @@ class Basic_trainer:
 
                 if self.env_name == 'Pendulum-v0':
                     reward = (reward + 8.1) / 8.1
+                    #normalize pendulum-v0 reward
 
                 if not self.algorithm.buffer.on_policy:
                     self.algorithm.buffer.add(observation, action, reward, next_observation, real_done)

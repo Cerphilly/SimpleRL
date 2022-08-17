@@ -117,7 +117,7 @@ class Squashed_Gaussian_Actor(tf.keras.Model):#use it for SAC
         #dist = tfp.distributions.MultivariateNormalDiag(loc=mu, scale_diag=sigma, validate_args=True, allow_nan_stats=False)
         dist = tfp.distributions.Normal(loc=mu, scale=sigma, validate_args=True, allow_nan_stats=False)
 
-        if deterministic == True:
+        if deterministic:
             tanh_mean = tf.nn.tanh(mu)
             log_prob = dist.log_prob(mu)
             #log_pi = tf.reshape(log_prob, shape=(-1, 1)) - tf.reduce_sum(tf.math.log(1 - tf.square(tanh_mean) + 1e-6), axis=1, keepdims=True)

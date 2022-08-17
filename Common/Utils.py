@@ -3,6 +3,7 @@ import gym
 import tensorflow as tf
 import random
 import cv2
+import os
 from collections import deque
 from skimage.util.shape import view_as_windows
 from gym.spaces import Box, Discrete
@@ -43,6 +44,15 @@ def set_seed(random_seed):
     random.seed(random_seed)
 
     return random_seed
+
+def save_weights(algorithm, path):
+    for name, network in algorithm.network_list.items():
+        network.save_weights(os.path.join(path, name))
+
+def load_weights(algorithm, path):
+    for name, network in algorithm.network_list.items():
+        network.load_weights(os.path.join(path, name))
+
 
 #####################################################################
 def gym_env(env_name, random_seed):

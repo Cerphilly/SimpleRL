@@ -49,10 +49,29 @@ class Buffer:
         dones = self.d[ids]
         log_prob = None
 
-        if self.on_policy == True:
+        if self.on_policy:
             log_prob = self.log_prob[ids]
+            return {"states": states, "actions": actions, "rewards": rewards, "states_next": states_next,
+                    "dones": dones, "log_probs": log_prob}
 
-        return states, actions, rewards, states_next, dones, log_prob
+        return {"states": states, "actions": actions, "rewards": rewards, "states_next": states_next, "dones": dones}
+
+    def load(self, buffer_dict):
+        np.copyto(self.s[self.idx: self.idx + len(buffer_dict['states']), :], buffer_dict['states'])
+        np.copyto(self.a[self.idx: self.idx + len(buffer_dict['actions']), :], buffer_dict['actions'])
+        np.copyto(self.r[self.idx: self.idx + len(buffer_dict['rewards']), :], buffer_dict['rewards'])
+        np.copyto(self.ns[self.idx: self.idx + len(buffer_dict['states_next']), :], buffer_dict['states_next'])
+        np.copyto(self.d[self.idx: self.idx + len(buffer_dict['dones']), :], buffer_dict['dones'])
+
+        if self.on_policy:
+            np.copyto(self.log_prob[self.idx: self.idx + len(buffer_dict['log_probs']), :], buffer_dict['log_probs'])
+
+        self.idx = (self.idx + len(buffer_dict['dones'])) % self.max_size
+        if self.idx == 0:
+            self.full = True
+
+        print("buffer loaded")
+
 
     def delete(self):
         if type(self.state_dim) == int:
